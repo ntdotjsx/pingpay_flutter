@@ -296,13 +296,21 @@ class BillCreationNotifier extends StateNotifier<BillCreationState> {
         return {'userId': p.userId, 'amount': p.amountBaht};
       }).toList();
 
-      final itemsPayload = state.items.map((item) {
-        return {
-          'name': item.name,
-          'amount': item.amount,
-          'quantity': item.quantity,
+      Map<String, dynamic>? itemsBreakdownPayload;
+      if (state.items.isNotEmpty) {
+        final itemsList = state.items.map((item) {
+          return {
+            'name': item.name,
+            'price': item.amount,
+            'quantity': item.quantity,
+          };
+        }).toList();
+
+        itemsBreakdownPayload = {
+          'items': itemsList,
+          'totalAmount': state.totalAmount,
         };
-      }).toList();
+      }
 
       final bill = await _repo.createBill(
         title: state.title.trim().isNotEmpty ? state.title.trim() : 'บิลอาหาร',
@@ -311,7 +319,7 @@ class BillCreationNotifier extends StateNotifier<BillCreationState> {
             : null,
         totalAmount: state.totalAmount,
         participants: participantsPayload,
-        itemsBreakdown: itemsPayload.isNotEmpty ? itemsPayload : null,
+        itemsBreakdown: itemsBreakdownPayload,
       );
 
       state = state.copyWith(

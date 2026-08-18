@@ -37,7 +37,6 @@ class _CreateBillScreenState extends ConsumerState<CreateBillScreen>
 
   // Scanner animation
   late AnimationController _scannerAnimController;
-  late Animation<double> _scannerAnimation;
   bool _isTorchOn = false;
 
   @override
@@ -46,10 +45,6 @@ class _CreateBillScreenState extends ConsumerState<CreateBillScreen>
     _scannerAnimController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 2000),
-    );
-
-    _scannerAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _scannerAnimController, curve: Curves.easeInOut),
     );
 
     if (_currentBottomNavIndex == 0) {
@@ -335,18 +330,6 @@ class _CreateBillScreenState extends ConsumerState<CreateBillScreen>
       children: [
         Positioned.fill(
           child: Container(
-            color: const Color(0xFF101012),
-            child: Center(
-              child: Icon(
-                Icons.camera_alt_outlined,
-                size: 80,
-                color: Colors.white.withValues(alpha: 0.1),
-              ),
-            ),
-          ),
-        ),
-        Positioned.fill(
-          child: Container(
             decoration: BoxDecoration(
               gradient: RadialGradient(
                 center: Alignment.center,
@@ -425,140 +408,7 @@ class _CreateBillScreenState extends ConsumerState<CreateBillScreen>
                 ),
               ),
               const Spacer(),
-              Container(
-                width: 290,
-                height: 290,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(24),
-                  border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.35),
-                    width: 1.5,
-                  ),
-                ),
-                child: Stack(
-                  children: [
-                    // Laser Frame Corners
-                    Positioned(
-                      top: -1,
-                      left: -1,
-                      child: Container(
-                        width: 28,
-                        height: 28,
-                        decoration: const BoxDecoration(
-                          border: Border(
-                            top: BorderSide(color: AppColors.primary, width: 4),
-                            left: BorderSide(
-                              color: AppColors.primary,
-                              width: 4,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    Positioned(
-                      top: -1,
-                      right: -1,
-                      child: Container(
-                        width: 28,
-                        height: 28,
-                        decoration: const BoxDecoration(
-                          border: Border(
-                            top: BorderSide(color: AppColors.primary, width: 4),
-                            right: BorderSide(
-                              color: AppColors.primary,
-                              width: 4,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    Positioned(
-                      bottom: -1,
-                      left: -1,
-                      child: Container(
-                        width: 28,
-                        height: 28,
-                        decoration: const BoxDecoration(
-                          border: Border(
-                            bottom: BorderSide(
-                              color: AppColors.primary,
-                              width: 4,
-                            ),
-                            left: BorderSide(
-                              color: AppColors.primary,
-                              width: 4,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    Positioned(
-                      bottom: -1,
-                      right: -1,
-                      child: Container(
-                        width: 28,
-                        height: 28,
-                        decoration: const BoxDecoration(
-                          border: Border(
-                            bottom: BorderSide(
-                              color: AppColors.primary,
-                              width: 4,
-                            ),
-                            right: BorderSide(
-                              color: AppColors.primary,
-                              width: 4,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
 
-                    // Laser Scanning Bar
-                    AnimatedBuilder(
-                      animation: _scannerAnimation,
-                      builder: (context, child) {
-                        return Positioned(
-                          top: _scannerAnimation.value * 260 + 10,
-                          left: 15,
-                          right: 15,
-                          child: Container(
-                            height: 3,
-                            decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                colors: [
-                                  Colors.transparent,
-                                  Color(0xFF2997FF),
-                                  AppColors.primary,
-                                  Colors.transparent,
-                                ],
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: AppColors.primary.withValues(
-                                    alpha: 0.8,
-                                  ),
-                                  blurRadius: 10,
-                                  spreadRadius: 2,
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 18),
-              const Text(
-                'วางบิลหรือใบเสร็จให้อยู่ในกรอบ',
-                style: TextStyle(
-                  color: Colors.white70,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              const Spacer(),
               Padding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 24.0,
@@ -783,60 +633,220 @@ class _CreateBillScreenState extends ConsumerState<CreateBillScreen>
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
-                                // Section 1: Bill Information
-                                Text(
-                                  'ข้อมูลบิล (Bill Details)',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 15,
+                                // Section 1: Bill Information (Modern FinTech & iOS-inspired Card Design)
+                                Container(
+                                  decoration: ShapeDecoration(
                                     color: isDark
-                                        ? AppColors.bodyOnDark
-                                        : AppColors.ink,
-                                  ),
-                                ),
-                                const SizedBox(height: 10),
-
-                                TextField(
-                                  controller: _titleController,
-                                  decoration: InputDecoration(
-                                    labelText: 'ชื่อบิล / ร้านค้า',
-                                    hintText: 'เช่น ค่าอาหารมื้อเย็น, ร้านตอง',
-                                    prefixIcon: const Icon(
-                                      Icons.receipt_long_rounded,
-                                      color: AppColors.primary,
-                                    ),
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(14),
-                                    ),
-                                    contentPadding: const EdgeInsets.symmetric(
-                                      horizontal: 14,
-                                      vertical: 12,
-                                    ),
-                                  ),
-                                ),
-
-                                const SizedBox(height: 12),
-
-                                TextField(
-                                  controller: _amountController,
-                                  keyboardType:
-                                      const TextInputType.numberWithOptions(
-                                        decimal: true,
+                                        ? AppColors.surfaceTile2
+                                        : AppColors.canvasParchment,
+                                    shape: SmoothRectangleBorder(
+                                      side: BorderSide(
+                                        color: isDark
+                                            ? Colors.white10
+                                            : AppColors.hairline,
                                       ),
-                                  decoration: InputDecoration(
-                                    labelText: 'ยอดรวมทั้งหมด (บาท)',
-                                    hintText: '0.00',
-                                    prefixIcon: const Icon(
-                                      Icons.attach_money_rounded,
-                                      color: AppColors.primary,
+                                      borderRadius:
+                                          const SmoothBorderRadius.all(
+                                            SmoothRadius(
+                                              cornerRadius: 16,
+                                              cornerSmoothing: 1.0,
+                                            ),
+                                          ),
                                     ),
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(14),
-                                    ),
-                                    contentPadding: const EdgeInsets.symmetric(
-                                      horizontal: 14,
-                                      vertical: 12,
-                                    ),
+                                  ),
+                                  child: Column(
+                                    children: [
+                                      // 1. Bill Title / Merchant Name Input
+                                      Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 14,
+                                          vertical: 6,
+                                        ),
+                                        child: Row(
+                                          children: [
+                                            Container(
+                                              width: 38,
+                                              height: 38,
+                                              decoration: BoxDecoration(
+                                                color: AppColors.primary
+                                                    .withValues(alpha: 0.12),
+                                                borderRadius:
+                                                    BorderRadius.circular(10),
+                                              ),
+                                              child: const Icon(
+                                                Icons.receipt_long_rounded,
+                                                color: AppColors.primary,
+                                                size: 20,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 12),
+                                            Expanded(
+                                              child: Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  const Text(
+                                                    'ชื่อบิล / รายการ',
+                                                    style: TextStyle(
+                                                      fontSize: 11,
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                      color:
+                                                          AppColors.inkMuted48,
+                                                    ),
+                                                  ),
+                                                  TextField(
+                                                    controller:
+                                                        _titleController,
+                                                    style: TextStyle(
+                                                      fontSize: 15,
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                      color: isDark
+                                                          ? AppColors.bodyOnDark
+                                                          : AppColors.ink,
+                                                    ),
+                                                    decoration:
+                                                        const InputDecoration(
+                                                          isDense: true,
+                                                          filled: false,
+                                                          hintText:
+                                                              'เช่น ค่าอาหารมื้อเย็น, ค่าทริป',
+                                                          hintStyle: TextStyle(
+                                                            fontSize: 14,
+                                                            color: AppColors
+                                                                .inkMuted48,
+                                                            fontWeight:
+                                                                FontWeight
+                                                                    .normal,
+                                                          ),
+                                                          border:
+                                                              InputBorder.none,
+                                                          enabledBorder:
+                                                              InputBorder.none,
+                                                          focusedBorder:
+                                                              InputBorder.none,
+                                                          errorBorder:
+                                                              InputBorder.none,
+                                                          disabledBorder:
+                                                              InputBorder.none,
+                                                          contentPadding:
+                                                              EdgeInsets.only(
+                                                                top: 4,
+                                                                bottom: 4,
+                                                              ),
+                                                        ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+
+                                      Divider(
+                                        height: 1,
+                                        thickness: 1,
+                                        color: isDark
+                                            ? Colors.white10
+                                            : AppColors.hairline,
+                                      ),
+
+                                      // 2. Bill Total Amount Input with FinTech Currency Badge
+                                      Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 14,
+                                          vertical: 6,
+                                        ),
+                                        child: Row(
+                                          children: [
+                                            Container(
+                                              width: 38,
+                                              height: 38,
+                                              decoration: BoxDecoration(
+                                                color: AppColors.primary
+                                                    .withValues(alpha: 0.12),
+                                                borderRadius:
+                                                    BorderRadius.circular(10),
+                                              ),
+                                              alignment: Alignment.center,
+                                              child: const Text(
+                                                '฿',
+                                                style: TextStyle(
+                                                  fontSize: 20,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: AppColors.primary,
+                                                ),
+                                              ),
+                                            ),
+                                            const SizedBox(width: 12),
+                                            Expanded(
+                                              child: Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  const Text(
+                                                    'ยอดรวมทั้งหมด (บาท)',
+                                                    style: TextStyle(
+                                                      fontSize: 11,
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                      color:
+                                                          AppColors.inkMuted48,
+                                                    ),
+                                                  ),
+                                                  TextField(
+                                                    controller:
+                                                        _amountController,
+                                                    keyboardType:
+                                                        const TextInputType.numberWithOptions(
+                                                          decimal: true,
+                                                        ),
+                                                    style: TextStyle(
+                                                      fontSize: 18,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      color: isDark
+                                                          ? AppColors.bodyOnDark
+                                                          : AppColors.ink,
+                                                    ),
+                                                    decoration:
+                                                        const InputDecoration(
+                                                          isDense: true,
+                                                          filled: false,
+                                                          hintText: '0.00',
+                                                          hintStyle: TextStyle(
+                                                            fontSize: 16,
+                                                            color: AppColors
+                                                                .inkMuted48,
+                                                            fontWeight:
+                                                                FontWeight
+                                                                    .normal,
+                                                          ),
+                                                          border:
+                                                              InputBorder.none,
+                                                          enabledBorder:
+                                                              InputBorder.none,
+                                                          focusedBorder:
+                                                              InputBorder.none,
+                                                          errorBorder:
+                                                              InputBorder.none,
+                                                          disabledBorder:
+                                                              InputBorder.none,
+                                                          contentPadding:
+                                                              EdgeInsets.only(
+                                                                top: 4,
+                                                                bottom: 4,
+                                                              ),
+                                                        ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
 
