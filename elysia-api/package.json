@@ -1,0 +1,27 @@
+{
+  "name": "elysia-api",
+  "version": "1.0.50",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "bun run --watch src/index.ts"
+  },
+  "dependencies": {
+    "@elysia/openapi": "^1.4.15",
+    "argon2": "^0.41.1",
+    "drizzle-orm": "^0.45.2",
+    "drizzle-typebox": "^0.3.3",
+    "elysia": "latest",
+    "elysia-autoload": "^1.7.0",
+    "elysia-rate-limit": "^5.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "logixlysia": "^6.7.0",
+    "postgres": "^3.4.4"
+  },
+  "devDependencies": {
+    "@elysiajs/eden": "^1.4.9",
+    "@types/jsonwebtoken": "^9.0.7",
+    "bun-types": "latest",
+    "drizzle-kit": "^0.30.4"
+  },
+  "module": "src/index.js"
+}
