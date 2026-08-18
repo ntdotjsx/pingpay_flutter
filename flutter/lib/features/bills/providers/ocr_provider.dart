@@ -1,13 +1,7 @@
 import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../auth/providers/auth_provider.dart';
 import '../models/ocr_models.dart';
 import '../repositories/bill_repository.dart';
-
-final billRepositoryProvider = Provider<BillRepository>((ref) {
-  final dioClient = ref.watch(dioClientProvider);
-  return BillRepository(dioClient);
-});
 
 class OcrScanState {
   final bool isScanning;
@@ -55,8 +49,9 @@ class OcrScanNotifier extends StateNotifier<OcrScanState> {
   }
 }
 
-final ocrScanProvider =
-    StateNotifierProvider.autoDispose<OcrScanNotifier, OcrScanState>((ref) {
-      final repo = ref.watch(billRepositoryProvider);
-      return OcrScanNotifier(repo);
-    });
+final ocrScanProvider = StateNotifierProvider<OcrScanNotifier, OcrScanState>((
+  ref,
+) {
+  final repo = ref.watch(billRepositoryProvider);
+  return OcrScanNotifier(repo);
+});

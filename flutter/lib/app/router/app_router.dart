@@ -10,6 +10,7 @@ import '../../features/pin/presentation/pin_setup_screen.dart';
 import '../../features/profile/presentation/username_setup_screen.dart';
 import '../../features/home/presentation/home_screen.dart';
 import '../../features/bills/presentation/create_bill_screen.dart';
+import '../../features/bills/presentation/bill_detail_screen.dart';
 import '../../features/friends/screens/friends_screen.dart';
 import '../../features/friends/screens/add_friend_screen.dart';
 import '../../features/friends/screens/friend_detail_screen.dart';
@@ -40,6 +41,13 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/bills/create',
         builder: (context, state) => const CreateBillScreen(),
+      ),
+      GoRoute(
+        path: '/bills/:id',
+        builder: (context, state) {
+          final id = state.pathParameters['id'] ?? '';
+          return BillDetailScreen(billId: id);
+        },
       ),
       GoRoute(
         path: '/friends',

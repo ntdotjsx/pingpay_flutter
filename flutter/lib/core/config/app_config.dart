@@ -33,6 +33,6 @@ class AppConfig {
   }
 
   static const String appName = 'PingPay';
-  static const Duration connectTimeout = Duration(seconds: 15);
-  static const Duration receiveTimeout = Duration(seconds: 15);
+  static const Duration connectTimeout = Duration(seconds: 45);
+  static const Duration receiveTimeout = Duration(seconds: 60);
 }

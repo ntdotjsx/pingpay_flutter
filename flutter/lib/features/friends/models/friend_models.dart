@@ -1,9 +1,11 @@
 class FriendUserModel {
+  final String? id;
   final String userCode;
   final String displayName;
   final String? avatarUrl;
 
   const FriendUserModel({
+    this.id,
     required this.userCode,
     required this.displayName,
     this.avatarUrl,
@@ -11,6 +13,7 @@ class FriendUserModel {
 
   factory FriendUserModel.fromJson(Map<String, dynamic> json) {
     return FriendUserModel(
+      id: json['id'] as String?,
       userCode: json['userCode'] as String? ?? '',
       displayName: json['displayName'] as String? ?? 'ผู้ใช้งาน',
       avatarUrl: json['avatarUrl'] as String?,
@@ -18,6 +21,7 @@ class FriendUserModel {
   }
 
   Map<String, dynamic> toJson() => {
+    if (id != null) 'id': id,
     'userCode': userCode,
     'displayName': displayName,
     'avatarUrl': avatarUrl,
