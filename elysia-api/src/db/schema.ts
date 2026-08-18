@@ -657,10 +657,13 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   consentRecords: many(consentRecords),
   ownedBills: many(bills),
   billItems: many(billItems),
-  payments: many(payments),
+  paymentsMade: many(payments, { relationName: "payer" }),
+  paymentsConfirmed: many(payments, { relationName: "confirmedByOwner" }),
   groupMemberships: many(groupMembers),
   friendRequestsSent: many(friendships, { relationName: "requester" }),
   friendRequestsReceived: many(friendships, { relationName: "addressee" }),
+  editLogsPerformed: many(editLogs, { relationName: "performedBy" }),
+  editLogsAffected: many(editLogs, { relationName: "affectedUser" }),
 }));
 
 export const consentRecordsRelations = relations(consentRecords, ({ one }) => ({
@@ -719,10 +722,12 @@ export const paymentsRelations = relations(payments, ({ one, many }) => ({
   payer: one(users, {
     fields: [payments.payerId],
     references: [users.id],
+    relationName: "payer",
   }),
   confirmedByOwner: one(users, {
     fields: [payments.confirmedByOwnerId],
     references: [users.id],
+    relationName: "confirmedByOwner",
   }),
   verifications: many(paymentVerifications),
 }));
@@ -781,10 +786,12 @@ export const editLogsRelations = relations(editLogs, ({ one }) => ({
   performedBy: one(users, {
     fields: [editLogs.performedById],
     references: [users.id],
+    relationName: "performedBy",
   }),
   affectedUser: one(users, {
     fields: [editLogs.affectedUserId],
     references: [users.id],
+    relationName: "affectedUser",
   }),
 }));
 

@@ -10,6 +10,16 @@ export class LineNotificationProvider implements NotificationProvider {
   private shouldFail = false;
   private failAfterAttempts = 0;
   private currentAttemptCount = 0;
+  private isMockMode: boolean;
+
+  constructor(isMockMode?: boolean) {
+    // Default to Mock mode during bun test runner, or explicit constructor flag
+    this.isMockMode = isMockMode !== undefined ? isMockMode : process.env.NODE_ENV === "test";
+  }
+
+  setMockMode(mock: boolean) {
+    this.isMockMode = mock;
+  }
 
   setSimulateFailure(fail: boolean, failAfterAttempts = 0) {
     this.shouldFail = fail;
@@ -62,8 +72,8 @@ export class LineNotificationProvider implements NotificationProvider {
 
     const token = process.env.LINE_CHANNEL_ACCESS_TOKEN;
 
-    // If real LINE Channel Access Token is provided, call LINE Messaging API
-    if (token) {
+    // If real LINE Channel Access Token is provided and not in mock mode, call LINE Messaging API
+    if (token && !this.isMockMode) {
       try {
         const response = await fetch("https://api.line.me/v2/bot/message/push", {
           method: "POST",
