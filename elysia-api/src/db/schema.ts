@@ -220,6 +220,7 @@ export const bills = pgTable(
     totalAmount: numeric("total_amount", { precision: 12, scale: 2 }).notNull(),
     receiptImageUrl: text("receipt_image_url"), // original bill photo
     ocrRawData: jsonb("ocr_raw_data"), // raw OCR extraction result, for audit
+    itemsBreakdown: jsonb("items_breakdown"), // Detailed breakdown: subtotal, service charge, tax, items list, formula explanation
     status: billStatusEnum("status").notNull().default("unpaid"),
 
     createdAt: timestamp("created_at").notNull().defaultNow(),

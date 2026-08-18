@@ -5,6 +5,29 @@ export const ParticipantSchema = t.Object({
   amount: t.Optional(t.Number({ minimum: 0, description: "Allocated amount (required for exact allocation)" })),
 });
 
+export const ReceiptItemBreakdownSchema = t.Object({
+  name: t.String({ description: "Name of item or menu" }),
+  price: t.Number({ minimum: 0, description: "Price of single unit or total item price" }),
+  quantity: t.Optional(t.Number({ minimum: 1, default: 1, description: "Quantity of items" })),
+  allocatedToUserIds: t.Optional(t.Array(t.String({ format: "uuid" }), { description: "User IDs assigned to this specific item" })),
+});
+
+export const ItemsBreakdownSchema = t.Object({
+  items: t.Array(ReceiptItemBreakdownSchema, { description: "List of items in the receipt" }),
+  subtotal: t.Optional(t.Number({ minimum: 0, description: "Subtotal sum of items" })),
+  serviceCharge: t.Optional(t.Object({
+    ratePercent: t.Optional(t.Number({ minimum: 0 })),
+    amount: t.Number({ minimum: 0 }),
+  })),
+  vat: t.Optional(t.Object({
+    ratePercent: t.Optional(t.Number({ minimum: 0 })),
+    amount: t.Number({ minimum: 0 }),
+  })),
+  discount: t.Optional(t.Number({ minimum: 0 })),
+  totalAmount: t.Number({ minimum: 0.01, description: "Calculated total amount" }),
+  formulaExplanation: t.Optional(t.String({ description: "Human-readable formula explanation: Subtotal + Service + VAT - Discount = Total" })),
+});
+
 export const CreateBillSchema = t.Object({
   title: t.Optional(t.String({ maxLength: 128, description: "Title of the bill" })),
   description: t.Optional(t.String({ description: "Description or notes for the bill" })),
@@ -12,14 +35,32 @@ export const CreateBillSchema = t.Object({
   currency: t.Optional(t.String({ default: "THB", maxLength: 3, description: "3-letter currency code (defaults to THB)" })),
   groupId: t.Optional(t.String({ format: "uuid", description: "Optional group ID" })),
   participants: t.Array(ParticipantSchema, { minItems: 1, description: "List of participants in this bill" }),
-  allocationMethod: t.Optional(t.Union([t.Literal("evenly"), t.Literal("exact")], { default: "evenly" })),
+  allocationMethod: t.Optional(t.Union([t.Literal("evenly"), t.Literal("exact"), t.Literal("itemized")], { default: "evenly" })),
+  itemsBreakdown: t.Optional(ItemsBreakdownSchema),
 });
 
 export const EditBillSchema = t.Object({
-  title: t.Optional(t.String({ maxLength: 128, description: "Updated bill title" })),
+  title: t.Optional(t.String({ maxLength: 128, description: "Updated bill title or merchant name" })),
   description: t.Optional(t.String({ description: "Updated bill description" })),
   totalAmount: t.Optional(t.Number({ minimum: 0.01, description: "Updated total bill amount" })),
+  itemsBreakdown: t.Optional(ItemsBreakdownSchema, { description: "Updated items breakdown, subtotal, VAT, or service charge" }),
   version: t.Optional(t.Number({ description: "Optimistic concurrency version or timestamp" })),
+});
+
+export const UpdateReceiptDraftSchema = t.Object({
+  merchant: t.Optional(t.String({ maxLength: 128, description: "Updated merchant/restaurant name" })),
+  items: t.Optional(t.Array(ReceiptItemBreakdownSchema, { description: "Updated list of line items" })),
+  subtotal: t.Optional(t.Number({ minimum: 0, description: "Updated subtotal" })),
+  serviceCharge: t.Optional(t.Object({
+    ratePercent: t.Optional(t.Number({ minimum: 0 })),
+    amount: t.Number({ minimum: 0 }),
+  })),
+  vat: t.Optional(t.Object({
+    ratePercent: t.Optional(t.Number({ minimum: 0 })),
+    amount: t.Number({ minimum: 0 }),
+  })),
+  discount: t.Optional(t.Number({ minimum: 0 })),
+  totalAmount: t.Optional(t.Number({ minimum: 0.01, description: "Updated total amount" })),
 });
 
 export const EditBillItemSchema = t.Object({

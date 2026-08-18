@@ -34,17 +34,40 @@ describe("Live E2E: Real Images with PaddleOCR Container", () => {
 
         const result = await service.extractReceipt(fileBlob);
 
-        console.log(`\n[PaddleOCR Live Result for: ${img.name}]`);
-        console.log(`Merchant: ${result.merchant}`);
-        console.log(`Total: ${result.totalAmount} ${result.currency}`);
-        console.log(`Items count: ${result.items.length}`);
+        console.log(`\n======================================================================`);
+        console.log(`🧾 [LIVE OCR RESULT] ${img.name}`);
+        console.log(`======================================================================`);
+        console.log(`🏪 Merchant : ${result.merchant}`);
+        console.log(`💵 Total    : ${result.totalAmount} ${result.currency}`);
+        console.log(`🔢 Subtotal : ${result.subtotal} ${result.currency}`);
+        if (result.serviceCharge) console.log(`🛎️  Service  : ${result.serviceCharge.amount} THB (${result.serviceCharge.ratePercent || 10}%)`);
+        if (result.vat) console.log(`🏛️  VAT      : ${result.vat.amount} THB (${result.vat.ratePercent || 7}%)`);
+        if (result.discount) console.log(`🏷️  Discount : ${result.discount} THB`);
+        console.log(`📝 Formula  : ${result.formulaExplanation || "N/A"}`);
+        console.log(`----------------------------------------------------------------------`);
+        console.log(`📦 Line Items (${result.items.length} items):`);
+        result.items.forEach((item, idx) => {
+          console.log(`   ${(idx + 1).toString().padStart(2, " ")}. ${item.name.padEnd(28, " ")} : ${item.amount.toFixed(2)} THB (qty: ${item.quantity || 1})`);
+        });
+        console.log(`----------------------------------------------------------------------`);
+        console.log(`💾 Database JSON Breakdown (items_breakdown):`);
+        console.log(JSON.stringify({
+          items: result.items,
+          subtotal: result.subtotal,
+          service_charge: result.serviceCharge,
+          vat: result.vat,
+          discount: result.discount,
+          total_amount: result.totalAmount,
+          formula_explanation: result.formulaExplanation
+        }, null, 2));
+        console.log(`======================================================================\n`);
 
         expect(result.currency).toBe("THB");
         expect(result.totalAmount).toBeGreaterThan(0);
         expect(result.items.length).toBeGreaterThan(0);
         expect(result.merchant).toBeDefined();
       },
-      30000 // 30s timeout for full CPU image inference
+      60000 // 60s timeout for CPU image inference
     );
   }
 });

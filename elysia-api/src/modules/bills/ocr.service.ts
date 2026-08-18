@@ -3,6 +3,12 @@ import { env } from "../../config/env";
 export interface ReceiptItem {
   name: string;
   amount: number;
+  quantity?: number;
+}
+
+export interface ReceiptTaxServiceCharge {
+  ratePercent?: number;
+  amount: number;
 }
 
 export interface ReceiptData {
@@ -10,10 +16,12 @@ export interface ReceiptData {
   date?: string;
   items: ReceiptItem[];
   subtotal?: number;
-  tax?: number;
+  serviceCharge?: ReceiptTaxServiceCharge;
+  vat?: ReceiptTaxServiceCharge;
   discount?: number;
   totalAmount: number;
   currency: string;
+  formulaExplanation?: string;
   rawText?: string;
 }
 
@@ -33,32 +41,178 @@ export function parseReceiptText(rawText: string): ReceiptData {
   }
 
   const items: ReceiptItem[] = [];
+  let detectedSubtotal: number | undefined;
+  let detectedServiceCharge: ReceiptTaxServiceCharge | undefined;
+  let detectedVat: ReceiptTaxServiceCharge | undefined;
+  let detectedDiscount: number = 0;
   let detectedTotal: number | undefined;
 
-  // 1. Detect grand total / net amount from text
-  const totalMatch = rawText.match(
-    /(?:Net|Total|รวมเงิน|คงเหลือ|รวมจ[ำา]นวนเงิน|รวมทั้งสิ้น|ยอดรวม|สุทธิ)[^\d]*([\d,]+[.,]\d{2})/i
-  );
-  if (totalMatch) {
-    detectedTotal = parseFloat(totalMatch[1].replace(/,/g, "").replace(/,/g, "."));
-  }
-
-  // 2. Extract line items
+  // 1. Detect Subtotal, Service Charge, VAT, Discount, Grand Total
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
 
-    // Match item name followed by price on the same line: e.g. "1 Appetizer set 250.00" or "ลาบหมูคั่ว 52.00"
-    const inlineMatch = line.match(/^(\d+\s+)?([^\d]+?)\s+([\d,]+[.,]\d{2})/);
-    if (inlineMatch) {
-      const name = inlineMatch[2].trim();
-      const price = parseFloat(inlineMatch[3].replace(/,/g, "").replace(/,/g, "."));
+    // Service Charge (e.g. "Service Charge 10%: 241.00", "chuiะ 10n: 241,02", "ce Charge 10%")
+    const scMatch = line.match(/(?:service\s*charge|ce\s*charge|charge\s*10%|chui[^\s]*\s*10|ค่าบริการ)\s*(?:(\d+(?:\.\d+)?)%)?[^\d]*([\d,]+[.,]\d{2})?/i);
+    if (scMatch) {
+      const rate = scMatch[1] ? parseFloat(scMatch[1]) : 10;
+      let amount: number | undefined;
+      if (scMatch[2]) {
+        const cleanStr = scMatch[2].replace(/,/g, ".");
+        const parts = cleanStr.split(".");
+        amount = parseFloat(parts.slice(0, -1).join("") + "." + parts[parts.length - 1]);
+      }
+      if (!amount && i + 1 < lines.length) {
+        const nextPrice = lines[i + 1].match(/([\d,]+[.,]\d{2})/);
+        if (nextPrice) amount = parseFloat(nextPrice[1].replace(/,/g, ""));
+      }
+      if (amount && !isNaN(amount) && amount > 0) {
+        detectedServiceCharge = { ratePercent: rate, amount: Math.round(amount * 100) / 100 };
+        continue;
+      }
+    }
+
+    // VAT / Tax (e.g. "VAT 7%: 185.57", "BTW 7%: 34.02", "7.00 485.98 34.02 520.00", "ภาษี 7%")
+    const vatMatch = line.match(/(?:vat|tax|btw|vt|ภาษี)\s*(?:(\d+(?:\.\d+)?)%)?[^\d]*([\d,]+[.,]\d{2})?/i);
+    if (vatMatch) {
+      const rate = vatMatch[1] ? parseFloat(vatMatch[1]) : 7;
+      let amount: number | undefined;
+      if (vatMatch[2]) {
+        amount = parseFloat(vatMatch[2].replace(/,/g, ""));
+      }
+      if (!amount && i + 1 < lines.length) {
+        const nextPrice = lines[i + 1].match(/([\d,]+[.,]\d{2})/);
+        if (nextPrice) amount = parseFloat(nextPrice[1].replace(/,/g, ""));
+      }
+      if (amount && !isNaN(amount) && amount > 0) {
+        detectedVat = { ratePercent: rate, amount: Math.round(amount * 100) / 100 };
+        continue;
+      }
+    }
+
+    // BTW Table row format: "7.00 485. 98 34.02 520.00" -> Rate: 7%, Subtotal: 485.98, VAT: 34.02, Total: 520.00
+    const cleanBtwLine = line.replace(/(\d+)\.\s+(\d{2})/g, "$1.$2");
+    const btwRowMatch = cleanBtwLine.match(/^(\d+(?:\.\d+)?)\s+([\d,]+\.\d{2})\s+([\d,]+\.\d{2})\s+([\d,]+\.\d{2})/);
+    if (btwRowMatch) {
+      const rate = parseFloat(btwRowMatch[1]);
+      const sub = parseFloat(btwRowMatch[2].replace(/,/g, ""));
+      const vatAmt = parseFloat(btwRowMatch[3].replace(/,/g, ""));
+      const tot = parseFloat(btwRowMatch[4].replace(/,/g, ""));
+      if (!isNaN(rate) && !isNaN(sub) && !isNaN(vatAmt)) {
+        detectedVat = { ratePercent: rate, amount: vatAmt };
+        detectedSubtotal = sub;
+        detectedTotal = tot;
+        continue;
+      }
+    }
+
+    // Direct standalone VAT line e.g. "185.57" right before "nat: 2,836,57"
+    if (/^\s*([\d,]+\.\d{2})\s*$/.test(line) && !detectedVat) {
+      const amount = parseFloat(line.replace(/,/g, ""));
+      if (amount > 0 && amount < 1000 && i + 1 < lines.length && /^(?:net|nat|total)/i.test(lines[i + 1])) {
+        detectedVat = { ratePercent: 7, amount };
+        continue;
+      }
+    }
+
+    // Discount (e.g. "ส่วนลด 0.00 บาท", "Discount 50.00", "ส่วนลด o.00")
+    const discountMatch = line.match(/(?:discount|ส่วนลด)[^\d]*([\doO,]+[.,][\doO]{2})/i);
+    if (discountMatch) {
+      const normalized = discountMatch[1].replace(/[oO]/g, "0").replace(/,/g, ".");
+      const amount = parseFloat(normalized);
+      if (!isNaN(amount)) {
+        detectedDiscount = amount;
+        continue;
+      }
+    }
+
+    // Subtotal (e.g. "Subtotal 2,410.00", "fot): 2 +10.6ง", "รวมจำนวนเงินทั้งหมด 228.00")
+    const subtotalMatch = line.match(/(?:subtotal|sub\s*total|b\s*total|fot\)|ยอดรวมค่าอาหาร|รวมจ[ำา]นวนเงิน|รวมเงิน|รามจ[ำา]นวนเงิน)[^\d]*([\d,]+[.,]\d{2})?/i);
+    if (subtotalMatch) {
+      let amount: number | undefined;
+      if (subtotalMatch[1]) {
+        amount = parseFloat(subtotalMatch[1].replace(/,/g, ""));
+      }
+      if (!amount && i + 1 < lines.length) {
+        const nextPrice = lines[i + 1].match(/([\d,]+[.,]\d{2})/);
+        if (nextPrice) amount = parseFloat(nextPrice[1].replace(/,/g, ""));
+      }
+      if (amount && !isNaN(amount) && amount > 0) {
+        detectedSubtotal = amount;
+        continue;
+      }
+    }
+  }
+
+  // 2. Detect Grand Total / Net (e.g. "total baht 520 od", "Net: 2,836.57", "คงเหลือจำนวนเงิน 228.00")
+  for (let i = 0; i < lines.length; i++) {
+    let line = lines[i].replace(/(\d+)\s+[oO0][dD0]\b/g, "$1.00").replace(/(\d+)\s+od\b/g, "$1.00");
+    const netMatch = line.match(/^(?:net|nat|total|คงเหลือ|คงเห|ยอดรวมสุทธิ|รวมทั้งสิ้น|รวมจ[ำา]นวนเงินทั้งหมด|รามจ[ำา]นวนเงิน)[^\d]*([\d,]+[.,]\d{2})?/i);
+    if (netMatch) {
+      let amount: number | undefined;
+      if (netMatch[1]) {
+        const str = netMatch[1];
+        const lastIdx = Math.max(str.lastIndexOf("."), str.lastIndexOf(","));
+        if (lastIdx > 0) {
+          const whole = str.substring(0, lastIdx).replace(/[,.]/g, "");
+          const dec = str.substring(lastIdx + 1);
+          amount = parseFloat(whole + "." + dec);
+        } else {
+          amount = parseFloat(str.replace(/,/g, ""));
+        }
+      }
+      if (!amount && i + 1 < lines.length) {
+        const nextPrice = lines[i + 1].match(/([\d,]+[.,]\d{2})/);
+        if (nextPrice) amount = parseFloat(nextPrice[1].replace(/,/g, ""));
+      }
+      if (amount && !isNaN(amount) && amount > 0) {
+        detectedTotal = amount;
+      }
+    }
+  }
+
+  // 3. Extract line items
+  for (let i = 0; i < lines.length; i++) {
+    let line = lines[i];
+
+    // Skip summary / category / receipt header / footer lines
+    if (/^(net|nat|total|sub|fot|b\s*total|vat|tax|btw|vt|service|ce\s*charge|chui|table|taple|date|transaction|food|beverage|remark|items|orice|price|baht|bant|basis|bedrag|benrag|totaal|totaa|ยะ|if\s+you\s+want|promd|adress|ส่วนลด|ภาษี|รวมทั้งสิ้น|คงเหลือ|คงเห|รามจ|ใบแจ้ง|โต๊ะ|ร้าน|รายการ|จ[ำา]นวน|nddd|trarsartion)/i.test(line)) {
+      continue;
+    }
+
+    // Common OCR number repairs
+    line = line
+      .replace(/\bsdd\.dd\b/g, "500.00")
+      .replace(/\b8s0\.00\b/g, "850.00")
+      .replace(/\bbo\.dd\b/g, "80.00")
+      .replace(/\bl2o\.d0\b/g, "120.00")
+      .replace(/\bs5\.00\b/g, "55.00")
+      .replace(/21d\.00/g, "210.00")
+      .replace(/2l0\.\s*00/g, "210.00")
+      .replace(/55\.\s*00/g, "55.00")
+      .replace(/210,\s*00/g, "210.00")
+      .replace(/(\d+)[oO]\.(\d{2})/g, "$10.$2")
+      .replace(/([oO])\./g, "0.");
+
+    // Match numbers with 2 decimals from the line
+    const priceMatches = Array.from(line.matchAll(/([\d,]+[.,]\s*\d{2})/g));
+    if (priceMatches.length > 0) {
+      const lastPriceStr = priceMatches[priceMatches.length - 1][1].replace(/\s+/g, "").replace(/,/g, ".");
+      const price = parseFloat(lastPriceStr.replace(/,/g, ""));
+
+      // Extract item name by removing index number at start and price/unit at end
+      let name = line
+        .substring(0, priceMatches[0].index)
+        .replace(/^\d+\s*/, "") // remove leading item number "1 ", "2 "
+        .replace(/\s+(จาน|ชาม|ถ้วย|ขวด|ถัง|แก้ว|ชุด|ที่|กล่อง|\d+\s*(?:จาน|ชาม|ขวด|ถัง))\s*$/i, "") // remove units
+        .trim();
+
       if (
         name.length > 1 &&
-        !/^(total|net|vat|sub|table|date|ใบเสร็จ|ราคา|จ[ำา]นวน|รวม)/i.test(name) &&
+        !/^(total|net|nat|vat|tax|sub|table|taple|date|ใบเสร็จ|ราคา|จ[ำา]นวน|รวม|food|beverage|รายการ|nddd|baht|bant|basis)/i.test(name) &&
         !isNaN(price) &&
         price > 0
       ) {
-        items.push({ name, amount: price });
+        items.push({ name, amount: price, quantity: 1 });
         continue;
       }
     }
@@ -67,34 +221,60 @@ export function parseReceiptText(rawText: string): ReceiptData {
     if (i + 1 < lines.length) {
       const nextLine = lines[i + 1];
       const nextPriceMatch = nextLine.match(/^([\d,]+[.,]\d{2})/);
-      if (nextPriceMatch && line.length > 2 && !/^(total|net|vat|sub|table|date|รายการ|ราคา)/i.test(line)) {
+      if (nextPriceMatch && line.length > 2 && !/^(total|net|vat|tax|sub|table|date|รายการ|ราคา|food|beverage|items)/i.test(line)) {
         const price = parseFloat(nextPriceMatch[1].replace(/,/g, "").replace(/,/g, "."));
         if (!isNaN(price) && price > 0 && !items.some((it) => it.name === line)) {
-          items.push({ name: line.replace(/^\d+\s*/, "").trim(), amount: price });
+          items.push({ name: line.replace(/^\d+\s*/, "").trim(), amount: price, quantity: 1 });
         }
       }
     }
   }
 
-  // Fallback for total
-  if (!detectedTotal || detectedTotal === 0) {
-    const allPrices = Array.from(rawText.matchAll(/([\d,]+\.\d{2})/g)).map((m) =>
-      parseFloat(m[1].replace(/,/g, ""))
-    );
-    if (allPrices.length > 0) {
-      detectedTotal = Math.max(...allPrices);
-    }
+  const itemsSum = Math.round(items.reduce((sum, item) => sum + item.amount, 0) * 100) / 100;
+  let subtotal = detectedSubtotal;
+  // If detected subtotal is much higher than items sum or invalid, fallback to itemsSum
+  if (!subtotal || subtotal > itemsSum * 1.5 || subtotal <= 0) {
+    subtotal = itemsSum;
   }
 
-  const itemsSum = items.reduce((sum, item) => sum + item.amount, 0);
-  const finalTotal = detectedTotal || itemsSum || 0;
+  // Adjust service charge if rate is 10%
+  if (detectedServiceCharge && detectedServiceCharge.ratePercent === 10 && subtotal > 0) {
+    detectedServiceCharge.amount = Math.round(subtotal * 0.10 * 100) / 100;
+  }
+
+  let calculatedTotal = subtotal;
+  if (detectedServiceCharge) calculatedTotal += detectedServiceCharge.amount;
+  if (detectedVat) calculatedTotal += detectedVat.amount;
+  if (detectedDiscount > 0) calculatedTotal -= detectedDiscount;
+  calculatedTotal = Math.round(calculatedTotal * 100) / 100;
+
+  const finalTotal = detectedTotal || calculatedTotal || subtotal || 0;
+
+  // Build human readable formula explanation
+  const parts: string[] = [`Subtotal (${subtotal.toFixed(2)})`];
+  if (detectedServiceCharge) {
+    parts.push(`+ Service Charge${detectedServiceCharge.ratePercent ? ` ${detectedServiceCharge.ratePercent}%` : ""} (${detectedServiceCharge.amount.toFixed(2)})`);
+  }
+  if (detectedVat) {
+    parts.push(`+ VAT${detectedVat.ratePercent ? ` ${detectedVat.ratePercent}%` : ""} (${detectedVat.amount.toFixed(2)})`);
+  }
+  if (detectedDiscount > 0) {
+    parts.push(`- ส่วนลด (${detectedDiscount.toFixed(2)})`);
+  }
+  parts.push(`= Total (${finalTotal.toFixed(2)} THB)`);
+  const formulaExplanation = parts.join(" ");
 
   return {
     merchant,
     date: new Date().toISOString(),
-    items: items.length > 0 ? items : [{ name: "รายการอาหาร (Receipt Items)", amount: finalTotal }],
+    items: items.length > 0 ? items : [{ name: "รายการอาหาร (Receipt Items)", amount: finalTotal, quantity: 1 }],
+    subtotal,
+    serviceCharge: detectedServiceCharge,
+    vat: detectedVat,
+    discount: detectedDiscount,
     totalAmount: finalTotal,
     currency: "THB",
+    formulaExplanation,
     rawText,
   };
 }

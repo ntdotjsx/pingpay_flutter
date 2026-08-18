@@ -10,6 +10,7 @@ export class BillRepository {
       totalAmount: string;
       currency: string;
       groupId?: string;
+      itemsBreakdown?: any;
     },
     items: { debtorId: string; amount: string }[]
   ) {
@@ -20,6 +21,7 @@ export class BillRepository {
         totalAmount: data.totalAmount,
         currency: data.currency,
         groupId: data.groupId,
+        itemsBreakdown: data.itemsBreakdown,
         status: "unpaid",
       }).returning();
 
@@ -72,7 +74,11 @@ export class BillRepository {
     });
   }
 
-  async updateBill(id: string, userId: string, data: { title?: string; totalAmount?: string }) {
+  async updateBill(
+    id: string,
+    userId: string,
+    data: { title?: string; description?: string; totalAmount?: string; itemsBreakdown?: any }
+  ) {
     return await db.transaction(async (tx) => {
       const bill = await tx.query.bills.findFirst({ where: eq(bills.id, id) });
       if (!bill) throw new Error("Bill not found");
@@ -80,7 +86,9 @@ export class BillRepository {
       const [updatedBill] = await tx.update(bills)
         .set({
           title: data.title !== undefined ? data.title : bill.title,
+          description: data.description !== undefined ? data.description : bill.description,
           totalAmount: data.totalAmount !== undefined ? data.totalAmount : bill.totalAmount,
+          itemsBreakdown: data.itemsBreakdown !== undefined ? data.itemsBreakdown : bill.itemsBreakdown,
           updatedAt: new Date(),
         })
         .where(eq(bills.id, id))
@@ -90,8 +98,8 @@ export class BillRepository {
         action: "bill_amount_edited",
         billId: id,
         performedById: userId,
-        previousValue: { title: bill.title, totalAmount: bill.totalAmount },
-        newValue: { title: updatedBill.title, totalAmount: updatedBill.totalAmount },
+        previousValue: { title: bill.title, totalAmount: bill.totalAmount, itemsBreakdown: bill.itemsBreakdown },
+        newValue: { title: updatedBill.title, totalAmount: updatedBill.totalAmount, itemsBreakdown: updatedBill.itemsBreakdown },
       });
 
       return updatedBill;

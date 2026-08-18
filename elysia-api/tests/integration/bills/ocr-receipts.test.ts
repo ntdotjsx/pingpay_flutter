@@ -12,56 +12,59 @@ export const sampleReceipt1_TheLocal: ReceiptData = {
   merchant: "THE LOCAL BY OAMTHONG THAI CUISINE",
   date: "2019-03-29T20:02:00Z",
   items: [
-    { name: "Appetizer set", amount: 250.00 },
-    { name: "Pomelo Salad", amount: 250.00 },
-    { name: "Bai cha kram local vegeta (x2)", amount: 500.00 },
-    { name: "Grill Beef with homemade", amount: 850.00 },
-    { name: "Chicken in Pandanus Leave", amount: 220.00 },
-    { name: "Rice (x2)", amount: 80.00 },
-    { name: "Mango Blended", amount: 120.00 },
-    { name: "Cold Butt&Passion", amount: 85.00 },
-    { name: "Soda", amount: 55.00 },
+    { name: "Appetizer set", amount: 250.00, quantity: 1 },
+    { name: "Pomelo Salad", amount: 250.00, quantity: 1 },
+    { name: "Bai cha kram local vegeta", amount: 500.00, quantity: 2 },
+    { name: "Grill Beef with homemade", amount: 850.00, quantity: 1 },
+    { name: "Chicken in Pandanus Leave", amount: 220.00, quantity: 1 },
+    { name: "Rice", amount: 80.00, quantity: 2 },
+    { name: "Mango Blended", amount: 120.00, quantity: 1 },
+    { name: "Cold Butt&Passion", amount: 85.00, quantity: 1 },
+    { name: "Soda", amount: 55.00, quantity: 1 },
   ],
   subtotal: 2410.00,
-  tax: 185.57, // VAT
+  serviceCharge: { ratePercent: 10, amount: 241.00 },
+  vat: { ratePercent: 7, amount: 185.57 },
   discount: 0,
-  totalAmount: 2836.57, // Net (Includes 10% Service Charge 241.00 + VAT 185.57)
-  currency: "THB"
+  totalAmount: 2836.57, // Subtotal (2410) + Service Charge (241) + VAT (185.57) = 2836.57
+  currency: "THB",
+  formulaExplanation: "Subtotal (2410.00) + Service Charge 10% (241.00) + VAT 7% (185.57) = Total (2836.57 THB)",
 };
 
 export const sampleReceipt2_MaiThai: ReceiptData = {
   merchant: "MAI THAI (Pattaya Naklua Road)",
   date: "2016-09-17T18:28:00Z",
   items: [
-    { name: "Khaw phad in saparot", amount: 210.00 },
-    { name: "PANAENG KAI", amount: 210.00 },
-    { name: "Water", amount: 55.00 },
-    { name: "STEAMED RICE", amount: 45.00 }
+    { name: "Khaw phad in saparot", amount: 210.00, quantity: 1 },
+    { name: "PANAENG KAI", amount: 210.00, quantity: 1 },
+    { name: "Water", amount: 55.00, quantity: 1 },
+    { name: "STEAMED RICE", amount: 45.00, quantity: 1 }
   ],
   subtotal: 485.98,
-  tax: 34.02,
+  vat: { ratePercent: 7, amount: 34.02 },
   discount: 0,
   totalAmount: 520.00,
-  currency: "THB"
+  currency: "THB",
+  formulaExplanation: "Subtotal (485.98) + VAT 7% (34.02) = Total (520.00 THB)",
 };
 
 export const sampleReceipt3_TongNorthern: ReceiptData = {
   merchant: "ต๋อง อาหารพื้นเมือง (Tong Northern Thai Cuisine, เชียงใหม่)",
   date: "2012-04-16T13:52:51Z",
   items: [
-    { name: "ลาบหมูคั่ว", amount: 52.00 },
-    { name: "แกงฮังเล", amount: 62.00 },
-    { name: "ข้าวเหนียว", amount: 15.00 },
-    { name: "ยำยอดมะขาม", amount: 62.00 },
-    { name: "ข้าวสวย", amount: 15.00 },
-    { name: "น้ำดื่ม", amount: 12.00 },
-    { name: "น้ำแข็ง S", amount: 10.00 }
+    { name: "ลาบหมูคั่ว", amount: 52.00, quantity: 1 },
+    { name: "แกงฮังเล", amount: 62.00, quantity: 1 },
+    { name: "ข้าวเหนียว", amount: 15.00, quantity: 1 },
+    { name: "ยำยอดมะขาม", amount: 62.00, quantity: 1 },
+    { name: "ข้าวสวย", amount: 15.00, quantity: 1 },
+    { name: "น้ำดื่ม", amount: 12.00, quantity: 1 },
+    { name: "น้ำแข็ง S", amount: 10.00, quantity: 1 }
   ],
   subtotal: 228.00,
-  tax: 0,
   discount: 0.00,
   totalAmount: 228.00,
-  currency: "THB"
+  currency: "THB",
+  formulaExplanation: "Subtotal (228.00) = Total (228.00 THB)",
 };
 
 describe("Integration: Real Receipts OCR & Bill Splitting Flow", () => {

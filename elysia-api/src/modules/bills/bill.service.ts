@@ -14,13 +14,15 @@ export interface CreateBillDTO {
   currency?: string;
   groupId?: string;
   participants: Array<{ userId: string; amount?: number }>;
-  allocationMethod?: "evenly" | "exact";
+  allocationMethod?: "evenly" | "exact" | "itemized";
+  itemsBreakdown?: any;
 }
 
 export interface EditBillDTO {
   title?: string;
   description?: string;
   totalAmount?: number;
+  itemsBreakdown?: any;
   version?: number;
 }
 
@@ -86,6 +88,7 @@ export class BillService {
         totalAmount: dto.totalAmount.toFixed(2),
         currency: dto.currency || "THB",
         groupId: dto.groupId,
+        itemsBreakdown: dto.itemsBreakdown,
       },
       finalAllocations
     );
@@ -109,7 +112,9 @@ export class BillService {
 
     return await this.repo.updateBill(id, userId, {
       title: dto.title,
+      description: dto.description,
       totalAmount: dto.totalAmount !== undefined ? dto.totalAmount.toFixed(2) : undefined,
+      itemsBreakdown: dto.itemsBreakdown,
     });
   }
 

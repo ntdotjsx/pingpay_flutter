@@ -14,8 +14,8 @@ describe("Unit: PaddleOCR Receipt Text Parser", () => {
 
     expect(parsed.merchant).toBe("ต๋อง อาหารพื้นเมือง");
     expect(parsed.items.length).toBe(4);
-    expect(parsed.items[0]).toEqual({ name: "ลาบหมูคั่ว", amount: 52 });
-    expect(parsed.items[1]).toEqual({ name: "แกงฮังเล", amount: 62 });
+    expect(parsed.items[0]).toEqual({ name: "ลาบหมูคั่ว", amount: 52, quantity: 1 });
+    expect(parsed.items[1]).toEqual({ name: "แกงฮังเล", amount: 62, quantity: 1 });
     expect(parsed.totalAmount).toBe(141.00);
     expect(parsed.currency).toBe("THB");
   });
