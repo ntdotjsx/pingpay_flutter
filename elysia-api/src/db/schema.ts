@@ -76,6 +76,14 @@ export const editActionEnum = pgEnum("edit_action", [
   "friend_removed",
 ]);
 
+export const transactionTypeEnum = pgEnum("transaction_type", [
+  "debt_created",
+  "debt_adjusted",
+  "payment",
+  "refund",
+  "write_off",
+]);
+
 export const accountStatusEnum = pgEnum("account_status", [
   "active",
   "suspended",
@@ -206,7 +214,9 @@ export const bills = pgTable(
     ownerId: uuid("owner_id") // creditor - the person who paid upfront
       .notNull()
       .references(() => users.id, { onDelete: "restrict" }),
+    groupId: uuid("group_id").references(() => groups.id, { onDelete: "set null" }),
     title: varchar("title", { length: 128 }),
+    currency: varchar("currency", { length: 3 }).notNull().default("THB"),
     totalAmount: numeric("total_amount", { precision: 12, scale: 2 }).notNull(),
     receiptImageUrl: text("receipt_image_url"), // original bill photo
     ocrRawData: jsonb("ocr_raw_data"), // raw OCR extraction result, for audit
@@ -273,7 +283,47 @@ export const billItems = pgTable(
 );
 
 /* -------------------------------------------------------------------------- */
-/* PAYMENTS                                                                   */
+/* GROUPS                                                                     */
+/* -------------------------------------------------------------------------- */
+
+export const groups = pgTable(
+  "groups",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    name: varchar("name", { length: 128 }).notNull(),
+    description: text("description"),
+    createdById: uuid("created_by_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  }
+);
+
+export const groupMembers = pgTable(
+  "group_members",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    groupId: uuid("group_id")
+      .notNull()
+      .references(() => groups.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    role: varchar("role", { length: 32 }).notNull().default("member"), // 'admin', 'member'
+    joinedAt: timestamp("joined_at").notNull().defaultNow(),
+  },
+  (table) => ({
+    groupUserIdx: uniqueIndex("group_members_group_user_idx").on(
+      table.groupId,
+      table.userId
+    ),
+    userIdx: index("group_members_user_idx").on(table.userId),
+  })
+);
+
+/* -------------------------------------------------------------------------- */
+/* PAYMENTS & FINANCIAL TRANSACTIONS                                          */
 /* -------------------------------------------------------------------------- */
 
 export const payments = pgTable(
@@ -316,6 +366,34 @@ export const payments = pgTable(
   (table) => ({
     billItemIdx: index("payments_bill_item_idx").on(table.billItemId),
     payerIdx: index("payments_payer_idx").on(table.payerId),
+  })
+);
+
+/* Strict append-only ledger for all financial movements. */
+export const financialTransactions = pgTable(
+  "financial_transactions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    billId: uuid("bill_id")
+      .notNull()
+      .references(() => bills.id, { onDelete: "cascade" }),
+    billItemId: uuid("bill_item_id")
+      .notNull()
+      .references(() => billItems.id, { onDelete: "cascade" }),
+    type: transactionTypeEnum("type").notNull(),
+    amount: numeric("amount", { precision: 12, scale: 2 }).notNull(),
+    currency: varchar("currency", { length: 3 }).notNull().default("THB"),
+    referenceId: varchar("reference_id", { length: 128 }), // Connects to payments.id, editLogs.id etc.
+    createdById: uuid("created_by_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    metadata: jsonb("metadata"),
+  },
+  (table) => ({
+    billIdx: index("fin_tx_bill_idx").on(table.billId),
+    billItemIdx: index("fin_tx_bill_item_idx").on(table.billItemId),
+    typeIdx: index("fin_tx_type_idx").on(table.type),
   })
 );
 
@@ -488,6 +566,7 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   ownedBills: many(bills),
   billItems: many(billItems),
   payments: many(payments),
+  groupMemberships: many(groupMembers),
   friendRequestsSent: many(friendships, { relationName: "requester" }),
   friendRequestsReceived: many(friendships, { relationName: "addressee" }),
 }));
@@ -517,8 +596,13 @@ export const billsRelations = relations(bills, ({ one, many }) => ({
     fields: [bills.ownerId],
     references: [users.id],
   }),
+  group: one(groups, {
+    fields: [bills.groupId],
+    references: [groups.id],
+  }),
   items: many(billItems),
   editLogs: many(editLogs),
+  financialTransactions: many(financialTransactions),
 }));
 
 export const billItemsRelations = relations(billItems, ({ one, many }) => ({
@@ -531,6 +615,7 @@ export const billItemsRelations = relations(billItems, ({ one, many }) => ({
     references: [users.id],
   }),
   payments: many(payments),
+  financialTransactions: many(financialTransactions),
   disputes: many(disputes),
   reminderLogs: many(reminderLogs),
 }));
@@ -542,6 +627,41 @@ export const paymentsRelations = relations(payments, ({ one }) => ({
   }),
   payer: one(users, {
     fields: [payments.payerId],
+    references: [users.id],
+  }),
+}));
+
+export const groupsRelations = relations(groups, ({ one, many }) => ({
+  creator: one(users, {
+    fields: [groups.createdById],
+    references: [users.id],
+  }),
+  members: many(groupMembers),
+  bills: many(bills),
+}));
+
+export const groupMembersRelations = relations(groupMembers, ({ one }) => ({
+  group: one(groups, {
+    fields: [groupMembers.groupId],
+    references: [groups.id],
+  }),
+  user: one(users, {
+    fields: [groupMembers.userId],
+    references: [users.id],
+  }),
+}));
+
+export const financialTransactionsRelations = relations(financialTransactions, ({ one }) => ({
+  bill: one(bills, {
+    fields: [financialTransactions.billId],
+    references: [bills.id],
+  }),
+  billItem: one(billItems, {
+    fields: [financialTransactions.billItemId],
+    references: [billItems.id],
+  }),
+  createdBy: one(users, {
+    fields: [financialTransactions.createdById],
     references: [users.id],
   }),
 }));
