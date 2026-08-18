@@ -266,40 +266,11 @@ export class FriendService {
   }
 
   static async getFriends(currentUserId: string, limit: number) {
-    // A friend is someone where status is accepted and removedAt is null.
-    // The current user can be requester or addressee.
-    
-    // We will query friendships where currentUser is involved
-    const rels = await db.query.friendships.findMany({
-      where: and(
-        eq(friendships.status, "accepted"),
-        isNull(friendships.removedAt),
-        or(
-          eq(friendships.requesterId, currentUserId),
-          eq(friendships.addresseeId, currentUserId)
-        )
-      ),
-      limit,
-    });
-
-    if (rels.length === 0) return [];
-
-    const otherUserIds = rels.map((r) =>
-      r.requesterId === currentUserId ? r.addresseeId : r.requesterId
-    );
-
-    // Fetch user details for other users
-    const otherUsers = await db.query.users.findMany({
-      where: notInArray(users.id, []), // just a placeholder, we'll use a better approach
-    });
-    // Wait, Drizzle doesn't support notInArray with empty gracefully sometimes.
-    // Better to query them properly:
-    // actually, let's just do a join:
-
     const friendsList = await db
       .select({
         friendshipId: friendships.id,
         createdAt: friendships.createdAt,
+        id: users.id,
         userCode: users.userCode,
         displayName: users.displayName,
         avatarUrl: users.avatarUrl,
@@ -328,6 +299,7 @@ export class FriendService {
       friendshipId: f.friendshipId,
       friendsSince: f.createdAt,
       user: {
+        id: f.id,
         userCode: f.userCode,
         displayName: f.displayName,
         avatarUrl: f.avatarUrl,

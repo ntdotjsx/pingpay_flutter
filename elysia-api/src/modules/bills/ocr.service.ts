@@ -175,7 +175,7 @@ export function parseReceiptText(rawText: string): ReceiptData {
     let line = lines[i];
 
     // Skip summary / category / receipt header / footer lines
-    if (/^(net|nat|total|sub|fot|b\s*total|vat|tax|btw|vt|service|ce\s*charge|chui|table|taple|date|transaction|food|beverage|remark|items|orice|price|baht|bant|basis|bedrag|benrag|totaal|totaa|ยะ|if\s+you\s+want|promd|adress|ส่วนลด|ภาษี|รวมทั้งสิ้น|คงเหลือ|คงเห|รามจ|ใบแจ้ง|โต๊ะ|ร้าน|รายการ|จ[ำา]นวน|nddd|trarsartion)/i.test(line)) {
+    if (/^(net|nat|total|sub|fot|b\s*total|vat|tax|btw|vt|service|ce\s*charge|chui|table|taple|date|transaction|food|beverage|remark|items|orice|price|baht|bant|basis|bedrag|benrag|totaal|totaa|ยะ|if\s+you\s+want|promd|adress|ส่วนลด|ภาษี|รวมทั้งสิ้น|คงเหลือ|คงเห|รามจ|ใบแจ้ง|โต๊ะ|ร้าน|รายการ|จ[ำา]นวน|nddd|trarsartion|ทง|หคด|เงง|จำนวเนจิง)/i.test(line)) {
       continue;
     }
 
