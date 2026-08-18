@@ -7,6 +7,7 @@
   },
   "dependencies": {
     "@elysia/openapi": "^1.4.15",
+    "@prakrit_m/slipok-sdk": "^1.1.1",
     "argon2": "^0.41.1",
     "drizzle-orm": "^0.45.2",
     "drizzle-typebox": "^0.3.3",

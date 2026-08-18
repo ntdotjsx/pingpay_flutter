@@ -60,10 +60,13 @@ export const promptPayIdTypeEnum = pgEnum("promptpay_id_type", [
 ]);
 
 export const paymentStatusEnum = pgEnum("payment_status", [
-  "pending_verification", // slip uploaded, SlipOK not yet confirmed
-  "slip_verified", // SlipOK confirmed, waiting for creditor confirmation
-  "confirmed", // creditor manually confirmed receipt
-  "rejected", // creditor rejected (fake / mismatched slip)
+  "pending_verification", // slip uploaded, SlipOK not yet processed
+  "verification_failed", // SlipOK verification failed
+  "pending_owner_confirmation", // SlipOK passed, waiting for bill owner confirmation
+  "confirmed", // bill owner manually confirmed receipt
+  "rejected", // bill owner rejected
+  "cancelled", // cancelled prior to confirmation
+  "refunded", // refunded after confirmation
 ]);
 
 export const editActionEnum = pgEnum("edit_action", [
@@ -111,6 +114,25 @@ export const disputeStatusEnum = pgEnum("dispute_status", [
   "resolved_paid",
   "resolved_written_off",
   "resolved_rejected",
+]);
+
+export const notificationEventTypeEnum = pgEnum("notification_event_type", [
+  "BILL_CREATED",
+  "BILL_UPDATED",
+  "BILL_WRITTEN_OFF",
+  "PAYMENT_PENDING_CONFIRMATION",
+  "PAYMENT_CONFIRMED",
+  "PAYMENT_REJECTED",
+  "DEBT_WEEKLY_REMINDER",
+]);
+
+export const notificationStatusEnum = pgEnum("notification_status", [
+  "PENDING",
+  "PROCESSING",
+  "SENT",
+  "FAILED",
+  "CANCELLED",
+  "SKIPPED",
 ]);
 
 /* -------------------------------------------------------------------------- */
@@ -352,6 +374,7 @@ export const payments = pgTable(
     promptPayQrGeneratedAt: timestamp("prompt_pay_qr_generated_at"),
 
     slipImageUrl: text("slip_image_url"),
+    slipHash: varchar("slip_hash", { length: 64 }), // SHA-256 hash of slip file for deduplication
     slipOkReferenceId: varchar("slip_ok_reference_id", { length: 128 }),
     slipOkVerifiedAt: timestamp("slip_ok_verified_at"),
     slipOkRawResponse: jsonb("slip_ok_raw_response"),
@@ -360,13 +383,44 @@ export const payments = pgTable(
       .notNull()
       .default("pending_verification"),
     confirmedByOwnerAt: timestamp("confirmed_by_owner_at"),
+    confirmedByOwnerId: uuid("confirmed_by_owner_id").references(() => users.id, { onDelete: "set null" }),
+    rejectedAt: timestamp("rejected_at"),
+    rejectedById: uuid("rejected_by_id").references(() => users.id, { onDelete: "set null" }),
     rejectedReason: text("rejected_reason"),
 
     createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
   (table) => ({
     billItemIdx: index("payments_bill_item_idx").on(table.billItemId),
     payerIdx: index("payments_payer_idx").on(table.payerId),
+    slipHashIdx: index("payments_slip_hash_idx").on(table.slipHash),
+    slipRefIdx: index("payments_slip_ref_idx").on(table.slipOkReferenceId),
+  })
+);
+
+/* Audit history for slip verifications (preserves multiple attempts without overwriting) */
+export const paymentVerifications = pgTable(
+  "payment_verifications",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    paymentId: uuid("payment_id")
+      .notNull()
+      .references(() => payments.id, { onDelete: "cascade" }),
+    provider: varchar("provider", { length: 32 }).notNull().default("slipok"),
+    status: varchar("status", { length: 32 }).notNull(), // 'success' | 'failed' | 'error'
+    providerReference: varchar("provider_reference", { length: 128 }),
+    verifiedAmount: numeric("verified_amount", { precision: 12, scale: 2 }),
+    senderInfo: jsonb("sender_info"),
+    receiverInfo: jsonb("receiver_info"),
+    failureCode: varchar("failure_code", { length: 64 }),
+    failureMessage: text("failure_message"),
+    rawResponse: jsonb("raw_response"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => ({
+    paymentIdx: index("payment_verifications_payment_idx").on(table.paymentId),
+    providerRefIdx: index("payment_verifications_provider_ref_idx").on(table.providerReference),
   })
 );
 
@@ -537,21 +591,58 @@ export const activityLogs = pgTable(
 );
 
 /* -------------------------------------------------------------------------- */
-/* WEEKLY REMINDER TRACKING (optional, avoids duplicate sends)                */
+/* NOTIFICATIONS & OUTBOX (FEATURE 5)                                         */
 /* -------------------------------------------------------------------------- */
 
-export const reminderLogs = pgTable(
-  "reminder_logs",
+export const notificationOutbox = pgTable(
+  "notification_outbox",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    billItemId: uuid("bill_item_id")
+    eventType: notificationEventTypeEnum("event_type").notNull(),
+    recipientUserId: uuid("recipient_user_id")
       .notNull()
-      .references(() => billItems.id, { onDelete: "cascade" }),
-    sentAt: timestamp("sent_at").notNull().defaultNow(),
+      .references(() => users.id, { onDelete: "cascade" }),
     channel: varchar("channel", { length: 32 }).notNull().default("line"),
+    payload: jsonb("payload").notNull(),
+    deduplicationKey: varchar("deduplication_key", { length: 255 }).notNull().unique(),
+    status: notificationStatusEnum("status").notNull().default("PENDING"),
+    attempts: integer("attempts").notNull().default(0),
+    maxAttempts: integer("max_attempts").notNull().default(5),
+    availableAt: timestamp("available_at").notNull().defaultNow(),
+    lockedAt: timestamp("locked_at"),
+    sentAt: timestamp("sent_at"),
+    failedAt: timestamp("failed_at"),
+    lastError: text("last_error"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
   (table) => ({
-    billItemIdx: index("reminder_logs_bill_item_idx").on(table.billItemId),
+    recipientIdx: index("notification_outbox_recipient_idx").on(table.recipientUserId),
+    statusAvailableIdx: index("notification_outbox_status_available_idx").on(
+      table.status,
+      table.availableAt
+    ),
+    dedupIdx: uniqueIndex("notification_outbox_dedup_idx").on(table.deduplicationKey),
+  })
+);
+
+export const notificationDeliveries = pgTable(
+  "notification_deliveries",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    notificationId: uuid("notification_id")
+      .notNull()
+      .references(() => notificationOutbox.id, { onDelete: "cascade" }),
+    provider: varchar("provider", { length: 32 }).notNull().default("line"),
+    recipientLineId: varchar("recipient_line_id", { length: 128 }),
+    status: varchar("status", { length: 32 }).notNull(), // 'SENT', 'FAILED', 'SKIPPED'
+    attemptNumber: integer("attempt_number").notNull(),
+    responsePayload: jsonb("response_payload"),
+    errorMessage: text("error_message"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => ({
+    notificationIdx: index("notification_deliveries_notification_idx").on(table.notificationId),
   })
 );
 
@@ -618,10 +709,9 @@ export const billItemsRelations = relations(billItems, ({ one, many }) => ({
   payments: many(payments),
   financialTransactions: many(financialTransactions),
   disputes: many(disputes),
-  reminderLogs: many(reminderLogs),
 }));
 
-export const paymentsRelations = relations(payments, ({ one }) => ({
+export const paymentsRelations = relations(payments, ({ one, many }) => ({
   billItem: one(billItems, {
     fields: [payments.billItemId],
     references: [billItems.id],
@@ -629,6 +719,18 @@ export const paymentsRelations = relations(payments, ({ one }) => ({
   payer: one(users, {
     fields: [payments.payerId],
     references: [users.id],
+  }),
+  confirmedByOwner: one(users, {
+    fields: [payments.confirmedByOwnerId],
+    references: [users.id],
+  }),
+  verifications: many(paymentVerifications),
+}));
+
+export const paymentVerificationsRelations = relations(paymentVerifications, ({ one }) => ({
+  payment: one(payments, {
+    fields: [paymentVerifications.paymentId],
+    references: [payments.id],
   }),
 }));
 
@@ -697,10 +799,18 @@ export const disputesRelations = relations(disputes, ({ one }) => ({
   }),
 }));
 
-export const reminderLogsRelations = relations(reminderLogs, ({ one }) => ({
-  billItem: one(billItems, {
-    fields: [reminderLogs.billItemId],
-    references: [billItems.id],
+export const notificationOutboxRelations = relations(notificationOutbox, ({ one, many }) => ({
+  recipient: one(users, {
+    fields: [notificationOutbox.recipientUserId],
+    references: [users.id],
+  }),
+  deliveries: many(notificationDeliveries),
+}));
+
+export const notificationDeliveriesRelations = relations(notificationDeliveries, ({ one }) => ({
+  notification: one(notificationOutbox, {
+    fields: [notificationDeliveries.notificationId],
+    references: [notificationOutbox.id],
   }),
 }));
 

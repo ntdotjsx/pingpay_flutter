@@ -2,6 +2,7 @@ import { db } from "../../db";
 import { bills, billItems, financialTransactions, editLogs } from "../../db/schema";
 import { eq } from "drizzle-orm";
 import { BillPolicy } from "./bill.policy";
+import { BillStatusService } from "./bill-status.service";
 import { defaultNotificationService, NotificationService } from "./bill-notification.service";
 
 export interface AdjustmentRequestDTO {
@@ -14,7 +15,14 @@ export interface AdjustmentRequestDTO {
 export class BillAdjustmentService {
   private processedIdempotencyKeys = new Set<string>();
 
-  constructor(private notificationService: NotificationService = defaultNotificationService) {}
+  constructor(
+    private notificationService: NotificationService = defaultNotificationService,
+    private customDb: any = db
+  ) {}
+
+  private get db() {
+    return this.customDb;
+  }
 
   async adjustPaidDebt(userId: string, billId: string, dto: AdjustmentRequestDTO) {
     if (dto.idempotencyKey && this.processedIdempotencyKeys.has(dto.idempotencyKey)) {
@@ -34,7 +42,7 @@ export class BillAdjustmentService {
       reason?: string;
     } | null = null;
 
-    const result = await db.transaction(async (tx) => {
+    const result = await this.db.transaction(async (tx: any) => {
       const bill = await tx.query.bills.findFirst({
         where: eq(bills.id, billId),
         with: { items: true, owner: true }
@@ -128,6 +136,37 @@ export class BillAdjustmentService {
         newAmount: formattedNewAmount,
         reason: dto.reason
       };
+
+      // Recalculate overall bill status via BillStatusService
+      const allBillItems = await tx
+        .select()
+        .from(billItems)
+        .where(eq(billItems.billId, bill.id));
+
+      const participantStates = allBillItems.map((bi) => {
+        if (bi.id === item.id) {
+          return {
+            originalDebt: Number(bi.originalAmount),
+            currentAmount: dto.newAmount,
+            amountPaid: Number(bi.amountPaid),
+            amountWrittenOff: Number(bi.amountWrittenOff),
+          };
+        }
+        return {
+          originalDebt: Number(bi.originalAmount),
+          currentAmount: Number(bi.currentAmount),
+          amountPaid: Number(bi.amountPaid),
+          amountWrittenOff: Number(bi.amountWrittenOff),
+        };
+      });
+
+      const calculatedStatus = BillStatusService.calculateBillStatus({
+        participants: participantStates,
+      });
+
+      await tx.update(bills)
+        .set({ status: calculatedStatus.status, updatedAt: new Date() })
+        .where(eq(bills.id, bill.id));
 
       return updatedItem;
     });

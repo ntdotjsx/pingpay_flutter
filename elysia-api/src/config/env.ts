@@ -6,6 +6,9 @@ export const env = {
   JWT_ACCESS_SECRET: process.env.JWT_ACCESS_SECRET as string,
   JWT_REFRESH_SECRET: process.env.JWT_REFRESH_SECRET as string,
   PADDLE_OCR_URL: process.env.PADDLE_OCR_URL || "http://localhost:8866/predict/ocr_system",
+  SLIPOK_API_KEY: process.env.SLIPOK_API_KEY || "",
+  SLIPOK_BRANCH_ID: process.env.SLIPOK_BRANCH_ID || "",
+  LINE_CHANNEL_ACCESS_TOKEN: process.env.LINE_CHANNEL_ACCESS_TOKEN || "",
   PORT: process.env.PORT ? parseInt(process.env.PORT, 10) : 3000,
 };
 

@@ -2,6 +2,7 @@ import { db } from "../../db";
 import { bills, billItems, financialTransactions, editLogs, users } from "../../db/schema";
 import { eq, inArray, and } from "drizzle-orm";
 import { BillPolicy } from "./bill.policy";
+import { BillStatusService } from "./bill-status.service";
 import { defaultNotificationService, NotificationService } from "./bill-notification.service";
 
 export interface WriteOffParticipantInput {
@@ -15,10 +16,26 @@ export interface WriteOffRequestDTO {
   participants: WriteOffParticipantInput[];
 }
 
+import {
+  NotificationOutboxService,
+  defaultNotificationOutboxService,
+} from "../notifications/notification-outbox.service";
+
 export class BillWriteoffService {
   private processedIdempotencyKeys = new Set<string>();
+  private outboxService: NotificationOutboxService;
 
-  constructor(private notificationService: NotificationService = defaultNotificationService) {}
+  constructor(
+    private notificationService: NotificationService = defaultNotificationService,
+    private customDb: any = db,
+    outboxService?: NotificationOutboxService
+  ) {
+    this.outboxService = outboxService || new NotificationOutboxService(customDb);
+  }
+
+  private get db() {
+    return this.customDb;
+  }
 
   async writeOffDebt(userId: string, billId: string, dto: WriteOffRequestDTO) {
     if (dto.idempotencyKey && this.processedIdempotencyKeys.has(dto.idempotencyKey)) {
@@ -38,7 +55,7 @@ export class BillWriteoffService {
       reason?: string;
     }> = [];
 
-    const result = await db.transaction(async (tx) => {
+    const result = await this.db.transaction(async (tx: any) => {
       const bill = await tx.query.bills.findFirst({
         where: eq(bills.id, billId),
         with: { items: true, owner: true }
@@ -96,7 +113,7 @@ export class BillWriteoffService {
           metadata: { reason: dto.reason, idempotencyKey: dto.idempotencyKey }
         });
 
-        await tx.insert(editLogs).values({
+        const [editLog] = await tx.insert(editLogs).values({
           action: "debt_written_off",
           billId: bill.id,
           billItemId: item.id,
@@ -111,6 +128,24 @@ export class BillWriteoffService {
             remainingDebt: newRemainingDebt
           },
           note: dto.reason
+        }).returning();
+
+        // 5.14 Enqueue BILL_WRITTEN_OFF notification atomically inside transaction
+        await this.outboxService.enqueueInTx(tx, {
+          eventType: "BILL_WRITTEN_OFF",
+          recipientUserId: item.debtorId,
+          deduplicationKey: `BILL_WRITTEN_OFF:${editLog.id}:${item.debtorId}`,
+          payload: {
+            billId: bill.id,
+            billTitle: bill.title || "Bill",
+            actorId: userId,
+            actorName: bill.owner?.displayName || bill.owner?.fullName || "Bill Owner",
+            participantId: item.id,
+            oldAmount: (remainingDebtCents / 100).toFixed(2),
+            newAmount: newRemainingDebt,
+            writtenOffAmount: itemInput.amount.toFixed(2),
+            reason: dto.reason,
+          },
         });
 
         notificationsToSend.push({
@@ -122,6 +157,33 @@ export class BillWriteoffService {
           reason: dto.reason
         });
       }
+
+      // Recalculate overall bill status via BillStatusService
+      const allBillItems = await tx
+        .select()
+        .from(billItems)
+        .where(eq(billItems.billId, bill.id));
+
+      const participantStates = allBillItems.map((bi) => {
+        const inputItem = dto.participants.find((p) => p.participantId === bi.id);
+        const wOff = inputItem
+          ? Number(bi.amountWrittenOff) + inputItem.amount
+          : Number(bi.amountWrittenOff);
+        return {
+          originalDebt: Number(bi.originalAmount),
+          currentAmount: Number(bi.currentAmount),
+          amountPaid: Number(bi.amountPaid),
+          amountWrittenOff: wOff,
+        };
+      });
+
+      const calculatedStatus = BillStatusService.calculateBillStatus({
+        participants: participantStates,
+      });
+
+      await tx.update(bills)
+        .set({ status: calculatedStatus.status, updatedAt: new Date() })
+        .where(eq(bills.id, bill.id));
 
       return bill;
     });

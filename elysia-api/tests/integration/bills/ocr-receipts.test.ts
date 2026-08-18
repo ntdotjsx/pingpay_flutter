@@ -67,6 +67,98 @@ export const sampleReceipt3_TongNorthern: ReceiptData = {
   formulaExplanation: "Subtotal (228.00) = Total (228.00 THB)",
 };
 
+import { bills, billItems, financialTransactions, editLogs } from "../../../src/db/schema";
+
+const createFakeDb = () => {
+  const dbState = {
+    bills: new Map<string, any>(),
+    billItems: new Map<string, any>(),
+    financialTransactions: [] as any[],
+    editLogs: [] as any[],
+  };
+
+  const fakeTx = {
+    insert: (table: any) => ({
+      values: (val: any) => ({
+        returning: async () => {
+          const items = Array.isArray(val) ? val : [val];
+          const created = items.map((item) => {
+            const row = { id: crypto.randomUUID(), createdAt: new Date(), updatedAt: new Date(), ...item };
+            if (table === bills || item.ownerId !== undefined || (item.totalAmount !== undefined && item.debtorId === undefined)) {
+              dbState.bills.set(row.id, row);
+            } else if (table === billItems || item.debtorId !== undefined) {
+              dbState.billItems.set(row.id, row);
+            } else if (table === financialTransactions || item.type !== undefined) {
+              dbState.financialTransactions.push(row);
+            } else if (table === editLogs || item.action !== undefined) {
+              dbState.editLogs.push(row);
+            }
+            return row;
+          });
+          return created;
+        },
+      }),
+    }),
+    update: (table: any) => ({
+      set: (val: any) => ({
+        where: (condition: any) => ({
+          returning: async () => {
+            for (const [id, bill] of dbState.bills.entries()) {
+              Object.assign(bill, val);
+              return [bill];
+            }
+            for (const [id, item] of dbState.billItems.entries()) {
+              Object.assign(item, val);
+              return [item];
+            }
+            return [val];
+          },
+        }),
+      }),
+    }),
+    delete: (table: any) => {
+      const p: any = Promise.resolve();
+      p.where = (cond: any) => Promise.resolve();
+      return p;
+    },
+    select: () => ({
+      from: (table: any) => ({
+        where: (cond: any) => Array.from(dbState.billItems.values()),
+      }),
+    }),
+    query: {
+      bills: {
+        findFirst: async (q: any) => {
+          const firstBill = Array.from(dbState.bills.values())[0];
+          if (!firstBill) return undefined;
+          const items = Array.from(dbState.billItems.values()).filter((i) => i.billId === firstBill.id);
+          return {
+            ...firstBill,
+            items,
+            owner: { id: firstBill.ownerId, displayName: "Test Owner", fullName: "Test Owner Full" },
+          };
+        },
+      },
+      billItems: {
+        findFirst: async (q: any) => {
+          const firstItem = Array.from(dbState.billItems.values())[0];
+          if (!firstItem) return undefined;
+          const bill = dbState.bills.get(firstItem.billId);
+          return { ...firstItem, bill };
+        },
+        findMany: async (q: any) => {
+          return Array.from(dbState.billItems.values());
+        },
+      },
+    },
+  };
+
+  return {
+    ...fakeTx,
+    transaction: async (cb: any) => cb(fakeTx),
+  };
+};
+
 describe("Integration: Real Receipts OCR & Bill Splitting Flow", () => {
   let mockOCRService: MockOCRService;
   let fakeNotificationService: FakeLineNotificationService;
@@ -81,7 +173,8 @@ describe("Integration: Real Receipts OCR & Bill Splitting Flow", () => {
   beforeEach(() => {
     mockOCRService = new MockOCRService();
     fakeNotificationService = new FakeLineNotificationService();
-    billService = new BillService(fakeNotificationService, mockOCRService);
+    const fakeDb = createFakeDb();
+    billService = new BillService(fakeNotificationService, mockOCRService, fakeDb);
   });
 
   /* -------------------------------------------------------------------------- */

@@ -1,8 +1,24 @@
 import { db } from "../../db";
-import { bills, billItems, financialTransactions, editLogs } from "../../db/schema";
+import { bills, billItems, financialTransactions, editLogs, users } from "../../db/schema";
 import { eq, and } from "drizzle-orm";
+import {
+  NotificationOutboxService,
+  defaultNotificationOutboxService,
+} from "../notifications/notification-outbox.service";
 
 export class BillRepository {
+  private outboxService: NotificationOutboxService;
+
+  constructor(
+    private customDb: any = db,
+    outboxService?: NotificationOutboxService
+  ) {
+    this.outboxService = outboxService || new NotificationOutboxService(customDb);
+  }
+
+  private get db() {
+    return this.customDb;
+  }
   async createBillWithItems(
     ownerId: string,
     data: {
@@ -14,7 +30,7 @@ export class BillRepository {
     },
     items: { debtorId: string; amount: string }[]
   ) {
-    return await db.transaction(async (tx) => {
+    return await this.db.transaction(async (tx: any) => {
       const [bill] = await tx.insert(bills).values({
         ownerId,
         title: data.title,
@@ -24,6 +40,11 @@ export class BillRepository {
         itemsBreakdown: data.itemsBreakdown,
         status: "unpaid",
       }).returning();
+
+      const ownerUser = await tx.query.users?.findFirst?.({
+        where: eq(users.id, ownerId),
+      });
+      const creatorName = ownerUser?.displayName || ownerUser?.fullName || "Bill Owner";
 
       if (items.length > 0) {
         const billItemValues = items.map(item => ({
@@ -45,6 +66,25 @@ export class BillRepository {
           createdById: ownerId,
         }));
         await tx.insert(financialTransactions).values(finTxValues);
+
+        // 5.10 & 5.11 Enqueue BILL_CREATED notification for each participant atomically
+        for (const item of createdItems) {
+          await this.outboxService.enqueueInTx(tx, {
+            eventType: "BILL_CREATED",
+            recipientUserId: item.debtorId,
+            deduplicationKey: `BILL_CREATED:${bill.id}:${item.debtorId}`,
+            payload: {
+              billId: bill.id,
+              billTitle: bill.title || "Bill",
+              creatorId: ownerId,
+              creatorName,
+              participantId: item.id,
+              participantDebtAmount: item.currentAmount,
+              totalAmount: bill.totalAmount,
+              currency: bill.currency,
+            },
+          });
+        }
       }
 
       await tx.insert(editLogs).values({
@@ -59,16 +99,19 @@ export class BillRepository {
   }
 
   async getBillById(id: string) {
-    return await db.query.bills.findFirst({
+    return await this.db.query.bills.findFirst({
       where: eq(bills.id, id),
       with: {
-        items: true,
-      }
+        items: {
+          with: { debtor: true, payments: true },
+        },
+        owner: true,
+      },
     });
   }
 
   async getBillItem(billId: string, debtorId: string) {
-    return await db.query.billItems.findFirst({
+    return await this.db.query.billItems.findFirst({
       where: and(eq(billItems.billId, billId), eq(billItems.debtorId, debtorId)),
       with: { bill: true }
     });
@@ -79,7 +122,7 @@ export class BillRepository {
     userId: string,
     data: { title?: string; description?: string; totalAmount?: string; itemsBreakdown?: any }
   ) {
-    return await db.transaction(async (tx) => {
+    return await this.db.transaction(async (tx: any) => {
       const bill = await tx.query.bills.findFirst({ where: eq(bills.id, id) });
       if (!bill) throw new Error("Bill not found");
 
@@ -107,7 +150,7 @@ export class BillRepository {
   }
 
   async updateBillItemAmount(billItemId: string, billId: string, userId: string, newAmount: string) {
-    return await db.transaction(async (tx) => {
+    return await this.db.transaction(async (tx: any) => {
       const item = await tx.query.billItems.findFirst({ where: eq(billItems.id, billItemId), with: { bill: true } });
       if (!item) throw new Error("Bill item not found");
 
@@ -128,7 +171,7 @@ export class BillRepository {
         createdById: userId,
       });
 
-      await tx.insert(editLogs).values({
+      const [log] = await tx.insert(editLogs).values({
         action: "bill_item_edited",
         billId,
         billItemId,
@@ -136,7 +179,30 @@ export class BillRepository {
         affectedUserId: item.debtorId,
         previousValue: { currentAmount: item.currentAmount },
         newValue: { currentAmount: updatedItem.currentAmount },
-      });
+      }).returning();
+
+      // 5.12 & 5.13 Enqueue BILL_UPDATED notification atomically inside transaction
+      if (item.currentAmount !== updatedItem.currentAmount) {
+        const editorUser = await tx.query.users?.findFirst?.({
+          where: eq(users.id, userId),
+        });
+        const editorName = editorUser?.displayName || editorUser?.fullName || "Bill Owner";
+
+        await this.outboxService.enqueueInTx(tx, {
+          eventType: "BILL_UPDATED",
+          recipientUserId: item.debtorId,
+          deduplicationKey: `BILL_UPDATED:${log.id}:${item.debtorId}`,
+          payload: {
+            billId,
+            billTitle: item.bill?.title || "Bill",
+            editorId: userId,
+            editorName,
+            participantId: item.id,
+            oldAmount: item.currentAmount,
+            newAmount: updatedItem.currentAmount,
+          },
+        });
+      }
 
       return updatedItem;
     });

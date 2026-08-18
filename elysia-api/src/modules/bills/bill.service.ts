@@ -1,3 +1,4 @@
+import { db } from "../../db";
 import { BillRepository } from "./bill.repository";
 import { BillAllocationService } from "./bill-allocation.service";
 import { BillPolicy } from "./bill.policy";
@@ -27,16 +28,18 @@ export interface EditBillDTO {
 }
 
 export class BillService {
-  private repo = new BillRepository();
+  private repo: BillRepository;
   private writeoffService: BillWriteoffService;
   private adjustmentService: BillAdjustmentService;
 
   constructor(
     private notificationService: NotificationService = defaultNotificationService,
-    private ocrService: OCRService = defaultOCRService
+    private ocrService: OCRService = defaultOCRService,
+    customDb: any = db
   ) {
-    this.writeoffService = new BillWriteoffService(notificationService);
-    this.adjustmentService = new BillAdjustmentService(notificationService);
+    this.repo = new BillRepository(customDb);
+    this.writeoffService = new BillWriteoffService(notificationService, customDb);
+    this.adjustmentService = new BillAdjustmentService(notificationService, customDb);
   }
 
   async createBill(ownerId: string, dto: CreateBillDTO) {

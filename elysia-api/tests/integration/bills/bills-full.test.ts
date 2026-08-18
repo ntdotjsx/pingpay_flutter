@@ -1,7 +1,8 @@
-import { describe, it, expect, beforeEach, mock } from "bun:test";
+import { describe, it, expect, beforeEach } from "bun:test";
 import { FakeLineNotificationService } from "../../../src/modules/bills/bill-notification.service";
 import { MockOCRService } from "../../../src/modules/bills/ocr.service";
 import { BillService } from "../../../src/modules/bills/bill.service";
+import { bills, billItems, financialTransactions, editLogs } from "../../../src/db/schema";
 
 // In-memory relational tables for database simulation
 const dbState = {
@@ -11,8 +12,8 @@ const dbState = {
   editLogs: [] as any[],
 };
 
-// Stateful mock for drizzle db
-mock.module("../../../src/db/index.ts", () => {
+// Stateful fake DB for in-memory isolated tests
+const createFakeDb = () => {
   const fakeTx = {
     insert: (table: any) => ({
       values: (val: any) => ({
@@ -20,13 +21,13 @@ mock.module("../../../src/db/index.ts", () => {
           const items = Array.isArray(val) ? val : [val];
           const created = items.map((item) => {
             const row = { id: crypto.randomUUID(), createdAt: new Date(), updatedAt: new Date(), ...item };
-            if (item.totalAmount !== undefined && item.ownerId !== undefined) {
+            if (table === bills || item.ownerId !== undefined || (item.totalAmount !== undefined && item.debtorId === undefined)) {
               dbState.bills.set(row.id, row);
-            } else if (item.debtorId !== undefined && item.billId !== undefined) {
+            } else if (table === billItems || item.debtorId !== undefined) {
               dbState.billItems.set(row.id, row);
-            } else if (item.type !== undefined) {
+            } else if (table === financialTransactions || item.type !== undefined) {
               dbState.financialTransactions.push(row);
-            } else if (item.action !== undefined) {
+            } else if (table === editLogs || item.action !== undefined) {
               dbState.editLogs.push(row);
             }
             return row;
@@ -39,18 +40,35 @@ mock.module("../../../src/db/index.ts", () => {
       set: (val: any) => ({
         where: (condition: any) => ({
           returning: async () => {
-            // Find target item and update
-            for (const [id, bill] of dbState.bills.entries()) {
-              Object.assign(bill, val);
-              return [bill];
-            }
-            for (const [id, item] of dbState.billItems.entries()) {
-              Object.assign(item, val);
-              return [item];
+            if (table === bills) {
+              for (const [id, bill] of dbState.bills.entries()) {
+                Object.assign(bill, val);
+                return [bill];
+              }
+            } else if (table === billItems) {
+              for (const [id, item] of dbState.billItems.entries()) {
+                Object.assign(item, val);
+                return [item];
+              }
+            } else {
+              for (const [id, bill] of dbState.bills.entries()) {
+                Object.assign(bill, val);
+                return [bill];
+              }
             }
             return [val];
           },
         }),
+      }),
+    }),
+    delete: (table: any) => {
+      const p: any = Promise.resolve();
+      p.where = (cond: any) => Promise.resolve();
+      return p;
+    },
+    select: () => ({
+      from: (table: any) => ({
+        where: (cond: any) => Array.from(dbState.billItems.values()),
       }),
     }),
     query: {
@@ -73,17 +91,18 @@ mock.module("../../../src/db/index.ts", () => {
           const bill = dbState.bills.get(firstItem.billId);
           return { ...firstItem, bill };
         },
+        findMany: async (q: any) => {
+          return Array.from(dbState.billItems.values());
+        },
       },
     },
   };
 
   return {
-    db: {
-      ...fakeTx,
-      transaction: async (cb: any) => cb(fakeTx),
-    },
+    ...fakeTx,
+    transaction: async (cb: any) => cb(fakeTx),
   };
-});
+};
 
 describe("Integration & E2E: Bill Management API", () => {
   let fakeNotificationService: FakeLineNotificationService;
@@ -104,7 +123,8 @@ describe("Integration & E2E: Bill Management API", () => {
 
     fakeNotificationService = new FakeLineNotificationService();
     mockOCRService = new MockOCRService();
-    billService = new BillService(fakeNotificationService, mockOCRService);
+    const fakeDb = createFakeDb();
+    billService = new BillService(fakeNotificationService, mockOCRService, fakeDb);
   });
 
   /* -------------------------------------------------------------------------- */
