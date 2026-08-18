@@ -6,13 +6,19 @@ import jwt from "jsonwebtoken";
 import { env } from "../../../../config/env";
 
 const requireAuth = (app: Elysia) => 
-  app.derive(async ({ cookie: { access_token }, set }) => {
-    if (!access_token.value) {
+  app.derive(async ({ cookie: { access_token }, headers, set }) => {
+    let token = access_token.value;
+    const authHeader = headers.authorization || headers.Authorization;
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      token = authHeader.substring(7);
+    }
+
+    if (!token) {
       set.status = 401;
       throw new Error("Unauthorized");
     }
     try {
-      const decoded = jwt.verify(access_token.value, env.JWT_ACCESS_SECRET) as { userId: string };
+      const decoded = jwt.verify(token, env.JWT_ACCESS_SECRET) as { userId: string };
       return { userId: decoded.userId };
     } catch {
       set.status = 401;
@@ -43,12 +49,15 @@ export default new Elysia()
     };
   }, { detail: { tags: ["Profile & Consent"], summary: "Get user profile" } })
   .post("/", async ({ userId, body }) => {
-    const updateData = {
-      fullName: body.fullName,
-      address: body.address,
-      phoneNumber: body.phoneNumber,
+    const updateData: any = {
       profileCompletedAt: new Date(),
     };
+
+    if (body.displayName) updateData.displayName = body.displayName;
+    if (body.fullName) updateData.fullName = body.fullName;
+    if (body.address !== undefined) updateData.address = body.address;
+    if (body.phoneNumber !== undefined) updateData.phoneNumber = body.phoneNumber;
+    if (body.promptPayId !== undefined) updateData.promptPayId = body.promptPayId;
 
     const [updatedUser] = await db
       .update(users)
@@ -58,13 +67,22 @@ export default new Elysia()
 
     return {
       success: true,
+      user: {
+        id: updatedUser.id,
+        userCode: updatedUser.userCode,
+        displayName: updatedUser.displayName,
+        fullName: updatedUser.fullName,
+        avatarUrl: updatedUser.avatarUrl,
+      },
       profileCompletedAt: updatedUser.profileCompletedAt,
     };
   }, {
     body: t.Object({
-      fullName: t.String({ minLength: 1 }),
-      address: t.String(),
-      phoneNumber: t.String({ minLength: 9 }),
+      displayName: t.Optional(t.String({ minLength: 1, maxLength: 64 })),
+      fullName: t.Optional(t.String({ minLength: 1, maxLength: 128 })),
+      address: t.Optional(t.String()),
+      phoneNumber: t.Optional(t.String()),
+      promptPayId: t.Optional(t.String()),
     }),
-    detail: { tags: ["Profile & Consent"], summary: "Update user profile" }
+    detail: { tags: ["Profile & Consent"], summary: "Update user profile / Set username" }
   });

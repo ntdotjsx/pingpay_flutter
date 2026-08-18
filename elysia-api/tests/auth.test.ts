@@ -45,6 +45,11 @@ mock.module("../src/db/index.ts", () => {
             }
             return { pinHash: "$argon2id$v=19$m=65536,t=3,p=4$mockedhash", failedAttempts: globalThis.__failedAttempts, lockedUntil: globalThis.__lockedUntil };
           })
+        },
+        authOauthStates: {
+          findFirst: mock().mockImplementation(async () => {
+            return null;
+          })
         }
       },
       insert: mock().mockReturnValue({

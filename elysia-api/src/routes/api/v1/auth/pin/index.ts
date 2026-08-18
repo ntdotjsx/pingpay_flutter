@@ -7,12 +7,18 @@ import { env } from "../../../../../config/env";
 import * as argon2 from "argon2";
 
 const requireAuth = (app: Elysia) => 
-  app.derive(async ({ cookie: { access_token } }) => {
-    if (!access_token.value) {
+  app.derive(async ({ cookie: { access_token }, headers }) => {
+    let token = access_token.value;
+    const authHeader = headers.authorization || headers.Authorization;
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      token = authHeader.substring(7);
+    }
+
+    if (!token) {
       return { userId: null, authError: "Unauthorized" };
     }
     try {
-      const decoded = jwt.verify(access_token.value, env.JWT_ACCESS_SECRET) as { userId: string };
+      const decoded = jwt.verify(token, env.JWT_ACCESS_SECRET) as { userId: string };
       return { userId: decoded.userId, authError: null };
     } catch {
       return { userId: null, authError: "Unauthorized" };

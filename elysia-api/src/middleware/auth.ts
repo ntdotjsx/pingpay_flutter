@@ -6,13 +6,20 @@ import { users, consentRecords, userCredentials } from "../db/schema";
 import { eq } from "drizzle-orm";
 
 export const authGuard = (app: Elysia) =>
-  app.derive(async ({ cookie: { access_token } }) => {
-    if (!access_token.value) {
+  app.derive(async ({ cookie: { access_token }, headers }) => {
+    let token = access_token.value;
+
+    const authHeader = headers.authorization || headers.Authorization;
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      token = authHeader.substring(7);
+    }
+
+    if (!token) {
       return { userId: null, authError: "Unauthorized: Missing access token" };
     }
     try {
       const decoded = jwt.verify(
-        access_token.value,
+        token,
         env.JWT_ACCESS_SECRET
       ) as { userId: string };
       return { userId: decoded.userId, authError: null };
@@ -52,10 +59,10 @@ export const onboardingGuard = (app: Elysia) =>
 
     if (!consent) {
       onboardingState = "PDPA_REQUIRED";
-    } else if (!user.profileCompletedAt) {
-      onboardingState = "PROFILE_REQUIRED";
     } else if (!creds || !creds.pinHash) {
       onboardingState = "PIN_REQUIRED";
+    } else if (!user.profileCompletedAt) {
+      onboardingState = "PROFILE_REQUIRED";
     }
 
     return { user, onboardingState, onboardError: null };

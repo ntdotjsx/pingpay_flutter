@@ -8,13 +8,19 @@ import { env } from "../../../../config/env";
 const CURRENT_POLICY_VERSION = "v1.0.0";
 
 const requireAuth = (app: Elysia) =>
-  app.derive(async ({ cookie: { access_token }, set }) => {
-    if (!access_token.value) {
+  app.derive(async ({ cookie: { access_token }, headers, set }) => {
+    let token = access_token.value;
+    const authHeader = headers.authorization || headers.Authorization;
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      token = authHeader.substring(7);
+    }
+
+    if (!token) {
       set.status = 401;
       throw new Error("Unauthorized");
     }
     try {
-      const decoded = jwt.verify(access_token.value, env.JWT_ACCESS_SECRET) as { userId: string };
+      const decoded = jwt.verify(token, env.JWT_ACCESS_SECRET) as { userId: string };
       return { userId: decoded.userId };
     } catch {
       set.status = 401;
