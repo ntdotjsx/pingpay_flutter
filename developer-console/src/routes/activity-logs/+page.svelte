@@ -82,114 +82,112 @@
 <div>
   <div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
     <div>
-      <h1 class="text-2xl font-bold text-gray-900">Activity Logs</h1>
-      <p class="mt-1 text-sm text-gray-500">Per-user and system activity tracking with automated 1-month retention policy.</p>
+      <h1 class="text-2xl font-bold tracking-tight text-[#000000]">Activity Logs</h1>
+      <p class="mt-0.5 text-xs text-[#615d59]">Per-user and system activity tracking with automated 1-month retention policy.</p>
     </div>
     <div class="flex flex-wrap items-center gap-2">
-      <a href="/suspicious" class="rounded border border-red-300 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-100">
+      <a href="/suspicious" class="rounded-md border border-[#e6e6e6] bg-white px-3 py-1.5 text-xs font-semibold text-[#0075de] hover:bg-[#e8f3fc] transition-colors">
         Suspicious Logs &rarr;
       </a>
-      <button onclick={handlePurge} class="rounded bg-yellow-600 px-3 py-1.5 text-xs font-medium text-white shadow-sm hover:bg-yellow-700">
+      <button onclick={handlePurge} class="rounded-md border border-[#e6e6e6] bg-white px-3 py-1.5 text-xs font-medium text-[#dd5b00] hover:bg-[#fef2e8] transition-colors">
         Purge Old (&gt;1 mo)
       </button>
-      <button onclick={handleClearAll} class="rounded bg-red-600 px-3 py-1.5 text-xs font-medium text-white shadow-sm hover:bg-red-700">
+      <button onclick={handleClearAll} class="rounded-md bg-[#c53030] px-3 py-1.5 text-xs font-medium text-white hover:bg-[#a82525] transition-colors">
         Clear All Regular Logs
       </button>
     </div>
   </div>
 
   <!-- Retention Policy Notice -->
-  <div class="mb-6 rounded-lg border border-blue-200 bg-blue-50 p-4">
-    <div class="flex">
-      <div class="flex-shrink-0">
-        <svg class="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
-          <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
-        </svg>
-      </div>
-      <div class="ml-3 text-xs text-blue-800">
-        <span class="font-semibold">Retention Policy:</span> Regular activity logs auto-purge after 1 month. Flagged & suspicious logs are kept indefinitely. You can manually purge or clear logs anytime using the buttons above.
+  <div class="mb-6 rounded-xl border border-[#e6e6e6] bg-white p-4 shadow-sm">
+    <div class="flex items-center gap-2.5">
+      <span class="text-sm">ℹ️</span>
+      <div class="text-xs text-[#615d59]">
+        <span class="font-semibold text-[#000000]">Retention Policy:</span> Regular activity logs auto-purge after 1 month. Flagged & suspicious logs are kept indefinitely.
       </div>
     </div>
   </div>
 
   {#if actionMessage}
-    <div class="mb-4 rounded-md bg-green-50 p-3 text-sm text-green-700 flex justify-between items-center">
+    <div class="mb-4 rounded-md bg-[#e8f8eb] border border-[#e8f8eb] p-3 text-xs text-[#138029] flex justify-between items-center">
       <span>{actionMessage}</span>
-      <button onclick={() => actionMessage = ''} class="text-green-500 hover:text-green-800 font-bold">&times;</button>
+      <button onclick={() => actionMessage = ''} class="text-[#138029] font-bold">&times;</button>
     </div>
   {/if}
 
   {#if error}
-    <div class="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-700 flex justify-between items-center">
+    <div class="mb-4 rounded-md bg-[#fde8e8] border border-[#fde8e8] p-3 text-xs text-[#c53030] flex justify-between items-center">
       <span>{error}</span>
-      <button onclick={() => error = ''} class="text-red-500 hover:text-red-800 font-bold">&times;</button>
+      <button onclick={() => error = ''} class="text-[#c53030] font-bold">&times;</button>
     </div>
   {/if}
 
-  <div class="mb-6 rounded-lg bg-white p-4 shadow">
-    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+  <div class="mb-6 rounded-xl border border-[#e6e6e6] bg-white p-4 shadow-sm">
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
       <div>
-        <label for="act-user-id" class="block text-xs font-medium text-gray-600">User ID / Code</label>
-        <input id="act-user-id" type="text" bind:value={filters.userId} class="mt-1 block w-full rounded border border-gray-300 px-3 py-1.5 text-sm" placeholder="UUID or User Code" />
+        <label for="act-user-id" class="block text-[11px] font-medium text-[#615d59]">User ID / Code</label>
+        <input id="act-user-id" type="text" bind:value={filters.userId} class="mt-1 block w-full rounded-[4px] border border-[#e6e6e6] bg-white px-2.5 py-1.5 text-xs text-[#000000] focus:border-[#0075de] focus:ring-1 focus:ring-[#0075de] focus:outline-none" placeholder="UUID or User Code" />
       </div>
       <div>
-        <label for="act-action" class="block text-xs font-medium text-gray-600">Action Type</label>
-        <input id="act-action" type="text" bind:value={filters.action} class="mt-1 block w-full rounded border border-gray-300 px-3 py-1.5 text-sm" placeholder="e.g. login, create_bill, writeoff" />
+        <label for="act-action" class="block text-[11px] font-medium text-[#615d59]">Action Type</label>
+        <input id="act-action" type="text" bind:value={filters.action} class="mt-1 block w-full rounded-[4px] border border-[#e6e6e6] bg-white px-2.5 py-1.5 text-xs text-[#000000] focus:border-[#0075de] focus:ring-1 focus:ring-[#0075de] focus:outline-none" placeholder="e.g. login, create_bill, writeoff" />
       </div>
       <div>
-        <label for="act-from" class="block text-xs font-medium text-gray-600">From Date</label>
-        <input id="act-from" type="date" bind:value={filters.dateFrom} class="mt-1 block w-full rounded border border-gray-300 px-3 py-1.5 text-sm" />
+        <label for="act-from" class="block text-[11px] font-medium text-[#615d59]">From Date</label>
+        <input id="act-from" type="date" bind:value={filters.dateFrom} class="mt-1 block w-full rounded-[4px] border border-[#e6e6e6] bg-white px-2.5 py-1.5 text-xs text-[#000000] focus:border-[#0075de] focus:ring-1 focus:ring-[#0075de] focus:outline-none" />
       </div>
       <div>
-        <label for="act-to" class="block text-xs font-medium text-gray-600">To Date</label>
-        <input id="act-to" type="date" bind:value={filters.dateTo} class="mt-1 block w-full rounded border border-gray-300 px-3 py-1.5 text-sm" />
+        <label for="act-to" class="block text-[11px] font-medium text-[#615d59]">To Date</label>
+        <input id="act-to" type="date" bind:value={filters.dateTo} class="mt-1 block w-full rounded-[4px] border border-[#e6e6e6] bg-white px-2.5 py-1.5 text-xs text-[#000000] focus:border-[#0075de] focus:ring-1 focus:ring-[#0075de] focus:outline-none" />
       </div>
     </div>
-    <div class="mt-4 flex justify-between items-center">
-      <button onclick={applyFilters} class="rounded bg-blue-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-blue-700">Filter</button>
-      <span class="text-xs text-gray-500">Showing {rows.length} of {total} logs</span>
+    <div class="mt-4 flex items-center justify-between border-t border-[#e6e6e6] pt-3">
+      <button onclick={applyFilters} class="rounded-md bg-[#0075de] px-4 py-1.5 text-xs font-medium text-white hover:bg-[#005bab] transition-colors">Filter</button>
+      <span class="text-xs text-[#615d59] font-mono">Showing {rows.length} of {total} logs</span>
     </div>
   </div>
 
   {#if loading}
-    <p class="text-gray-500">Loading...</p>
+    <div class="rounded-xl border border-[#e6e6e6] bg-white p-8 text-center shadow-sm">
+      <p class="text-xs text-[#615d59]">Loading activity logs...</p>
+    </div>
   {:else}
-    <div class="overflow-x-auto rounded-lg bg-white shadow">
-      <table class="min-w-full divide-y divide-gray-200">
-        <thead class="bg-gray-50">
+    <div class="overflow-x-auto rounded-xl border border-[#e6e6e6] bg-white shadow-sm">
+      <table class="min-w-full divide-y divide-[#e6e6e6]">
+        <thead class="bg-[#f6f5f4]">
           <tr>
-            <th class="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">User</th>
-            <th class="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">Action</th>
-            <th class="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">Metadata</th>
-            <th class="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">Timestamp</th>
-            <th class="px-4 py-3 text-right text-xs font-medium uppercase text-gray-500">Actions</th>
+            <th class="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-[#615d59]">User</th>
+            <th class="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-[#615d59]">Action</th>
+            <th class="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-[#615d59]">Metadata</th>
+            <th class="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-[#615d59]">Timestamp</th>
+            <th class="px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wider text-[#615d59]">Actions</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-gray-200">
+        <tbody class="divide-y divide-[#e6e6e6] bg-white">
           {#each rows as row}
-            <tr class="hover:bg-gray-50">
-              <td class="px-4 py-3 text-sm font-medium text-gray-900">
+            <tr class="hover:bg-[#faf9f8] transition-colors">
+              <td class="px-4 py-3 text-xs font-medium text-[#000000]">
                 {row.userName || row.userCode || (row.userId ? row.userId.slice(0, 8) + '...' : 'System')}
               </td>
-              <td class="px-4 py-3 text-sm font-mono text-blue-700">{row.action}</td>
-              <td class="px-4 py-3 text-sm text-gray-500 max-w-xs truncate">
+              <td class="px-4 py-3 text-xs font-mono text-[#0075de]">{row.action}</td>
+              <td class="px-4 py-3 text-xs text-[#615d59] max-w-xs truncate">
                 {#if row.metadata}
-                  <code class="rounded bg-gray-100 px-1 py-0.5 text-xs">{JSON.stringify(row.metadata)}</code>
+                  <code class="rounded bg-[#f0efed] px-1.5 py-0.5 text-[11px] text-[#31302e] font-mono">{JSON.stringify(row.metadata)}</code>
                 {:else}
                   -
                 {/if}
               </td>
-              <td class="px-4 py-3 text-sm text-gray-500">{new Date(row.createdAt).toLocaleString()}</td>
+              <td class="px-4 py-3 text-xs text-[#615d59]">{new Date(row.createdAt).toLocaleString()}</td>
               <td class="px-4 py-3 text-right space-x-1">
                 <button
                   onclick={() => selectedLog = row}
-                  class="rounded bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-gray-200"
+                  class="rounded border border-[#e6e6e6] bg-white px-2.5 py-1 text-xs font-medium text-[#31302e] hover:bg-[#f6f5f4] transition-colors"
                 >
                   View
                 </button>
                 <button
                   onclick={() => handleDeleteSingle(row.id)}
-                  class="rounded bg-red-50 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-100"
+                  class="rounded bg-[#fde8e8] px-2 py-1 text-xs font-medium text-[#c53030] hover:bg-[#fbd5d5] transition-colors"
                   title="Delete this log"
                 >
                   Delete
@@ -197,7 +195,7 @@
               </td>
             </tr>
           {:else}
-            <tr><td colspan="5" class="px-4 py-8 text-center text-gray-500">No activity logs found</td></tr>
+            <tr><td colspan="5" class="px-4 py-8 text-center text-xs text-[#615d59]">No activity logs found</td></tr>
           {/each}
         </tbody>
       </table>
@@ -208,38 +206,38 @@
 
 <!-- Metadata Detail Modal -->
 {#if selectedLog}
-  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-    <div class="w-full max-w-lg rounded-lg bg-white p-6 shadow-xl">
-      <div class="flex items-center justify-between border-b pb-3">
-        <h3 class="text-lg font-bold text-gray-900">Log Details</h3>
-        <button onclick={() => selectedLog = null} class="text-gray-400 hover:text-gray-600">&times;</button>
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+    <div class="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl border border-[#e6e6e6]">
+      <div class="flex items-center justify-between border-b border-[#e6e6e6] pb-3">
+        <h3 class="text-base font-bold text-[#000000]">Log Details</h3>
+        <button onclick={() => selectedLog = null} class="text-[#615d59] hover:text-[#000000] text-lg font-bold">&times;</button>
       </div>
-      <div class="mt-4 space-y-3 text-sm">
+      <div class="mt-4 space-y-2.5 text-xs">
         <div class="flex justify-between">
-          <span class="text-gray-500">Action:</span>
-          <span class="font-mono font-semibold text-blue-600">{selectedLog.action}</span>
+          <span class="text-[#615d59]">Action:</span>
+          <span class="font-mono font-semibold text-[#0075de]">{selectedLog.action}</span>
         </div>
         <div class="flex justify-between">
-          <span class="text-gray-500">User:</span>
-          <span>{selectedLog.userName || selectedLog.userCode || selectedLog.userId}</span>
+          <span class="text-[#615d59]">User:</span>
+          <span class="text-[#000000]">{selectedLog.userName || selectedLog.userCode || selectedLog.userId}</span>
         </div>
         <div class="flex justify-between">
-          <span class="text-gray-500">Timestamp:</span>
-          <span>{new Date(selectedLog.createdAt).toLocaleString()}</span>
+          <span class="text-[#615d59]">Timestamp:</span>
+          <span class="text-[#000000]">{new Date(selectedLog.createdAt).toLocaleString()}</span>
         </div>
         <div>
-          <span class="text-gray-500">Raw Metadata:</span>
-          <pre class="mt-1 max-h-60 overflow-y-auto rounded bg-gray-900 p-3 font-mono text-xs text-green-400">{JSON.stringify(selectedLog.metadata, null, 2)}</pre>
+          <span class="text-[#615d59] block mb-1">Raw Metadata:</span>
+          <pre class="max-h-60 overflow-y-auto rounded-lg bg-[#fbfbfa] p-3 font-mono text-xs text-[#31302e] border border-[#e6e6e6]">{JSON.stringify(selectedLog.metadata, null, 2)}</pre>
         </div>
       </div>
-      <div class="mt-6 flex justify-end gap-2">
+      <div class="mt-6 flex justify-end gap-2 border-t border-[#e6e6e6] pt-3">
         <button
           onclick={() => { const id = selectedLog.id; selectedLog = null; handleDeleteSingle(id); }}
-          class="rounded bg-red-600 px-3 py-2 text-sm font-medium text-white hover:bg-red-700"
+          class="rounded-md bg-[#c53030] px-3 py-1.5 text-xs font-medium text-white hover:bg-[#a82525] transition-colors"
         >
           Delete This Log
         </button>
-        <button onclick={() => selectedLog = null} class="rounded bg-gray-200 px-4 py-2 text-sm font-medium text-gray-800 hover:bg-gray-300">
+        <button onclick={() => selectedLog = null} class="rounded-md border border-[#e6e6e6] bg-white px-3 py-1.5 text-xs font-medium text-[#31302e] hover:bg-[#f6f5f4] transition-colors">
           Close
         </button>
       </div>
