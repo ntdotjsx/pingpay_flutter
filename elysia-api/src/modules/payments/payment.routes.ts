@@ -145,4 +145,63 @@ export const paymentRoutes = new Elysia()
       summary: "Reject payment (Bill Owner)",
       description: "Allows the bill owner to reject a payment slip (e.g. invalid amount, fake slip). Debt balance remains unchanged.",
     }
+  })
+
+  // 4.50 Get user debts list and outstanding summary
+  .get("/debts", async ({ user, set }) => {
+    try {
+      const data = await paymentService.getUserDebtsAndSummary(user.id);
+      return { success: true, data };
+    } catch (e: any) {
+      set.status = 400;
+      return { success: false, error: e.message };
+    }
+  }, {
+    detail: {
+      tags: ["Payments", "Debts"],
+      summary: "Get debts and payment summary for current user",
+      description: "Retrieves list of debts owed by the authenticated user with creditor info, outstanding amount, and summary count/total.",
+    }
+  })
+
+  // 4.51 Get user receivables list (Money owed TO current user as bill owner)
+  .get("/receivables", async ({ user, set }) => {
+    try {
+      const data = await paymentService.getUserReceivablesAndSummary(user.id);
+      return { success: true, data };
+    } catch (e: any) {
+      set.status = 400;
+      return { success: false, error: e.message };
+    }
+  }, {
+    detail: {
+      tags: ["Payments", "Receivables"],
+      summary: "Get receivables summary and friends who owe current user",
+      description: "Retrieves list of debtors and bills owed to the authenticated user, including unique debtor count and outstanding totals.",
+    }
+  })
+
+  // 4.52 Debtor swipes to acknowledge/accept debt
+  .post("/debts/:billItemId/acknowledge", async ({ params: { billItemId }, user, set }) => {
+    try {
+      const data = await paymentService.acknowledgeDebt(user.id, billItemId);
+      return { success: true, data };
+    } catch (e: any) {
+      if (e.message.includes("UNAUTHORIZED")) {
+        set.status = 403;
+      } else if (e.message.includes("PARTICIPANT_NOT_FOUND")) {
+        set.status = 404;
+      } else {
+        set.status = 400;
+      }
+      return { success: false, error: e.message };
+    }
+  }, {
+    params: t.Object({ billItemId: t.String({ format: "uuid" }) }),
+    detail: {
+      tags: ["Payments", "Debts"],
+      summary: "Debtor accepts and acknowledges debt",
+      description: "Debtor performs a swipe action to confirm that they acknowledge the debt.",
+    }
   });
+

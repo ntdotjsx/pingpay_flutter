@@ -1,9 +1,9 @@
+import 'package:figma_squircle/figma_squircle.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pinput/pinput.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_spacing.dart';
 import '../../auth/providers/auth_provider.dart';
+import 'widgets/custom_pin_keypad.dart';
 
 class PinSetupScreen extends ConsumerStatefulWidget {
   const PinSetupScreen({super.key});
@@ -18,19 +18,52 @@ class _PinSetupScreenState extends ConsumerState<PinSetupScreen> {
   bool _isConfirming = false;
   String? _errorMessage;
 
-  void _handlePinCompleted(String value) {
+  void _onDigitPressed(String digit) {
     if (!_isConfirming) {
-      setState(() {
-        _pin = value;
-        _isConfirming = true;
-        _errorMessage = null;
-      });
+      if (_pin.length < 6) {
+        setState(() {
+          _pin += digit;
+          _errorMessage = null;
+        });
+
+        if (_pin.length == 6) {
+          Future.delayed(const Duration(milliseconds: 250), () {
+            if (mounted) {
+              setState(() {
+                _isConfirming = true;
+                _confirmPin = '';
+              });
+            }
+          });
+        }
+      }
     } else {
-      setState(() {
-        _confirmPin = value;
-      });
-      _submitPin();
+      if (_confirmPin.length < 6) {
+        setState(() {
+          _confirmPin += digit;
+          _errorMessage = null;
+        });
+
+        if (_confirmPin.length == 6) {
+          _submitPin();
+        }
+      }
     }
+  }
+
+  void _onDeletePressed() {
+    setState(() {
+      _errorMessage = null;
+      if (!_isConfirming) {
+        if (_pin.isNotEmpty) {
+          _pin = _pin.substring(0, _pin.length - 1);
+        }
+      } else {
+        if (_confirmPin.isNotEmpty) {
+          _confirmPin = _confirmPin.substring(0, _confirmPin.length - 1);
+        }
+      }
+    });
   }
 
   Future<void> _submitPin() async {
@@ -48,7 +81,7 @@ class _PinSetupScreenState extends ConsumerState<PinSetupScreen> {
       await ref.read(authStateProvider.notifier).setupPin(_pin);
     } catch (e) {
       setState(() {
-        _errorMessage = e.toString();
+        _errorMessage = e.toString().replaceAll('Exception:', '').trim();
         _isConfirming = false;
         _pin = '';
         _confirmPin = '';
@@ -59,100 +92,161 @@ class _PinSetupScreenState extends ConsumerState<PinSetupScreen> {
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authStateProvider);
-
-    final defaultPinTheme = PinTheme(
-      width: 48,
-      height: 56,
-      textStyle: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: AppRadius.roundedMd,
-        border: Border.all(color: Theme.of(context).colorScheme.outline),
-      ),
-    );
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final currentLength = _isConfirming ? _confirmPin.length : _pin.length;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('ตั้งรหัสความปลอดภัย PIN'),
-        automaticallyImplyLeading: false,
-      ),
+      backgroundColor: isDark ? AppColors.surfaceBlack : AppColors.canvas,
       body: SafeArea(
-        child: Padding(
-          padding: AppSpacing.screenPadding,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              const Icon(
-                Icons.shield_outlined,
-                size: 56,
-                color: AppColors.primary,
+        child: Column(
+          children: [
+            // Top App Bar
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  if (_isConfirming)
+                    IconButton(
+                      icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
+                      onPressed: () {
+                        setState(() {
+                          _isConfirming = false;
+                          _pin = '';
+                          _confirmPin = '';
+                          _errorMessage = null;
+                        });
+                      },
+                    )
+                  else
+                    const SizedBox(width: 48),
+                  const Text(
+                    'ตั้งรหัสความปลอดภัย',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(width: 48),
+                ],
               ),
-              const SizedBox(height: AppSpacing.lg),
-              Text(
-                _isConfirming
-                    ? 'ยืนยันรหัส PIN 6 หลักอีกครั้ง'
-                    : 'สร้างรหัส PIN 6 หลักของคุณ',
-                style: Theme.of(context).textTheme.headlineMedium,
-                textAlign: TextAlign.center,
+            ),
+
+            const SizedBox(height: 16),
+
+            // Security Icon Squircle Badge
+            Container(
+              width: 64,
+              height: 64,
+              decoration: ShapeDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFFFF5000), Color(0xFFFF6A00)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                shadows: [
+                  BoxShadow(
+                    color: AppColors.primary.withValues(alpha: 0.35),
+                    blurRadius: 14,
+                    offset: const Offset(0, 5),
+                  ),
+                ],
+                shape: const SmoothRectangleBorder(
+                  borderRadius: SmoothBorderRadius.all(
+                    SmoothRadius(cornerRadius: 22, cornerSmoothing: 1.0),
+                  ),
+                ),
               ),
-              const SizedBox(height: AppSpacing.sm),
-              Text(
+              child: const Icon(
+                Icons.shield_rounded,
+                size: 32,
+                color: Colors.white,
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Title & Subtitle
+            Text(
+              _isConfirming
+                  ? 'ยืนยันรหัส PIN 6 หลักอีกครั้ง'
+                  : 'สร้างรหัส PIN 6 หลักของคุณ',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: isDark ? AppColors.bodyOnDark : AppColors.ink,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 4),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 32),
+              child: Text(
                 _isConfirming
                     ? 'กรอกรหัส PIN เดิมเพื่อยืนยันความถูกต้อง'
                     : 'รหัส PIN นี้จะใช้ในการยืนยันตัวตนและการทำธุรกรรมทางการเงิน',
-                style: Theme.of(context).textTheme.bodyMedium,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
+                ),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: AppSpacing.xxl),
+            ),
 
-              Pinput(
-                key: ValueKey(_isConfirming),
-                length: 6,
-                obscureText: true,
-                autofocus: true,
-                keyboardType: TextInputType.number,
-                defaultPinTheme: defaultPinTheme,
-                focusedPinTheme: defaultPinTheme.copyWith(
-                  decoration: defaultPinTheme.decoration!.copyWith(
-                    border: Border.all(color: AppColors.primary, width: 2),
-                  ),
-                ),
-                onCompleted: _handlePinCompleted,
+            const SizedBox(height: 24),
+
+            // PIN Dots Indicator
+            PinDotsIndicator(
+              pinLength: 6,
+              filledLength: currentLength,
+              hasError: _errorMessage != null,
+            ),
+
+            const SizedBox(height: 10),
+
+            // Error message or loading
+            SizedBox(
+              height: 32,
+              child: Center(
+                child: authState.isLoading
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2.5),
+                      )
+                    : (_errorMessage != null
+                        ? Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: AppColors.error.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text(
+                              _errorMessage!,
+                              style: const TextStyle(
+                                color: AppColors.error,
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          )
+                        : const SizedBox.shrink()),
               ),
-              const SizedBox(height: AppSpacing.xl),
+            ),
 
-              if (_errorMessage != null) ...[
-                Text(
-                  _errorMessage!,
-                  style: const TextStyle(
-                    color: AppColors.error,
-                    fontWeight: FontWeight.w500,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: AppSpacing.md),
-              ],
+            const Spacer(),
 
-              if (authState.isLoading) const CircularProgressIndicator(),
+            // Custom Keypad
+            CustomPinKeypad(
+              onDigitPressed: _onDigitPressed,
+              onDeletePressed: _onDeletePressed,
+            ),
 
-              if (_isConfirming && !authState.isLoading) ...[
-                TextButton(
-                  onPressed: () {
-                    setState(() {
-                      _isConfirming = false;
-                      _pin = '';
-                      _confirmPin = '';
-                      _errorMessage = null;
-                    });
-                  },
-                  child: const Text('ย้อนกลับไปตั้งรหัส PIN ใหม่'),
-                ),
-              ],
-            ],
-          ),
+            const SizedBox(height: 20),
+          ],
         ),
       ),
     );
   }
 }
+

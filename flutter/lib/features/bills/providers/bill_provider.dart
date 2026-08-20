@@ -26,6 +26,7 @@ class BillCreationState {
   final bool isOwnerAmountManuallyAdjusted;
   final bool isSubmitting;
   final String? errorMessage;
+  final String? receiptImageBase64;
   final BillModel? createdBill;
 
   const BillCreationState({
@@ -40,6 +41,7 @@ class BillCreationState {
     this.isOwnerAmountManuallyAdjusted = false,
     this.isSubmitting = false,
     this.errorMessage,
+    this.receiptImageBase64,
     this.createdBill,
   });
 
@@ -82,6 +84,7 @@ class BillCreationState {
     bool? isOwnerAmountManuallyAdjusted,
     bool? isSubmitting,
     String? errorMessage,
+    String? receiptImageBase64,
     BillModel? createdBill,
   }) {
     return BillCreationState(
@@ -97,6 +100,7 @@ class BillCreationState {
           isOwnerAmountManuallyAdjusted ?? this.isOwnerAmountManuallyAdjusted,
       isSubmitting: isSubmitting ?? this.isSubmitting,
       errorMessage: errorMessage,
+      receiptImageBase64: receiptImageBase64 ?? this.receiptImageBase64,
       createdBill: createdBill ?? this.createdBill,
     );
   }
@@ -169,24 +173,39 @@ class BillCreationNotifier extends StateNotifier<BillCreationState> {
 
   // --- ITEM MANAGEMENT ---
   void setItems(List<ReceiptItemModel> items) {
-    state = state.copyWith(items: List.from(items), errorMessage: null);
+    final list = List<ReceiptItemModel>.from(items);
+    if (list.isNotEmpty) {
+      final itemsSum = list.fold(0.0, (acc, it) => acc + (it.amount * it.quantity));
+      _recalculateAll(newTotalAmount: itemsSum);
+    }
+    state = state.copyWith(items: list, errorMessage: null);
   }
 
   void addItem(ReceiptItemModel item) {
-    state = state.copyWith(items: [...state.items, item], errorMessage: null);
+    final updatedList = [...state.items, item];
+    final itemsSum = updatedList.fold(0.0, (acc, it) => acc + (it.amount * it.quantity));
+    _recalculateAll(newTotalAmount: itemsSum);
+    state = state.copyWith(items: updatedList, errorMessage: null);
   }
 
   void updateItem(int index, ReceiptItemModel item) {
     if (index < 0 || index >= state.items.length) return;
     final updatedList = List<ReceiptItemModel>.from(state.items);
     updatedList[index] = item;
+    final itemsSum = updatedList.fold(0.0, (acc, it) => acc + (it.amount * it.quantity));
+    _recalculateAll(newTotalAmount: itemsSum);
     state = state.copyWith(items: updatedList, errorMessage: null);
   }
 
   void removeItem(int index) {
     if (index < 0 || index >= state.items.length) return;
-    final updatedList = List<ReceiptItemModel>.from(state.items)
-      ..removeAt(index);
+    final updatedList = List<ReceiptItemModel>.from(state.items)..removeAt(index);
+    if (updatedList.isNotEmpty) {
+      final itemsSum = updatedList.fold(0.0, (acc, it) => acc + (it.amount * it.quantity));
+      _recalculateAll(newTotalAmount: itemsSum);
+    } else {
+      _recalculateAll(newTotalAmount: 0.0);
+    }
     state = state.copyWith(items: updatedList, errorMessage: null);
   }
 
@@ -260,6 +279,10 @@ class BillCreationNotifier extends StateNotifier<BillCreationState> {
     _recalculateAll(customOwnerSatang: null);
   }
 
+  void setReceiptImageBase64(String? base64String) {
+    state = state.copyWith(receiptImageBase64: base64String);
+  }
+
   // --- SUBMISSION ---
   Future<BillModel?> submitBill() async {
     // 1. Assert friend requirement and participant existence
@@ -320,6 +343,7 @@ class BillCreationNotifier extends StateNotifier<BillCreationState> {
         totalAmount: state.totalAmount,
         participants: participantsPayload,
         itemsBreakdown: itemsBreakdownPayload,
+        receiptImageUrl: state.receiptImageBase64,
       );
 
       state = state.copyWith(
@@ -355,4 +379,9 @@ final billDetailProvider = FutureProvider.family<BillModel, String>((
 ) async {
   final repo = ref.watch(billRepositoryProvider);
   return repo.getBillById(billId);
+});
+
+final myBillsProvider = FutureProvider<List<BillModel>>((ref) async {
+  final repo = ref.watch(billRepositoryProvider);
+  return repo.getMyBills();
 });

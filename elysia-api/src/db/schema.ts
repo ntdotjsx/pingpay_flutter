@@ -32,6 +32,7 @@ export const billStatusEnum = pgEnum("bill_status", [
   "fully_paid",
   "partially_written_off",
   "fully_written_off",
+  "cancelled",
 ]);
 
 export const billItemStatusEnum = pgEnum("bill_item_status", [
@@ -158,6 +159,12 @@ export const users = pgTable(
     promptPayVerifiedAt: timestamp("prompt_pay_verified_at"), // set after first successful SlipOK match to this ID
 
     avatarUrl: text("avatar_url"),
+
+    // Rewards & Gamification
+    rewardPoints: integer("reward_points").notNull().default(27),
+    shippingAddress: text("shipping_address"),
+    shippingPhone: varchar("shipping_phone", { length: 32 }),
+    shippingRecipientName: varchar("shipping_recipient_name", { length: 128 }),
 
     profileCompletedAt: timestamp("profile_completed_at"),
 
@@ -287,6 +294,10 @@ export const billItems = pgTable(
       .default("0"),
 
     status: billItemStatusEnum("status").notNull().default("unpaid"),
+
+    // Debt Acknowledgement by debtor (Friend swipes to accept debt)
+    isAcknowledged: boolean("is_acknowledged").notNull().default(false),
+    acknowledgedAt: timestamp("acknowledged_at"),
 
     // once true, currentAmount can no longer be edited directly;
     // corrections must go through a refund/adjustment flow instead
@@ -937,5 +948,67 @@ export const authSessionsRelations = relations(authSessions, ({ one }) => ({
   user: one(users, {
     fields: [authSessions.userId],
     references: [users.id],
+  }),
+}));
+
+/* -------------------------------------------------------------------------- */
+/* REWARDS & STORE CATALOG                                                    */
+/* -------------------------------------------------------------------------- */
+
+export const rewardRedemptionStatusEnum = pgEnum("reward_redemption_status", [
+  "pending_delivery",
+  "shipped",
+  "delivered",
+  "cancelled",
+]);
+
+export const rewardItems = pgTable(
+  "reward_items",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    title: varchar("title", { length: 128 }).notNull(),
+    description: text("description"),
+    pointsCost: integer("points_cost").notNull(),
+    category: varchar("category", { length: 64 }).notNull().default("physical"), // physical, voucher, gadget
+    imageUrl: text("image_url"),
+    inStock: integer("in_stock").notNull().default(100),
+    isActive: boolean("is_active").notNull().default(true),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  }
+);
+
+export const rewardRedemptions = pgTable(
+  "reward_redemptions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    rewardItemId: uuid("reward_item_id")
+      .notNull()
+      .references(() => rewardItems.id, { onDelete: "cascade" }),
+    pointsSpent: integer("points_spent").notNull(),
+    status: rewardRedemptionStatusEnum("status").notNull().default("pending_delivery"),
+    recipientName: varchar("recipient_name", { length: 128 }).notNull(),
+    phoneNumber: varchar("phone_number", { length: 32 }).notNull(),
+    shippingAddress: text("shipping_address").notNull(),
+    trackingNumber: varchar("tracking_number", { length: 64 }),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => ({
+    userIdx: index("reward_redemptions_user_idx").on(table.userId),
+  })
+);
+
+export const rewardRedemptionsRelations = relations(rewardRedemptions, ({ one }) => ({
+  user: one(users, {
+    fields: [rewardRedemptions.userId],
+    references: [users.id],
+  }),
+  rewardItem: one(rewardItems, {
+    fields: [rewardRedemptions.rewardItemId],
+    references: [rewardItems.id],
   }),
 }));

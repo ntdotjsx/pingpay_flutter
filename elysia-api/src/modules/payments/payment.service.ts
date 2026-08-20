@@ -6,6 +6,7 @@ import {
   financialTransactions,
   editLogs,
   users,
+  suspiciousActivityLogs,
 } from "../../db/schema";
 import { eq, sql } from "drizzle-orm";
 import { PaymentRepository } from "./payment.repository";
@@ -134,6 +135,12 @@ export class PaymentService {
     if (slipHash) {
       const duplicateByHash = await this.repo.findDuplicateSlip(slipHash);
       if (duplicateByHash) {
+        await db.insert(suspiciousActivityLogs).values({
+          userId: payerId,
+          type: "duplicate_slip",
+          description: `Duplicate slip hash submitted for bill ${billId} item ${dto.participantId}`,
+          metadata: { slipHash, billId, participantId: dto.participantId, existingPaymentId: duplicateByHash.id },
+        }).catch(() => {});
         throw new Error("DUPLICATE_SLIP: This slip image has already been submitted for a payment.");
       }
     }
@@ -154,6 +161,12 @@ export class PaymentService {
         slipResult.transactionReference
       );
       if (duplicateByRef) {
+        await db.insert(suspiciousActivityLogs).values({
+          userId: payerId,
+          type: "duplicate_slip",
+          description: `Duplicate SlipOK bank reference ${slipResult.transactionReference} submitted`,
+          metadata: { transactionReference: slipResult.transactionReference, billId, participantId: dto.participantId, existingPaymentId: duplicateByRef.id },
+        }).catch(() => {});
         throw new Error(
           "DUPLICATE_SLIP: This bank transfer transaction reference has already been consumed."
         );
@@ -671,4 +684,287 @@ export class PaymentService {
 
     return await this.repo.getPaymentsByBillId(billId);
   }
+
+  /**
+   * 4.50 Get Outstanding Debts and Summary for the Current User:
+   * Returns list of debts owed by the user, filtered or categorized by status,
+   * along with total outstanding count and sum.
+   */
+  async getUserDebtsAndSummary(userId: string) {
+    const rawItems = await this.repo.getOutstandingDebtsForUser(userId);
+
+    let totalOutstandingSatang = 0;
+    let outstandingCount = 0;
+
+    const formattedDebts = rawItems.map((item) => {
+      const origSatang = Math.round(parseFloat(item.originalAmount || "0") * 100);
+      const currSatang = Math.round(parseFloat(item.currentAmount || "0") * 100);
+      const paidSatang = Math.round(parseFloat(item.amountPaid || "0") * 100);
+      const writtenOffSatang = Math.round(parseFloat(item.amountWrittenOff || "0") * 100);
+      const outstandingSatang = Math.max(0, currSatang - paidSatang - writtenOffSatang);
+
+      const isOutstanding =
+        item.status !== "paid" &&
+        item.status !== "written_off" &&
+        outstandingSatang > 0 &&
+        !item.bill.cancelledAt;
+
+      if (isOutstanding) {
+        totalOutstandingSatang += outstandingSatang;
+        outstandingCount += 1;
+      }
+
+      return {
+        id: item.id,
+        billId: item.billId,
+        debtorId: item.debtorId,
+        billTitle: item.bill.title || "บิลค่าใช้จ่าย",
+        currency: item.bill.currency || "THB",
+        originalAmount: (origSatang / 100).toFixed(2),
+        currentAmount: (currSatang / 100).toFixed(2),
+        amountPaid: (paidSatang / 100).toFixed(2),
+        amountWrittenOff: (writtenOffSatang / 100).toFixed(2),
+        outstandingAmount: (outstandingSatang / 100).toFixed(2),
+        status: item.status,
+        isAcknowledged: item.isAcknowledged,
+        acknowledgedAt: item.acknowledgedAt ? item.acknowledgedAt.toISOString() : null,
+        isLocked: item.isLocked,
+        isOutstanding,
+        debtStartDate: item.createdAt.toISOString(),
+        receiptImageUrl: item.bill.receiptImageUrl || null,
+        creditor: {
+          id: item.bill.owner.id,
+          userCode: item.bill.owner.userCode,
+          displayName: item.bill.owner.displayName || item.bill.owner.fullName || "เจ้าของบิล",
+          avatarUrl: item.bill.owner.avatarUrl || null,
+          promptPayId: item.bill.owner.promptPayId || null,
+          promptPayIdType: item.bill.owner.promptPayIdType || null,
+          bankAccountNumber: item.bill.owner.bankAccountNumber || null,
+        },
+        paymentsCount: item.payments.length,
+        latestPaymentStatus: item.payments.length > 0 ? item.payments[0].status : null,
+      };
+    });
+
+    return {
+      summary: {
+        outstandingCount,
+        totalOutstandingAmount: (totalOutstandingSatang / 100).toFixed(2),
+        currency: "THB",
+      },
+      debts: formattedDebts,
+    };
+  }
+
+  /**
+   * Get all receivables (debts other users owe to this user), grouped and summarized.
+   * Calculates unique debtors count, total outstanding, and per-friend / per-bill breakdowns.
+   */
+  async getUserReceivablesAndSummary(userId: string) {
+    const ownerBills = await this.repo.getReceivablesForOwner(userId);
+
+    let totalOutstandingSatang = 0;
+    let totalPaidSatang = 0;
+    let totalWrittenOffSatang = 0;
+    let totalOriginalSatang = 0;
+
+    // Grouping by debtorId
+    const debtorMap = new Map<string, {
+      debtor: {
+        id: string;
+        userCode: string;
+        displayName: string;
+        avatarUrl: string | null;
+        promptPayId: string | null;
+        bankAccountNumber: string | null;
+      };
+      bills: Array<{
+        id: string; // bill_items.id
+        billId: string;
+        billTitle: string;
+        currency: string;
+        originalAmount: string;
+        currentAmount: string;
+        amountPaid: string;
+        amountWrittenOff: string;
+        outstandingAmount: string;
+        status: string;
+        isLocked: boolean;
+        isOutstanding: boolean;
+        debtStartDate: string;
+        paymentsCount: number;
+        latestPaymentStatus: string | null;
+      }>;
+      totalOriginalAmount: number;
+      totalCurrentAmount: number;
+      totalAmountPaid: number;
+      totalAmountWrittenOff: number;
+      totalOutstandingAmount: number;
+      oldestDebtStartDate: string;
+      latestPaymentStatus: string | null;
+    }>();
+
+    for (const bill of ownerBills) {
+      if (bill.cancelledAt) continue;
+
+      for (const item of bill.items) {
+        const origSat = Math.round(parseFloat(item.originalAmount || "0") * 100);
+        const currSat = Math.round(parseFloat(item.currentAmount || "0") * 100);
+        const paidSat = Math.round(parseFloat(item.amountPaid || "0") * 100);
+        const writtenOffSat = Math.round(parseFloat(item.amountWrittenOff || "0") * 100);
+        const outstandingSat = Math.max(0, currSat - paidSat - writtenOffSat);
+
+        const isOutstanding =
+          item.status !== "paid" &&
+          item.status !== "written_off" &&
+          outstandingSat > 0;
+
+        if (isOutstanding) {
+          totalOutstandingSatang += outstandingSat;
+        }
+        totalPaidSatang += paidSat;
+        totalWrittenOffSatang += writtenOffSat;
+        totalOriginalSatang += origSat;
+
+        const billItemFormatted = {
+          id: item.id,
+          billId: bill.id,
+          billTitle: bill.title || "บิลค่าใช้จ่าย",
+          currency: bill.currency || "THB",
+          originalAmount: (origSat / 100).toFixed(2),
+          currentAmount: (currSat / 100).toFixed(2),
+          amountPaid: (paidSat / 100).toFixed(2),
+          amountWrittenOff: (writtenOffSat / 100).toFixed(2),
+          outstandingAmount: (outstandingSat / 100).toFixed(2),
+          status: item.status,
+          isAcknowledged: item.isAcknowledged,
+          acknowledgedAt: item.acknowledgedAt ? item.acknowledgedAt.toISOString() : null,
+          isLocked: item.isLocked,
+          isOutstanding,
+          debtStartDate: item.createdAt.toISOString(),
+          paymentsCount: item.payments.length,
+          latestPaymentStatus: item.payments.length > 0 ? item.payments[0].status : null,
+        };
+
+        const debtorUser = item.debtor;
+        const dId = item.debtorId;
+
+        if (!debtorMap.has(dId)) {
+          debtorMap.set(dId, {
+            debtor: {
+              id: debtorUser.id,
+              userCode: debtorUser.userCode,
+              displayName: debtorUser.displayName || debtorUser.fullName || "เพื่อน",
+              avatarUrl: debtorUser.avatarUrl || null,
+              promptPayId: debtorUser.promptPayId || null,
+              bankAccountNumber: debtorUser.bankAccountNumber || null,
+            },
+            bills: [],
+            totalOriginalAmount: 0,
+            totalCurrentAmount: 0,
+            totalAmountPaid: 0,
+            totalAmountWrittenOff: 0,
+            totalOutstandingAmount: 0,
+            oldestDebtStartDate: item.createdAt.toISOString(),
+            latestPaymentStatus: null,
+          });
+        }
+
+        const debtorGroup = debtorMap.get(dId)!;
+        debtorGroup.bills.push(billItemFormatted);
+        debtorGroup.totalOriginalAmount += origSat / 100;
+        debtorGroup.totalCurrentAmount += currSat / 100;
+        debtorGroup.totalAmountPaid += paidSat / 100;
+        debtorGroup.totalAmountWrittenOff += writtenOffSat / 100;
+        debtorGroup.totalOutstandingAmount += outstandingSat / 100;
+
+        if (new Date(item.createdAt).getTime() < new Date(debtorGroup.oldestDebtStartDate).getTime()) {
+          debtorGroup.oldestDebtStartDate = item.createdAt.toISOString();
+        }
+
+        if (item.payments.length > 0 && !debtorGroup.latestPaymentStatus) {
+          debtorGroup.latestPaymentStatus = item.payments[0].status;
+        }
+      }
+    }
+
+    // Convert debtorMap to array and format amounts to fixed strings
+    const debtorFriends = Array.from(debtorMap.values()).map((group) => {
+      const outstandingBills = group.bills.filter((b) => b.isOutstanding);
+      return {
+        debtor: group.debtor,
+        outstandingBillCount: outstandingBills.length,
+        totalBillsCount: group.bills.length,
+        totalOriginalAmount: group.totalOriginalAmount.toFixed(2),
+        totalCurrentAmount: group.totalCurrentAmount.toFixed(2),
+        totalAmountPaid: group.totalAmountPaid.toFixed(2),
+        totalAmountWrittenOff: group.totalAmountWrittenOff.toFixed(2),
+        totalOutstandingAmount: group.totalOutstandingAmount.toFixed(2),
+        hasOutstandingDebt: group.totalOutstandingAmount > 0,
+        oldestDebtStartDate: group.oldestDebtStartDate,
+        latestPaymentStatus: group.latestPaymentStatus,
+        bills: group.bills,
+      };
+    });
+
+    // Count unique friends who currently owe money
+    const uniqueDebtorsWithOutstanding = debtorFriends.filter((f) => f.hasOutstandingDebt).length;
+
+    return {
+      summary: {
+        debtorCount: uniqueDebtorsWithOutstanding,
+        totalOutstandingAmount: (totalOutstandingSatang / 100).toFixed(2),
+        totalPaidAmount: (totalPaidSatang / 100).toFixed(2),
+        totalWrittenOffAmount: (totalWrittenOffSatang / 100).toFixed(2),
+        totalOriginalAmount: (totalOriginalSatang / 100).toFixed(2),
+        currency: "THB",
+      },
+      friends: debtorFriends,
+    };
+  }
+
+  /**
+   * Debtor swipes to acknowledge/accept that they indeed owe this debt.
+   */
+  async acknowledgeDebt(debtorId: string, billItemId: string) {
+    const item = await db.query.billItems.findFirst({
+      where: eq(billItems.id, billItemId),
+      with: { bill: { with: { owner: true } } },
+    });
+
+    if (!item) {
+      throw new Error("PARTICIPANT_NOT_FOUND: Debt item not found.");
+    }
+
+    if (item.debtorId !== debtorId) {
+      throw new Error("UNAUTHORIZED: Only the assigned debtor can acknowledge this debt.");
+    }
+
+    const [updated] = await db
+      .update(billItems)
+      .set({
+        isAcknowledged: true,
+        acknowledgedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(billItems.id, billItemId))
+      .returning();
+
+    // Enqueue Outbox notification to bill owner
+    await this.outboxService.enqueue({
+      eventType: "DEBT_ACKNOWLEDGED",
+      recipientUserId: item.bill.ownerId,
+      deduplicationKey: `DEBT_ACKNOWLEDGED:${billItemId}:${debtorId}`,
+      payload: {
+        billId: item.billId,
+        billTitle: item.bill.title || "Bill",
+        billItemId: item.id,
+        debtorId,
+        amount: item.currentAmount,
+      },
+    });
+
+    return updated;
+  }
 }
+

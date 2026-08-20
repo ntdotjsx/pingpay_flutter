@@ -7,9 +7,14 @@ import 'auth_interceptor.dart';
 class DioClient {
   late final Dio dio;
   final SecureStorageService secureStorage;
+  void Function()? onUnauthorized;
+  late final AuthInterceptor authInterceptor;
 
-  DioClient({SecureStorageService? storage, String? customBaseUrl})
-    : secureStorage = storage ?? SecureStorageService() {
+  DioClient({
+    SecureStorageService? storage,
+    String? customBaseUrl,
+    this.onUnauthorized,
+  }) : secureStorage = storage ?? SecureStorageService() {
     dio = Dio(
       BaseOptions(
         baseUrl: customBaseUrl ?? AppConfig.baseUrl,
@@ -22,7 +27,12 @@ class DioClient {
       ),
     );
 
-    dio.interceptors.add(AuthInterceptor(secureStorage, dio));
+    authInterceptor = AuthInterceptor(
+      secureStorage,
+      dio,
+      onUnauthorized: () => onUnauthorized?.call(),
+    );
+    dio.interceptors.add(authInterceptor);
   }
 
   Future<Response<T>> get<T>(
@@ -67,6 +77,24 @@ class DioClient {
   }) async {
     try {
       return await dio.patch<T>(
+        path,
+        data: data,
+        queryParameters: queryParameters,
+        options: options,
+      );
+    } on DioException catch (e) {
+      throw _mapDioException(e);
+    }
+  }
+
+  Future<Response<T>> delete<T>(
+    String path, {
+    dynamic data,
+    Map<String, dynamic>? queryParameters,
+    Options? options,
+  }) async {
+    try {
+      return await dio.delete<T>(
         path,
         data: data,
         queryParameters: queryParameters,

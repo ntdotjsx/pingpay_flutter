@@ -45,6 +45,10 @@ export default new Elysia()
       bankAccountNumber: user.bankAccountNumber,
       promptPayId: user.promptPayId,
       promptPayIdType: user.promptPayIdType,
+      rewardPoints: user.rewardPoints ?? 27,
+      shippingAddress: user.shippingAddress,
+      shippingPhone: user.shippingPhone,
+      shippingRecipientName: user.shippingRecipientName,
       profileCompletedAt: user.profileCompletedAt,
     };
   }, { detail: { tags: ["Profile & Consent"], summary: "Get user profile" } })
@@ -58,6 +62,11 @@ export default new Elysia()
     if (body.address !== undefined) updateData.address = body.address;
     if (body.phoneNumber !== undefined) updateData.phoneNumber = body.phoneNumber;
     if (body.promptPayId !== undefined) updateData.promptPayId = body.promptPayId;
+    if (body.promptPayIdType !== undefined) updateData.promptPayIdType = body.promptPayIdType;
+    if (body.bankAccountNumber !== undefined) updateData.bankAccountNumber = body.bankAccountNumber;
+    if (body.shippingAddress !== undefined) updateData.shippingAddress = body.shippingAddress;
+    if (body.shippingPhone !== undefined) updateData.shippingPhone = body.shippingPhone;
+    if (body.shippingRecipientName !== undefined) updateData.shippingRecipientName = body.shippingRecipientName;
 
     const [updatedUser] = await db
       .update(users)
@@ -67,22 +76,33 @@ export default new Elysia()
 
     return {
       success: true,
-      user: {
-        id: updatedUser.id,
-        userCode: updatedUser.userCode,
+      message: "Profile updated successfully",
+      profile: {
         displayName: updatedUser.displayName,
         fullName: updatedUser.fullName,
-        avatarUrl: updatedUser.avatarUrl,
-      },
-      profileCompletedAt: updatedUser.profileCompletedAt,
+        address: updatedUser.address,
+        phoneNumber: updatedUser.phoneNumber,
+        promptPayId: updatedUser.promptPayId,
+        promptPayIdType: updatedUser.promptPayIdType,
+        bankAccountNumber: updatedUser.bankAccountNumber,
+        rewardPoints: updatedUser.rewardPoints,
+        shippingAddress: updatedUser.shippingAddress,
+        shippingPhone: updatedUser.shippingPhone,
+        shippingRecipientName: updatedUser.shippingRecipientName,
+      }
     };
   }, {
     body: t.Object({
-      displayName: t.Optional(t.String({ minLength: 1, maxLength: 64 })),
-      fullName: t.Optional(t.String({ minLength: 1, maxLength: 128 })),
+      displayName: t.Optional(t.String()),
+      fullName: t.Optional(t.String()),
       address: t.Optional(t.String()),
       phoneNumber: t.Optional(t.String()),
       promptPayId: t.Optional(t.String()),
+      promptPayIdType: t.Optional(t.String()),
+      bankAccountNumber: t.Optional(t.String()),
+      shippingAddress: t.Optional(t.String()),
+      shippingPhone: t.Optional(t.String()),
+      shippingRecipientName: t.Optional(t.String()),
     }),
-    detail: { tags: ["Profile & Consent"], summary: "Update user profile / Set username" }
+    detail: { tags: ["Profile & Consent"], summary: "Save user profile" }
   });

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/theme.dart';
+import '../../../../core/utils/app_toast.dart';
 import '../models/friend_models.dart';
 import '../providers/friends_provider.dart';
 
@@ -255,7 +256,6 @@ class _AddFriendScreenState extends ConsumerState<AddFriendScreen> {
 
                       // Action Button based on Relationship State
                       _buildActionButtonForRelationship(
-                        context,
                         _searchResult!,
                         actionState,
                       ),
@@ -319,7 +319,6 @@ class _AddFriendScreenState extends ConsumerState<AddFriendScreen> {
   }
 
   Widget _buildActionButtonForRelationship(
-    BuildContext context,
     UserSearchModel user,
     FriendActionState actionState,
   ) {
@@ -368,27 +367,20 @@ class _AddFriendScreenState extends ConsumerState<AddFriendScreen> {
       onPressed: actionState.isLoading
           ? null
           : () async {
-              final messenger = ScaffoldMessenger.of(context);
               final router = GoRouter.of(context);
               final ok = await ref
                   .read(friendActionsProvider.notifier)
                   .sendRequest(user.userCode);
               if (ok) {
-                messenger.showSnackBar(
-                  const SnackBar(
-                    content: Text('ส่งคำขอเป็นเพื่อนเรียบร้อยแล้ว รอการตอบรับ'),
-                    backgroundColor: Colors.green,
-                  ),
-                );
-                router.pop();
+                if (mounted) {
+                  AppToast.success(context, 'ส่งคำขอเป็นเพื่อนเรียบร้อยแล้ว รอการตอบรับ');
+                  router.pop();
+                }
               } else {
-                final err = ref.read(friendActionsProvider).errorMessage;
-                messenger.showSnackBar(
-                  SnackBar(
-                    content: Text(err ?? 'ส่งคำขอไม่สำเร็จ'),
-                    backgroundColor: Colors.red,
-                  ),
-                );
+                if (mounted) {
+                  final err = ref.read(friendActionsProvider).errorMessage;
+                  AppToast.error(context, err ?? 'ส่งคำขอไม่สำเร็จ');
+                }
               }
             },
       style: ElevatedButton.styleFrom(

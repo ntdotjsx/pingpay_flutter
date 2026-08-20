@@ -37,6 +37,7 @@ export const CreateBillSchema = t.Object({
   participants: t.Array(ParticipantSchema, { minItems: 1, description: "List of participants in this bill" }),
   allocationMethod: t.Optional(t.Union([t.Literal("evenly"), t.Literal("exact"), t.Literal("itemized")], { default: "evenly" })),
   itemsBreakdown: t.Optional(ItemsBreakdownSchema),
+  receiptImageUrl: t.Optional(t.String({ description: "Base64 encoded image or receipt image URL" })),
 });
 
 export const EditBillSchema = t.Object({

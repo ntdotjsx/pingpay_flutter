@@ -51,6 +51,7 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
           'จัดการเพื่อน (Friends)',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
+        centerTitle: true,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
           onPressed: () => context.pop(),
@@ -64,6 +65,7 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
         ],
         bottom: TabBar(
           controller: _tabController,
+          dividerColor: Colors.transparent,
           labelColor: const Color(0xFFFF5000),
           unselectedLabelColor: isDark ? Colors.white60 : Colors.black54,
           indicatorColor: const Color(0xFFFF5000),

@@ -25,16 +25,32 @@ class UserModel {
   final String id;
   final String? userCode;
   final String? displayName;
+  final String? fullName;
   final String? avatarUrl;
   final String? role;
+  final String? promptPayId;
+  final String? phoneNumber;
+  final String? bankAccountNumber;
+  final int rewardPoints;
+  final String? shippingAddress;
+  final String? shippingPhone;
+  final String? shippingRecipientName;
   final OnboardingState onboardingState;
 
   UserModel({
     required this.id,
     this.userCode,
     this.displayName,
+    this.fullName,
     this.avatarUrl,
     this.role,
+    this.promptPayId,
+    this.phoneNumber,
+    this.bankAccountNumber,
+    this.rewardPoints = 27,
+    this.shippingAddress,
+    this.shippingPhone,
+    this.shippingRecipientName,
     this.onboardingState = OnboardingState.unknown,
   });
 
@@ -43,8 +59,18 @@ class UserModel {
       id: json['userId'] ?? json['id'] ?? '',
       userCode: json['userCode'],
       displayName: json['displayName'],
+      fullName: json['fullName'],
       avatarUrl: json['avatarUrl'],
       role: json['role'] ?? 'user',
+      promptPayId: json['promptPayId'],
+      phoneNumber: json['phoneNumber'],
+      bankAccountNumber: json['bankAccountNumber'],
+      rewardPoints: json['rewardPoints'] is int
+          ? json['rewardPoints'] as int
+          : (int.tryParse(json['rewardPoints']?.toString() ?? '') ?? 27),
+      shippingAddress: json['shippingAddress'],
+      shippingPhone: json['shippingPhone'],
+      shippingRecipientName: json['shippingRecipientName'],
       onboardingState: OnboardingState.fromString(json['onboardingState']),
     );
   }

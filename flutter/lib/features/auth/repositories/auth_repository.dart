@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import '../../../core/network/dio_client.dart';
 import '../models/auth_models.dart';
 
@@ -58,8 +59,15 @@ class AuthRepository {
         '/api/v1/auth/pin/verify',
         data: {'pin': pin},
       );
-      return res.data['valid'] == true;
-    } catch (_) {
+      final data = res.data;
+      return data['success'] == true || data['valid'] == true;
+    } catch (e) {
+      if (e is DioException) {
+        final errorMsg = e.response?.data?['error']?.toString();
+        if (errorMsg != null && errorMsg.isNotEmpty) {
+          throw Exception(errorMsg);
+        }
+      }
       return false;
     }
   }
@@ -69,6 +77,8 @@ class AuthRepository {
     String? fullName,
     String? address,
     String? phoneNumber,
+    String? promptPayId,
+    String? bankAccountNumber,
   }) async {
     await _client.post(
       '/api/v1/profile',
@@ -77,6 +87,8 @@ class AuthRepository {
         if (fullName != null) 'fullName': fullName,
         if (address != null) 'address': address,
         if (phoneNumber != null) 'phoneNumber': phoneNumber,
+        if (promptPayId != null) 'promptPayId': promptPayId,
+        if (bankAccountNumber != null) 'bankAccountNumber': bankAccountNumber,
       },
     );
   }

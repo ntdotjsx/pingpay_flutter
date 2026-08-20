@@ -30,14 +30,73 @@ export interface OCRService {
 }
 
 export function parseReceiptText(rawText: string): ReceiptData {
-  const lines = rawText
+  const tableItems: ReceiptItem[] = [];
+
+  // If text contains HTML table (AksonOCR output format)
+  const trMatches = rawText.match(/<tr[\s\S]*?<\/tr>/gi);
+  if (trMatches && trMatches.length > 0) {
+    for (const tr of trMatches) {
+      // Skip header rows
+      if (tr.includes("<th")) continue;
+
+      const tds = Array.from(tr.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi)).map(m => m[1].trim());
+      if (tds.length >= 2) {
+        // Find price cell (starts from the rightmost numeric cell)
+        let price = 0;
+        let name = "";
+        let qty = 1;
+
+        for (let i = tds.length - 1; i >= 0; i--) {
+          const cleanNum = tds[i].replace(/[^\d.]/g, "");
+          const num = parseFloat(cleanNum);
+          if (!isNaN(num) && num > 0 && price === 0) {
+            price = num;
+          } else if (price > 0 && !name && isNaN(parseFloat(tds[i])) && tds[i].length > 0) {
+            // Check if it is a unit/qty cell e.g. "1 จาน", "1 ชาม"
+            const qtyMatch = tds[i].match(/^(\d+)\s*(?:จาน|ชาม|ถ้วย|ขวด|ถัง|แก้ว|ชุด|ที่|กล่อง)/);
+            if (qtyMatch) {
+              qty = parseInt(qtyMatch[1], 10);
+            } else {
+              name = tds[i];
+            }
+          }
+        }
+
+        // If name wasn't set yet, pick the first non-numeric cell or column 1
+        if (!name && tds.length > 1) {
+          name = tds[1].replace(/^\d+\s*/, "").trim();
+        }
+
+        if (name && price > 0 && !/^(ที่|รายการ|ราคา|จำนวน|รวม|รวมเงิน|total|subtotal)/i.test(name)) {
+          tableItems.push({ name, amount: price, quantity: qty });
+        }
+      }
+    }
+  }
+
+  // 1. Clean Markdown / HTML table artifacts (e.g. <tr>, <td>, <th>, <table>, | delimiters)
+  let cleanText = rawText
+    .replace(/<thead[\s\S]*?<\/thead>/gi, "")
+    .replace(/<\/?(table|tr|th|tbody|tfoot|div|span|p|b|strong|i|em)[^>]*>/gi, "\n")
+    .replace(/<\/td>/gi, " ")
+    .replace(/<td[^>]*>/gi, "")
+    .replace(/<[^>]+>/g, " ");
+
+  // Handle Markdown table syntax e.g. | ลาบหมูคัว | 52.00 |
+  const lines = cleanText
     .split("\n")
-    .map((l) => l.trim())
-    .filter((l) => l.length > 0);
+    .map((l) => {
+      let trimmed = l.trim();
+      if (trimmed.startsWith("|") && trimmed.endsWith("|")) {
+        trimmed = trimmed.substring(1, trimmed.length - 1).trim();
+      }
+      return trimmed.replace(/\s*\|\s*/g, "   ").trim();
+    })
+    .filter((l) => l.length > 0 && !/^[|\-:\s]+$/.test(l));
 
   let merchant = "ร้านอาหาร (Receipt)";
   if (lines.length > 0) {
-    merchant = lines[0].replace(/[#:=]/g, "").trim();
+    merchant = lines[0].replace(/[#:=|*]/g, "").trim();
   }
 
   const items: ReceiptItem[] = [];
@@ -175,7 +234,7 @@ export function parseReceiptText(rawText: string): ReceiptData {
     let line = lines[i];
 
     // Skip summary / category / receipt header / footer lines
-    if (/^(net|nat|total|sub|fot|b\s*total|vat|tax|btw|vt|service|ce\s*charge|chui|table|taple|date|transaction|food|beverage|remark|items|orice|price|baht|bant|basis|bedrag|benrag|totaal|totaa|ยะ|if\s+you\s+want|promd|adress|ส่วนลด|ภาษี|รวมทั้งสิ้น|คงเหลือ|คงเห|รามจ|ใบแจ้ง|โต๊ะ|ร้าน|รายการ|จ[ำา]นวน|nddd|trarsartion|ทง|หคด|เงง|จำนวเนจิง)/i.test(line)) {
+    if (/^(net|nat|total|sub|fot|b\s*total|vat|tax|btw|vt|service|ce\s*charge|chui|table|taple|date|transaction|food|beverage|remark|items|orice|price|baht|bant|basis|bedrag|benrag|totaal|totaa|ยะ|if\s+you\s+want|promd|adress|ส่วนลด|ภาษี|รวมทั้งสิ้น|คงเหลือ|คงเห|รามจ|ใบแจ้ง|โต๊ะ|ร้าน|รายการ|จ[ำา]นวน|nddd|trarsartion|ทง|หคด|เงง|จำนวเนจิง|ทงเ|หคิด)/i.test(line)) {
       continue;
     }
 
@@ -208,7 +267,8 @@ export function parseReceiptText(rawText: string): ReceiptData {
 
       if (
         name.length > 1 &&
-        !/^(total|net|nat|vat|tax|sub|table|taple|date|ใบเสร็จ|ราคา|จ[ำา]นวน|รวม|food|beverage|รายการ|nddd|baht|bant|basis)/i.test(name) &&
+        !/^(total|net|nat|vat|tax|sub|table|taple|date|ใบเสร็จ|ราคา|จ[ำา]นวน|รวม|food|beverage|รายการ|nddd|baht|bant|basis|<|>|td|tr|th)/i.test(name) &&
+        !/^<[^>]+>$/i.test(name) &&
         !isNaN(price) &&
         price > 0
       ) {
@@ -221,7 +281,12 @@ export function parseReceiptText(rawText: string): ReceiptData {
     if (i + 1 < lines.length) {
       const nextLine = lines[i + 1];
       const nextPriceMatch = nextLine.match(/^([\d,]+[.,]\d{2})/);
-      if (nextPriceMatch && line.length > 2 && !/^(total|net|vat|tax|sub|table|date|รายการ|ราคา|food|beverage|items)/i.test(line)) {
+      if (
+        nextPriceMatch &&
+        line.length > 2 &&
+        !/^(total|net|vat|tax|sub|table|date|รายการ|ราคา|food|beverage|items|<|>|td|tr|th)/i.test(line) &&
+        !/^<[^>]+>$/i.test(line)
+      ) {
         const price = parseFloat(nextPriceMatch[1].replace(/,/g, "").replace(/,/g, "."));
         if (!isNaN(price) && price > 0 && !items.some((it) => it.name === line)) {
           items.push({ name: line.replace(/^\d+\s*/, "").trim(), amount: price, quantity: 1 });
@@ -230,7 +295,8 @@ export function parseReceiptText(rawText: string): ReceiptData {
     }
   }
 
-  const itemsSum = Math.round(items.reduce((sum, item) => sum + item.amount, 0) * 100) / 100;
+  const finalItems = tableItems.length > 0 ? tableItems : items;
+  const itemsSum = Math.round(finalItems.reduce((sum, item) => sum + item.amount, 0) * 100) / 100;
   let subtotal = detectedSubtotal;
   // If detected subtotal is much higher than items sum or invalid, fallback to itemsSum
   if (!subtotal || subtotal > itemsSum * 1.5 || subtotal <= 0) {
@@ -267,7 +333,7 @@ export function parseReceiptText(rawText: string): ReceiptData {
   return {
     merchant,
     date: new Date().toISOString(),
-    items: items.length > 0 ? items : [{ name: "รายการอาหาร (Receipt Items)", amount: finalTotal, quantity: 1 }],
+    items: finalItems.length > 0 ? finalItems : [{ name: "รายการอาหาร (Receipt Items)", amount: finalTotal, quantity: 1 }],
     subtotal,
     serviceCharge: detectedServiceCharge,
     vat: detectedVat,
@@ -389,5 +455,78 @@ export class PaddleOCRService implements OCRService {
   }
 }
 
-// Default exported OCR service is PaddleOCR
-export const defaultOCRService: OCRService = new PaddleOCRService();
+export class AksonOCRService implements OCRService {
+  private apiKey: string;
+  private url: string;
+
+  constructor(apiKey?: string, url?: string) {
+    this.apiKey = apiKey || env.AKSON_OCR_API_KEY || "";
+    this.url = url || env.AKSON_OCR_URL || "https://backend.aksonocr.com/api/v2/upload";
+  }
+
+  async extractReceipt(file: File | Blob): Promise<ReceiptData> {
+    if (!file || file.size === 0) {
+      throw new Error("INVALID_FILE: Empty or missing receipt image.");
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      throw new Error("FILE_TOO_LARGE: Receipt image exceeds 10MB limit.");
+    }
+
+    if (file.type && !["image/jpeg", "image/png", "image/webp", "image/heic"].includes(file.type)) {
+      throw new Error("UNSUPPORTED_FILE_TYPE: Only JPEG, PNG, WEBP, and HEIC images are supported.");
+    }
+
+    // If API key is not configured, fallback to PaddleOCRService or Mock
+    if (!this.apiKey) {
+      console.warn("[AksonOCRService] AKSON_OCR_API_KEY is not configured. Falling back to PaddleOCR / Mock.");
+      return new PaddleOCRService().extractReceipt(file);
+    }
+
+    try {
+      const formData = new FormData();
+      const filename = (file as any).name || "receipt.jpg";
+      formData.append("file", file, filename);
+      formData.append("model", "aksonocr-1.0");
+
+      const response = await fetch(this.url, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${this.apiKey}`,
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.warn(`[AksonOCRService] AksonOCR API returned ${response.status}: ${errorText}. Falling back.`);
+        return new PaddleOCRService().extractReceipt(file);
+      }
+
+      const json: any = await response.json();
+
+      // Extract markdown/text from pages array
+      let rawText = "";
+      if (Array.isArray(json.pages)) {
+        rawText = json.pages.map((p: any) => p.markdown || p.text || "").join("\n");
+      } else if (json.text) {
+        rawText = json.text;
+      } else if (json.markdown) {
+        rawText = json.markdown;
+      }
+
+      if (!rawText.trim()) {
+        return new PaddleOCRService().extractReceipt(file);
+      }
+
+      return parseReceiptText(rawText);
+    } catch (err: any) {
+      console.warn(`[AksonOCRService] Error during AksonOCR request: ${err.message}. Falling back.`);
+      return new PaddleOCRService().extractReceipt(file);
+    }
+  }
+}
+
+// Default exported OCR service uses AksonOCR (with PaddleOCR/Mock fallback)
+export const defaultOCRService: OCRService = new AksonOCRService();
+

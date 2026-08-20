@@ -1,20 +1,49 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'core/theme/theme.dart';
 import 'app/router/app_router.dart';
+import 'features/auth/providers/auth_provider.dart';
 import 'features/auth/services/line_auth_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await initializeDateFormatting('th_TH', null);
+  await initializeDateFormatting('th', null);
   await LineAuthService.initialize();
   runApp(const ProviderScope(child: PingPayApp()));
 }
 
-class PingPayApp extends ConsumerWidget {
+class PingPayApp extends ConsumerStatefulWidget {
   const PingPayApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<PingPayApp> createState() => _PingPayAppState();
+}
+
+class _PingPayAppState extends ConsumerState<PingPayApp> with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // When user leaves the app, swipes to home, or locks screen
+    if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive || state == AppLifecycleState.hidden) {
+      ref.read(authStateProvider.notifier).lockApp();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final router = ref.watch(routerProvider);
     final themeMode = ref.watch(themeModeProvider);
 
@@ -28,3 +57,4 @@ class PingPayApp extends ConsumerWidget {
     );
   }
 }
+

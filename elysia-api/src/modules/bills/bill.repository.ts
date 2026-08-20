@@ -1,6 +1,6 @@
 import { db } from "../../db";
 import { bills, billItems, financialTransactions, editLogs, users } from "../../db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, ne } from "drizzle-orm";
 import {
   NotificationOutboxService,
   defaultNotificationOutboxService,
@@ -23,10 +23,12 @@ export class BillRepository {
     ownerId: string,
     data: {
       title?: string;
+      description?: string;
       totalAmount: string;
       currency: string;
       groupId?: string;
       itemsBreakdown?: any;
+      receiptImageUrl?: string;
     },
     items: { debtorId: string; amount: string }[]
   ) {
@@ -34,10 +36,11 @@ export class BillRepository {
       const [bill] = await tx.insert(bills).values({
         ownerId,
         title: data.title,
-        totalAmount: data.totalAmount,
         currency: data.currency,
+        totalAmount: data.totalAmount,
         groupId: data.groupId,
         itemsBreakdown: data.itemsBreakdown,
+        receiptImageUrl: data.receiptImageUrl,
         status: "unpaid",
       }).returning();
 
@@ -108,6 +111,21 @@ export class BillRepository {
         owner: true,
       },
     });
+  }
+
+  async getBillsForUser(userId: string) {
+    const ownerBills = await this.db.query.bills.findMany({
+      where: and(eq(bills.ownerId, userId), ne(bills.status, "cancelled")),
+      with: {
+        items: {
+          with: { debtor: true, payments: true },
+        },
+        owner: true,
+      },
+      orderBy: (bills: any, { desc }: any) => [desc(bills.createdAt)],
+    });
+
+    return ownerBills;
   }
 
   async getBillItem(billId: string, debtorId: string) {
@@ -205,6 +223,48 @@ export class BillRepository {
       }
 
       return updatedItem;
+    });
+  }
+
+  async cancelBill(billId: string, userId: string, reason?: string) {
+    return await this.db.transaction(async (tx: any) => {
+      const bill = await tx.query.bills.findFirst({
+        where: eq(bills.id, billId),
+        with: { items: true },
+      });
+      if (!bill) throw new Error("BILL_NOT_FOUND: Bill not found.");
+
+      const [cancelledBill] = await tx
+        .update(bills)
+        .set({
+          status: "cancelled",
+          cancelledAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(eq(bills.id, billId))
+        .returning();
+
+      // Cancel / write off all unpaid items
+      for (const item of bill.items) {
+        if (item.status !== "paid") {
+          await tx
+            .update(billItems)
+            .set({
+              status: "written_off",
+              updatedAt: new Date(),
+            })
+            .where(eq(billItems.id, item.id));
+        }
+      }
+
+      await tx.insert(editLogs).values({
+        action: "bill_cancelled",
+        billId,
+        performedById: userId,
+        note: reason || "Bill cancelled by owner",
+      });
+
+      return cancelledBill;
     });
   }
 }

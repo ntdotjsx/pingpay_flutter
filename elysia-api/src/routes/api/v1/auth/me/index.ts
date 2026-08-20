@@ -9,9 +9,19 @@ export default new Elysia()
   .get("/", ({ user, onboardingState }) => {
     return {
       userId: user.id,
+      userCode: user.userCode,
       displayName: user.displayName,
+      fullName: user.fullName,
       avatarUrl: user.avatarUrl,
       role: user.role,
+      promptPayId: user.promptPayId,
+      promptPayIdType: user.promptPayIdType,
+      phoneNumber: user.phoneNumber,
+      bankAccountNumber: user.bankAccountNumber,
+      rewardPoints: user.rewardPoints ?? 27,
+      shippingAddress: user.shippingAddress,
+      shippingPhone: user.shippingPhone,
+      shippingRecipientName: user.shippingRecipientName,
       onboardingState,
     };
   }, { detail: { tags: ["Auth"], summary: "Get current user session info" } })

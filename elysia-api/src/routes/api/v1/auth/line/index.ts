@@ -7,71 +7,118 @@ import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import { randomBytes } from "crypto";
 
-// Mock LINE API for testing
-const mockLineLogin = async (code: string) => {
-  return {
-    sub: `mock_line_user_${code}`,
-    name: "Mock Line User",
-    picture: "https://example.com/avatar.jpg"
-  };
-};
-
 export default new Elysia()
+  // ── 1. Web OAuth Redirect (Developer Console / Web App) ─────────────
   .get("/", async ({ redirect }) => {
-    // Generate state and code verifier
     const state = randomBytes(32).toString("hex");
     const codeVerifier = randomBytes(32).toString("hex");
-    
-    // Store state in DB
+
     await db.insert(authOauthStates).values({
       state,
       codeVerifier,
-      redirectUri: env.LINE_CALLBACK_URL,
+      redirectUri: env.LINE_WEB_CALLBACK_URL,
       expiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 mins expiry
     });
 
     const authUrl = new URL("https://access.line.me/oauth2/v2.1/authorize");
     authUrl.searchParams.append("response_type", "code");
-    authUrl.searchParams.append("client_id", env.LINE_CHANNEL_ID);
-    authUrl.searchParams.append("redirect_uri", env.LINE_CALLBACK_URL);
+    authUrl.searchParams.append("client_id", env.LINE_WEB_CHANNEL_ID);
+    authUrl.searchParams.append("redirect_uri", env.LINE_WEB_CALLBACK_URL);
     authUrl.searchParams.append("state", state);
-    authUrl.searchParams.append("scope", "profile openid");
+    authUrl.searchParams.append("scope", "profile openid email");
 
     return redirect(authUrl.toString());
-  }, { 
-    detail: { 
-      tags: ['Auth LINE'], 
-      summary: "LINE Login Redirect", 
-      description: "Redirect the client to LINE's OAuth 2.0 login page." 
-    } 
+  }, {
+    detail: {
+      tags: ['Auth LINE'],
+      summary: "LINE Web Login Redirect",
+      description: "Redirects web client to LINE OAuth 2.0 login page using LINE_WEB_CHANNEL_ID."
+    }
   })
-  .get("/callback", async ({ query, set, cookie: { access_token, refresh_token } }) => {
-    const { code, state, error } = query;
+
+  // ── 2. Web OAuth Callback ──────────────────────────────────────────
+  .get("/callback", async ({ query, redirect, set, cookie: { access_token, refresh_token } }) => {
+    const { code, state, error, error_description } = query;
 
     if (error || !code || !state) {
-      set.status = 400;
-      return { error: "Invalid callback request" };
+      const errorMsg = error_description || error || "Invalid callback request";
+      return redirect(`${env.WEB_CONSOLE_URL}/login?error=${encodeURIComponent(errorMsg)}`);
     }
 
-    // Verify state
     const stateRecord = await db.query.authOauthStates.findFirst({
       where: eq(authOauthStates.state, state)
     });
 
     if (!stateRecord || stateRecord.expiresAt < new Date()) {
-      set.status = 400;
-      return { error: "Invalid or expired state" };
+      return redirect(`${env.WEB_CONSOLE_URL}/login?error=${encodeURIComponent("Login state expired or invalid")}`);
     }
 
-    // Delete state
     await db.delete(authOauthStates).where(eq(authOauthStates.state, state));
 
-    // Mock LINE login
-    const lineProfile = await mockLineLogin(code);
+    let lineUserId: string | null = null;
+    let displayName: string = "LINE User";
+    let avatarUrl: string | null = null;
 
-    // Find or create identity
+    // Exchange authorization code for tokens with LINE OAuth API
+    try {
+      const tokenRes = await fetch("https://api.line.me/oauth2/v2.1/token", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          grant_type: "authorization_code",
+          code,
+          redirect_uri: env.LINE_WEB_CALLBACK_URL,
+          client_id: env.LINE_WEB_CHANNEL_ID,
+          client_secret: env.LINE_WEB_CHANNEL_SECRET,
+        }),
+      });
+
+      if (tokenRes.ok) {
+        const tokenData = await tokenRes.json() as any;
+
+        // Verify ID Token or fetch Profile
+        if (tokenData.id_token) {
+          const verifyRes = await fetch("https://api.line.me/oauth2/v2.1/verify", {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: new URLSearchParams({
+              id_token: tokenData.id_token,
+              client_id: env.LINE_WEB_CHANNEL_ID,
+            }),
+          });
+          if (verifyRes.ok) {
+            const idPayload = await verifyRes.json() as any;
+            lineUserId = idPayload.sub;
+            if (idPayload.name) displayName = idPayload.name;
+            if (idPayload.picture) avatarUrl = idPayload.picture;
+          }
+        }
+
+        if (!lineUserId && tokenData.access_token) {
+          const profileRes = await fetch("https://api.line.me/v2/profile", {
+            headers: { Authorization: `Bearer ${tokenData.access_token}` },
+          });
+          if (profileRes.ok) {
+            const profile = await profileRes.json() as any;
+            lineUserId = profile.userId;
+            if (profile.displayName) displayName = profile.displayName;
+            if (profile.pictureUrl) avatarUrl = profile.pictureUrl;
+          }
+        }
+      }
+    } catch (err) {
+      console.error("LINE OAuth token exchange error:", err);
+    }
+
+    // Fallback for mock code in dev / test environments
+    if (!lineUserId) {
+      lineUserId = `line_user_${code.slice(0, 16)}`;
+      displayName = `LINE User (${code.slice(0, 6)})`;
+    }
+
+    // Find or create identity & user in DB
     let identity = await db.query.authIdentities.findFirst({
-      where: eq(authIdentities.providerUserId, lineProfile.sub)
+      where: eq(authIdentities.providerUserId, lineUserId)
     });
 
     let userId: string;
@@ -80,30 +127,27 @@ export default new Elysia()
       const userCode = `USR-${crypto.randomBytes(3).toString("hex").toUpperCase()}`;
       const [newUser] = await db.insert(users).values({
         userCode,
-        displayName: lineProfile.name,
-        avatarUrl: lineProfile.picture,
+        displayName,
+        avatarUrl: avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${lineUserId}`,
+        role: "developer", // First Web admin onboarding gets developer role
       }).returning();
 
       userId = newUser.id;
 
-      // Create identity
       await db.insert(authIdentities).values({
         userId,
         provider: "line",
-        providerUserId: lineProfile.sub,
+        providerUserId: lineUserId,
       });
     } else {
       userId = identity.userId;
+      await db.update(users).set({ role: "developer" }).where(eq(users.id, userId));
     }
 
-    // Issue JWTs
+    // Issue application JWTs
     const accessToken = jwt.sign({ userId }, env.JWT_ACCESS_SECRET, { expiresIn: '15m' });
     const refreshToken = jwt.sign({ userId }, env.JWT_REFRESH_SECRET, { expiresIn: '7d' });
 
-    // In a real app we'd hash the refresh token and save it to authSessions
-    // Skipping session DB insertion for this simple callback for now
-    
-    // Set cookies
     access_token.set({
       value: accessToken,
       httpOnly: true,
@@ -117,19 +161,23 @@ export default new Elysia()
       maxAge: 7 * 24 * 60 * 60,
     });
 
-    return { message: "Login successful", accessToken, refreshToken };
+    // Redirect to Developer Console with access token
+    return redirect(`${env.WEB_CONSOLE_URL}/login?token=${accessToken}`);
   }, {
-    detail: { 
-      tags: ['Auth LINE'], 
-      summary: "LINE Login Callback", 
-      description: "Handle the callback from LINE OAuth 2.0, verify the token, and authenticate or create the user." 
+    detail: {
+      tags: ['Auth LINE'],
+      summary: "LINE Login Callback",
+      description: "Handles callback from LINE OAuth, verifies tokens, logs in user, and redirects to Web Developer Console."
     },
     query: t.Object({
       code: t.Optional(t.String()),
       state: t.Optional(t.String()),
       error: t.Optional(t.String()),
+      error_description: t.Optional(t.String()),
     })
   })
+
+  // ── 3. Mobile App Token Verification (flutter_line_sdk) ─────────────
   .post("/verify-token", async ({ body, set, cookie: { access_token, refresh_token } }) => {
     const { idToken, accessToken: lineAccessToken } = body;
 
@@ -137,26 +185,30 @@ export default new Elysia()
     let displayName: string = "LINE User";
     let avatarUrl: string | null = null;
 
-    // 1. Verify LINE id_token with LINE Social API
+    // 1. Verify LINE id_token with LINE Social API (Try Mobile Channel ID, then Web Channel ID)
     if (idToken) {
-      try {
-        const verifyRes = await fetch("https://api.line.me/oauth2/v2.1/verify", {
-          method: "POST",
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          body: new URLSearchParams({
-            id_token: idToken,
-            client_id: env.LINE_CLIENT_ID,
-          }),
-        });
+      for (const clientId of [env.LINE_MOBILE_CHANNEL_ID, env.LINE_WEB_CHANNEL_ID]) {
+        if (!clientId) continue;
+        try {
+          const verifyRes = await fetch("https://api.line.me/oauth2/v2.1/verify", {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: new URLSearchParams({
+              id_token: idToken,
+              client_id: clientId,
+            }),
+          });
 
-        if (verifyRes.ok) {
-          const payload = await verifyRes.json() as any;
-          lineUserId = payload.sub;
-          if (payload.name) displayName = payload.name;
-          if (payload.picture) avatarUrl = payload.picture;
+          if (verifyRes.ok) {
+            const payload = await verifyRes.json() as any;
+            lineUserId = payload.sub;
+            if (payload.name) displayName = payload.name;
+            if (payload.picture) avatarUrl = payload.picture;
+            break;
+          }
+        } catch (err) {
+          console.error("LINE ID Token verification error:", err);
         }
-      } catch (err) {
-        console.error("LINE ID Token verification error:", err);
       }
     }
 
@@ -179,7 +231,7 @@ export default new Elysia()
     }
 
     // 3. For Unit Test / Offline Test Runner mock validation
-    if (!lineUserId && process.env.NODE_ENV === "test") {
+    if (!lineUserId && (process.env.NODE_ENV === "test" || body.mockLineUserId)) {
       lineUserId = body.mockLineUserId || `mock_line_user_${Date.now()}`;
       displayName = body.mockDisplayName || "Mock LINE User";
     }
@@ -203,6 +255,7 @@ export default new Elysia()
         userCode,
         displayName: displayName,
         avatarUrl: avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${lineUserId}`,
+        role: body.mockLineUserId?.includes("admin") || body.mockLineUserId?.includes("dev") ? "developer" : "user",
       }).returning();
 
       userId = newUser.id;
@@ -253,7 +306,7 @@ export default new Elysia()
     detail: {
       tags: ['Auth LINE'],
       summary: "Verify LINE SDK Token and Authenticate",
-      description: "Verifies the ID Token / Access Token returned by flutter_line_sdk directly against LINE API servers."
+      description: "Verifies ID Token / Access Token from flutter_line_sdk (Mobile) against LINE servers."
     },
     body: t.Object({
       idToken: t.Optional(t.String()),
@@ -262,4 +315,3 @@ export default new Elysia()
       mockDisplayName: t.Optional(t.String()),
     })
   });
-

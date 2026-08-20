@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/theme.dart';
+import '../../../../core/utils/app_toast.dart';
 import '../models/friend_models.dart';
 import '../providers/friends_provider.dart';
 
@@ -384,12 +385,7 @@ class FriendDetailScreen extends ConsumerWidget {
             .read(friendActionsProvider.notifier)
             .removeFriend(friendshipId);
         if (context.mounted && ok) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('ลบเพื่อนเรียบร้อยแล้ว'),
-              backgroundColor: Colors.green,
-            ),
-          );
+          AppToast.success(context, 'ลบเพื่อนเรียบร้อยแล้ว');
           context.pop();
         }
       }
@@ -452,12 +448,7 @@ class FriendDetailScreen extends ConsumerWidget {
           .read(friendActionsProvider.notifier)
           .removeFriend(friendshipId, confirmOutstandingDebt: true);
       if (context.mounted && ok) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('ลบเพื่อนเรียบร้อยแล้ว (ข้อมูลหนี้ยังคงอยู่ครบถ้วน)'),
-            backgroundColor: Colors.green,
-          ),
-        );
+        AppToast.success(context, 'ลบเพื่อนเรียบร้อยแล้ว (ข้อมูลหนี้ยังคงอยู่ครบถ้วน)');
         context.pop();
       }
     }

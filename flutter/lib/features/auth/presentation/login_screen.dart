@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../../core/utils/app_toast.dart';
 import '../providers/auth_provider.dart';
 import '../services/line_auth_service.dart';
 
@@ -30,13 +31,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('LINE Login Error: $e'),
-            backgroundColor: AppColors.error,
-            duration: const Duration(seconds: 6),
-          ),
-        );
+        AppToast.error(context, 'LINE Login Error: $e');
       }
     }
   }

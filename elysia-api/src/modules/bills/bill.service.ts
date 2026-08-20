@@ -17,6 +17,7 @@ export interface CreateBillDTO {
   participants: Array<{ userId: string; amount?: number }>;
   allocationMethod?: "evenly" | "exact" | "itemized";
   itemsBreakdown?: any;
+  receiptImageUrl?: string;
 }
 
 export interface EditBillDTO {
@@ -88,10 +89,12 @@ export class BillService {
       ownerId,
       {
         title: dto.title,
+        description: dto.description,
         totalAmount: dto.totalAmount.toFixed(2),
         currency: dto.currency || "THB",
         groupId: dto.groupId,
         itemsBreakdown: dto.itemsBreakdown,
+        receiptImageUrl: dto.receiptImageUrl,
       },
       finalAllocations
     );
@@ -101,6 +104,10 @@ export class BillService {
     const bill = await this.repo.getBillById(id);
     if (!bill) throw new Error("BILL_NOT_FOUND: Bill not found.");
     return bill;
+  }
+
+  async getMyBills(userId: string) {
+    return await this.repo.getBillsForUser(userId);
   }
 
   async editBill(userId: string, id: string, dto: EditBillDTO) {
@@ -201,5 +208,14 @@ export class BillService {
 
   async adjustPaidDebt(userId: string, billId: string, dto: AdjustmentRequestDTO) {
     return await this.adjustmentService.adjustPaidDebt(userId, billId, dto);
+  }
+
+  async cancelBill(userId: string, billId: string, reason?: string) {
+    const bill = await this.repo.getBillById(billId);
+    if (!bill) throw new Error("BILL_NOT_FOUND: Bill not found.");
+
+    BillPolicy.canEditBill(userId, bill.ownerId);
+
+    return await this.repo.cancelBill(billId, userId, reason);
   }
 }

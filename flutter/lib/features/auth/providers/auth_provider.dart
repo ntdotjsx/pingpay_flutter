@@ -18,12 +18,14 @@ class AuthState {
   final AuthStatus status;
   final UserModel? user;
   final bool isLoading;
+  final bool isLocked;
   final String? errorMessage;
 
   const AuthState({
     this.status = AuthStatus.unknown,
     this.user,
     this.isLoading = false,
+    this.isLocked = false,
     this.errorMessage,
   });
 
@@ -31,12 +33,14 @@ class AuthState {
     AuthStatus? status,
     UserModel? user,
     bool? isLoading,
+    bool? isLocked,
     String? errorMessage,
   }) {
     return AuthState(
       status: status ?? this.status,
       user: user ?? this.user,
       isLoading: isLoading ?? this.isLoading,
+      isLocked: isLocked ?? this.isLocked,
       errorMessage: errorMessage,
     );
   }
@@ -49,20 +53,53 @@ class AuthNotifier extends StateNotifier<AuthState> {
     checkSession();
   }
 
+  void forceUnauthenticated() {
+    state = const AuthState(status: AuthStatus.unauthenticated, user: null, isLocked: false);
+  }
+
+  void lockApp() {
+    // Only lock if user is authenticated and has completed onboarding
+    if (state.status == AuthStatus.authenticated &&
+        state.user?.onboardingState == OnboardingState.completed &&
+        !state.isLocked) {
+      state = state.copyWith(isLocked: true);
+    }
+  }
+
+  void unlockApp() {
+    state = state.copyWith(isLocked: false, errorMessage: null);
+  }
+
+  Future<bool> verifyPin(String pin) async {
+    try {
+      final success = await _repo.verifyPin(pin);
+      if (success) {
+        unlockApp();
+        return true;
+      }
+      return false;
+    } catch (e) {
+      rethrow;
+    }
+  }
+
   Future<void> checkSession() async {
     state = state.copyWith(isLoading: true, errorMessage: null);
     try {
       final user = await _repo.getCurrentUser();
+      final shouldLock = user.onboardingState == OnboardingState.completed;
       state = state.copyWith(
         status: AuthStatus.authenticated,
         user: user,
+        isLocked: shouldLock,
         isLoading: false,
       );
-    } catch (_) {
+    } catch (e) {
       state = state.copyWith(
         status: AuthStatus.unauthenticated,
-        user: null,
         isLoading: false,
+        isLocked: false,
+        errorMessage: e.toString(),
       );
     }
   }
@@ -125,6 +162,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
     String? displayName,
     String? phone,
     String? address,
+    String? promptPayId,
+    String? bankAccountNumber,
   }) async {
     state = state.copyWith(isLoading: true);
     try {
@@ -133,6 +172,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
         fullName: fullName,
         phoneNumber: phone,
         address: address,
+        promptPayId: promptPayId ?? phone,
+        bankAccountNumber: bankAccountNumber,
       );
       final updatedUser = await _repo.getCurrentUser();
       state = state.copyWith(user: updatedUser, isLoading: false);
@@ -151,5 +192,13 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
 final authStateProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) {
   final repo = ref.watch(authRepositoryProvider);
-  return AuthNotifier(repo);
+  final notifier = AuthNotifier(repo);
+  
+  // Connect onUnauthorized callback from DioClient to trigger logout
+  final dioClient = ref.watch(dioClientProvider);
+  dioClient.onUnauthorized = () {
+    notifier.forceUnauthenticated();
+  };
+
+  return notifier;
 });

@@ -1,3 +1,10 @@
+double _asDouble(dynamic val) {
+  if (val == null) return 0.0;
+  if (val is num) return val.toDouble();
+  if (val is String) return double.tryParse(val) ?? 0.0;
+  return 0.0;
+}
+
 class BillItemParticipantModel {
   final String id;
   final String billId;
@@ -40,18 +47,10 @@ class BillItemParticipantModel {
       id: json['id'] as String? ?? '',
       billId: json['billId'] as String? ?? '',
       debtorId: json['debtorId'] as String? ?? '',
-      originalAmount:
-          (json['originalAmount'] as num?)?.toDouble() ??
-          (double.tryParse(json['originalAmount']?.toString() ?? '') ?? 0.0),
-      currentAmount:
-          (json['currentAmount'] as num?)?.toDouble() ??
-          (double.tryParse(json['currentAmount']?.toString() ?? '') ?? 0.0),
-      amountPaid:
-          (json['amountPaid'] as num?)?.toDouble() ??
-          (double.tryParse(json['amountPaid']?.toString() ?? '') ?? 0.0),
-      amountWrittenOff:
-          (json['amountWrittenOff'] as num?)?.toDouble() ??
-          (double.tryParse(json['amountWrittenOff']?.toString() ?? '') ?? 0.0),
+      originalAmount: _asDouble(json['originalAmount']),
+      currentAmount: _asDouble(json['currentAmount']),
+      amountPaid: _asDouble(json['amountPaid']),
+      amountWrittenOff: _asDouble(json['amountWrittenOff']),
       status: json['status'] as String? ?? 'unpaid',
       isLocked: json['isLocked'] as bool? ?? false,
       createdAt: json['createdAt'] != null
@@ -113,6 +112,7 @@ class BillModel {
   final String
   status; // unpaid, partially_paid, fully_paid, partially_written_off, fully_written_off
   final dynamic itemsBreakdown;
+  final String? receiptImageUrl;
   final DateTime? createdAt;
   final DateTime? updatedAt;
   final List<BillItemParticipantModel> items;
@@ -128,6 +128,7 @@ class BillModel {
     this.groupId,
     required this.status,
     this.itemsBreakdown,
+    this.receiptImageUrl,
     this.createdAt,
     this.updatedAt,
     this.items = const [],
@@ -148,13 +149,12 @@ class BillModel {
       ownerId: json['ownerId'] as String? ?? '',
       title: json['title'] as String?,
       description: json['description'] as String?,
-      totalAmount:
-          (json['totalAmount'] as num?)?.toDouble() ??
-          (double.tryParse(json['totalAmount']?.toString() ?? '') ?? 0.0),
+      totalAmount: _asDouble(json['totalAmount']),
       currency: json['currency'] as String? ?? 'THB',
       groupId: json['groupId'] as String?,
       status: json['status'] as String? ?? 'unpaid',
       itemsBreakdown: json['itemsBreakdown'],
+      receiptImageUrl: json['receiptImageUrl'] as String?,
       createdAt: json['createdAt'] != null
           ? DateTime.tryParse(json['createdAt'].toString())
           : null,
@@ -180,6 +180,7 @@ class BillModel {
     'totalAmount': totalAmount,
     'currency': currency,
     'status': status,
+    'receiptImageUrl': receiptImageUrl,
     'items': items.map((e) => e.toJson()).toList(),
   };
 }

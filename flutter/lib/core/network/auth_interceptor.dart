@@ -4,8 +4,9 @@ import '../storage/secure_storage.dart';
 class AuthInterceptor extends Interceptor {
   final SecureStorageService _storage;
   final Dio _dio;
+  final void Function()? onUnauthorized;
 
-  AuthInterceptor(this._storage, this._dio);
+  AuthInterceptor(this._storage, this._dio, {this.onUnauthorized});
 
   @override
   Future<void> onRequest(
@@ -25,11 +26,18 @@ class AuthInterceptor extends Interceptor {
     DioException err,
     ErrorInterceptorHandler handler,
   ) async {
-    // Handle 401 token refresh if needed
-    if (err.response?.statusCode == 401 &&
-        !err.requestOptions.path.contains('/auth/refresh')) {
+    final statusCode = err.response?.statusCode;
+    final resData = err.response?.data;
+    final errorMsg = (resData is Map ? (resData['error'] ?? resData['message']) : null)?.toString() ?? '';
+
+    final isUnauthorized = statusCode == 401 ||
+        errorMsg.toLowerCase().contains('unauthorized') ||
+        errorMsg.toLowerCase().contains('invalid access token');
+
+    // Handle 401 / Unauthorized token refresh
+    if (isUnauthorized && !err.requestOptions.path.contains('/auth/refresh') && !err.requestOptions.path.contains('/auth/login')) {
       final refreshToken = await _storage.getRefreshToken();
-      if (refreshToken != null) {
+      if (refreshToken != null && refreshToken.isNotEmpty) {
         try {
           final refreshDio = Dio(
             BaseOptions(baseUrl: err.requestOptions.baseUrl),
@@ -60,7 +68,11 @@ class AuthInterceptor extends Interceptor {
           }
         } catch (_) {
           await _storage.clearAll();
+          onUnauthorized?.call();
         }
+      } else {
+        await _storage.clearAll();
+        onUnauthorized?.call();
       }
     }
     return handler.next(err);

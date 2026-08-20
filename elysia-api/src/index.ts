@@ -20,13 +20,17 @@ export const app = new Elysia()
     
     const message = error instanceof Error ? error.message : String(error);
     
-    if (message.includes("Unauthorized")) {
+    if (message.toLowerCase().includes("unauthorized") || message.includes("Invalid access token") || message.includes("Missing access token") || message.includes("jwt expired")) {
       set.status = 401;
-      return { error: message };
+      return { error: message, message };
+    }
+    if (message.includes("Forbidden") || message.includes("Developer role required")) {
+      set.status = 403;
+      return { error: message, message };
     }
     if (message.includes("User not found")) {
       set.status = 404;
-      return { error: message };
+      return { error: message, message };
     }
   })
   .use(await autoload({ dir: `${import.meta.dir}/routes` }))

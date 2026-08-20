@@ -1,3 +1,24 @@
+double _asDouble(dynamic val) {
+  if (val == null) return 0.0;
+  if (val is num) return val.toDouble();
+  if (val is String) return double.tryParse(val) ?? 0.0;
+  return 0.0;
+}
+
+double? _asOptionalDouble(dynamic val) {
+  if (val == null) return null;
+  if (val is num) return val.toDouble();
+  if (val is String) return double.tryParse(val);
+  return null;
+}
+
+int _asInt(dynamic val) {
+  if (val == null) return 1;
+  if (val is num) return val.toInt();
+  if (val is String) return int.tryParse(val) ?? 1;
+  return 1;
+}
+
 class ReceiptItemModel {
   final String name;
   final double amount;
@@ -20,8 +41,8 @@ class ReceiptItemModel {
   factory ReceiptItemModel.fromJson(Map<String, dynamic> json) {
     return ReceiptItemModel(
       name: json['name'] as String? ?? 'รายการสินค้า',
-      amount: (json['amount'] as num?)?.toDouble() ?? 0.0,
-      quantity: (json['quantity'] as num?)?.toInt() ?? 1,
+      amount: _asDouble(json['amount']),
+      quantity: _asInt(json['quantity']),
     );
   }
 
@@ -106,6 +127,15 @@ class ReceiptOcrResultModel {
       'ชำระ',
       'เงินสด',
       'เงินทอน',
+      'คงเหลือ',
+      'ทง',
+      'หคด',
+      'เงง',
+      'ทงเ',
+      'จำนวเนจิง',
+      'หคิดจำนวนเจิง',
+      'หคิดจำนวนเงิน',
+      'หคิดจำนวน',
       'total',
       'grandtotal',
       'subtotal',
@@ -125,14 +155,21 @@ class ReceiptOcrResultModel {
       }
     }
 
-    // Heuristic: If item amount equals the exact total and name contains typical receipt footer OCR noise
-    if ((amount - totalAmount).abs() < 0.01 &&
-        (lower.contains('ทง') ||
-            lower.contains('หคด') ||
-            lower.contains('เงง') ||
-            lower.contains('บาท') ||
-            lower.contains('thb'))) {
-      return true;
+    // Heuristic: If item amount equals the exact total and name contains typical receipt footer OCR noise or is suspiciously short/garbled
+    if ((amount - totalAmount).abs() < 0.01) {
+      if (lower.contains('ทง') ||
+          lower.contains('หคด') ||
+          lower.contains('เงง') ||
+          lower.contains('เจิง') ||
+          lower.contains('บาท') ||
+          lower.contains('thb') ||
+          lower.contains('จํานวน') ||
+          lower.contains('จำนวน') ||
+          lower.contains('ทอน') ||
+          lower.contains('จ่าย') ||
+          lower.contains('รับ')) {
+        return true;
+      }
     }
 
     return false;
@@ -140,7 +177,7 @@ class ReceiptOcrResultModel {
 
   factory ReceiptOcrResultModel.fromJson(Map<String, dynamic> json) {
     final itemsList = (json['items'] as List?) ?? [];
-    final total = (json['totalAmount'] as num?)?.toDouble() ?? 0.0;
+    final total = _asDouble(json['totalAmount']);
 
     final parsedItems = itemsList
         .map((e) => ReceiptItemModel.fromJson(e as Map<String, dynamic>))
@@ -151,14 +188,14 @@ class ReceiptOcrResultModel {
       merchant: json['merchant'] as String? ?? 'ร้านค้า (Receipt)',
       date: json['date'] as String?,
       items: parsedItems,
-      subtotal: (json['subtotal'] as num?)?.toDouble(),
+      subtotal: _asOptionalDouble(json['subtotal']),
       serviceCharge: (json['serviceCharge'] is Map)
-          ? (json['serviceCharge']['amount'] as num?)?.toDouble()
-          : (json['serviceCharge'] as num?)?.toDouble(),
+          ? _asOptionalDouble(json['serviceCharge']['amount'])
+          : _asOptionalDouble(json['serviceCharge']),
       vat: (json['vat'] is Map)
-          ? (json['vat']['amount'] as num?)?.toDouble()
-          : (json['vat'] as num?)?.toDouble(),
-      discount: (json['discount'] as num?)?.toDouble(),
+          ? _asOptionalDouble(json['vat']['amount'])
+          : _asOptionalDouble(json['vat']),
+      discount: _asOptionalDouble(json['discount']),
       totalAmount: total,
       currency: json['currency'] as String? ?? 'THB',
       formulaExplanation: json['formulaExplanation'] as String?,

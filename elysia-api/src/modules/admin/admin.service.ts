@@ -1,0 +1,339 @@
+import { AdminRepository } from "./admin.repository";
+
+export class AdminService {
+  private repo: AdminRepository;
+
+  constructor(repo?: AdminRepository) {
+    this.repo = repo || new AdminRepository();
+  }
+
+  // ── Dashboard ─────────────────────────────────────────────────────
+
+  async getDashboardStats(adminId: string) {
+    await this.repo.logAdminAction({
+      adminId,
+      actionType: "view_transactions",
+      metadata: { action: "dashboard_view" },
+    });
+    return this.repo.getDashboardStats();
+  }
+
+  // ── Transactions ──────────────────────────────────────────────────
+
+  async getTransactions(
+    adminId: string,
+    filters: {
+      userId?: string;
+      groupId?: string;
+      type?: string;
+      dateFrom?: string;
+      dateTo?: string;
+    },
+    page = 1,
+    limit = 20
+  ) {
+    const result = await this.repo.getTransactions(
+      {
+        userId: filters.userId,
+        groupId: filters.groupId,
+        type: filters.type,
+        dateFrom: filters.dateFrom ? new Date(filters.dateFrom) : undefined,
+        dateTo: filters.dateTo ? new Date(filters.dateTo) : undefined,
+      },
+      { page, limit }
+    );
+
+    await this.repo.logAdminAction({
+      adminId,
+      actionType: "view_transactions",
+      metadata: { filters, page, limit },
+    });
+
+    return result;
+  }
+
+  // ── Activity Logs ─────────────────────────────────────────────────
+
+  async getActivityLogs(
+    adminId: string,
+    filters: {
+      userId?: string;
+      action?: string;
+      dateFrom?: string;
+      dateTo?: string;
+    },
+    page = 1,
+    limit = 20
+  ) {
+    const result = await this.repo.getActivityLogs(
+      {
+        userId: filters.userId,
+        action: filters.action,
+        dateFrom: filters.dateFrom ? new Date(filters.dateFrom) : undefined,
+        dateTo: filters.dateTo ? new Date(filters.dateTo) : undefined,
+      },
+      { page, limit }
+    );
+
+    await this.repo.logAdminAction({
+      adminId,
+      actionType: "view_logs",
+      metadata: { filters, page, limit },
+    });
+
+    return result;
+  }
+
+  async purgeOldActivityLogs(adminId: string) {
+    const oneMonthAgo = new Date();
+    oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+
+    const result = await this.repo.deleteOldActivityLogs(oneMonthAgo);
+
+    await this.repo.logAdminAction({
+      adminId,
+      actionType: "view_logs",
+      metadata: { action: "purge_old_logs", olderThan: oneMonthAgo.toISOString() },
+    });
+
+    return result;
+  }
+
+  async clearAllActivityLogs(adminId: string) {
+    const result = await this.repo.clearAllActivityLogs();
+    await this.repo.logAdminAction({
+      adminId,
+      actionType: "view_logs",
+      metadata: { action: "clear_all_activity_logs" },
+    });
+    return result;
+  }
+
+  async deleteActivityLog(adminId: string, id: string) {
+    const result = await this.repo.deleteActivityLogById(id);
+    return result;
+  }
+
+  // ── Suspicious Activity ───────────────────────────────────────────
+
+  async getSuspiciousLogs(
+    adminId: string,
+    filters: {
+      userId?: string;
+      type?: string;
+      dateFrom?: string;
+      dateTo?: string;
+    },
+    page = 1,
+    limit = 20
+  ) {
+    const result = await this.repo.getSuspiciousLogs(
+      {
+        userId: filters.userId,
+        type: filters.type,
+        dateFrom: filters.dateFrom ? new Date(filters.dateFrom) : undefined,
+        dateTo: filters.dateTo ? new Date(filters.dateTo) : undefined,
+      },
+      { page, limit }
+    );
+
+    return result;
+  }
+
+  async flagSuspiciousActivity(
+    adminId: string,
+    data: {
+      userId?: string;
+      type: string;
+      description: string;
+      metadata?: any;
+    }
+  ) {
+    const log = await this.repo.createSuspiciousLog(data);
+
+    await this.repo.logAdminAction({
+      adminId,
+      actionType: "flag_suspicious",
+      targetUserId: data.userId,
+      reason: data.description,
+      metadata: { suspiciousLogId: log.id, type: data.type },
+    });
+
+    return log;
+  }
+
+  async deleteSuspiciousLog(adminId: string, id: string) {
+    const result = await this.repo.deleteSuspiciousLogById(id);
+    await this.repo.logAdminAction({
+      adminId,
+      actionType: "flag_suspicious",
+      metadata: { action: "delete_suspicious_log", suspiciousLogId: id },
+    });
+    return result;
+  }
+
+  async clearAllSuspiciousLogs(adminId: string) {
+    const result = await this.repo.clearAllSuspiciousLogs();
+    await this.repo.logAdminAction({
+      adminId,
+      actionType: "flag_suspicious",
+      metadata: { action: "clear_all_suspicious_logs" },
+    });
+    return result;
+  }
+
+  // ── User Management ───────────────────────────────────────────────
+
+  async getUsers(
+    filters: { search?: string; accountStatus?: string; role?: string },
+    page = 1,
+    limit = 20
+  ) {
+    return this.repo.getUsers(filters, { page, limit });
+  }
+
+  async getUserDetail(userId: string) {
+    const user = await this.repo.getUserById(userId);
+    if (!user) throw new Error("USER_NOT_FOUND");
+    return user;
+  }
+
+  async suspendAccount(adminId: string, targetUserId: string, reason: string, durationDays?: number) {
+    const target = await this.repo.getUserById(targetUserId);
+    if (!target) throw new Error("USER_NOT_FOUND");
+    if (target.role === "developer") throw new Error("CANNOT_SUSPEND_DEVELOPER");
+
+    let suspendedUntil: Date | undefined;
+    if (durationDays) {
+      suspendedUntil = new Date();
+      suspendedUntil.setDate(suspendedUntil.getDate() + durationDays);
+    }
+
+    const updated = await this.repo.updateUserStatus(targetUserId, "suspended", suspendedUntil);
+
+    await this.repo.logAdminAction({
+      adminId,
+      actionType: "suspend_account",
+      targetUserId,
+      reason,
+      metadata: { durationDays, suspendedUntil: suspendedUntil?.toISOString() },
+    });
+
+    return updated;
+  }
+
+  async banAccount(adminId: string, targetUserId: string, reason: string) {
+    const target = await this.repo.getUserById(targetUserId);
+    if (!target) throw new Error("USER_NOT_FOUND");
+    if (target.role === "developer") throw new Error("CANNOT_BAN_DEVELOPER");
+
+    const updated = await this.repo.updateUserStatus(targetUserId, "banned");
+
+    await this.repo.logAdminAction({
+      adminId,
+      actionType: "ban_account",
+      targetUserId,
+      reason,
+    });
+
+    return updated;
+  }
+
+  async unsuspendAccount(adminId: string, targetUserId: string, reason: string) {
+    const target = await this.repo.getUserById(targetUserId);
+    if (!target) throw new Error("USER_NOT_FOUND");
+
+    const updated = await this.repo.updateUserStatus(targetUserId, "active");
+
+    await this.repo.logAdminAction({
+      adminId,
+      actionType: "unsuspend_account",
+      targetUserId,
+      reason,
+    });
+
+    return updated;
+  }
+
+  // ── Disputes ──────────────────────────────────────────────────────
+
+  async getDisputes(
+    adminId: string,
+    filters: { status?: string; dateFrom?: string; dateTo?: string },
+    page = 1,
+    limit = 20
+  ) {
+    const result = await this.repo.getDisputes(
+      {
+        status: filters.status,
+        dateFrom: filters.dateFrom ? new Date(filters.dateFrom) : undefined,
+        dateTo: filters.dateTo ? new Date(filters.dateTo) : undefined,
+      },
+      { page, limit }
+    );
+
+    return result;
+  }
+
+  async getDisputeDetail(adminId: string, disputeId: string) {
+    const dispute = await this.repo.getDisputeById(disputeId);
+    if (!dispute) throw new Error("DISPUTE_NOT_FOUND");
+
+    const editHistory = await this.repo.getEditLogsByBill(dispute.billItem.billId);
+
+    return { dispute, editHistory };
+  }
+
+  async resolveDispute(
+    adminId: string,
+    disputeId: string,
+    resolution: {
+      status: "resolved_paid" | "resolved_written_off" | "resolved_rejected";
+      note: string;
+    }
+  ) {
+    const dispute = await this.repo.getDisputeById(disputeId);
+    if (!dispute) throw new Error("DISPUTE_NOT_FOUND");
+
+    if (dispute.status !== "open" && dispute.status !== "under_review") {
+      throw new Error("DISPUTE_ALREADY_RESOLVED");
+    }
+
+    const resolved = await this.repo.resolveDispute(
+      disputeId,
+      adminId,
+      resolution.status,
+      resolution.note
+    );
+
+    await this.repo.logAdminAction({
+      adminId,
+      actionType: "resolve_dispute",
+      metadata: {
+        disputeId,
+        resolution: resolution.status,
+        note: resolution.note,
+      },
+    });
+
+    return resolved;
+  }
+
+  async markDisputeUnderReview(adminId: string, disputeId: string) {
+    const dispute = await this.repo.getDisputeById(disputeId);
+    if (!dispute) throw new Error("DISPUTE_NOT_FOUND");
+    if (dispute.status !== "open") throw new Error("DISPUTE_NOT_OPEN");
+
+    return this.repo.updateDisputeStatus(disputeId, "under_review");
+  }
+
+  // ── Admin Audit Logs ──────────────────────────────────────────────
+
+  async getAdminAuditLogs(page = 1, limit = 20, adminId?: string) {
+    return this.repo.getAdminAuditLogs({ page, limit }, adminId);
+  }
+
+  async clearAllAuditLogs() {
+    return this.repo.clearAllAdminActionLogs();
+  }
+}

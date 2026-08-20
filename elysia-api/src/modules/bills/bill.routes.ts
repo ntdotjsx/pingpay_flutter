@@ -52,6 +52,21 @@ export const billRoutes = new Elysia()
       description: "Uploads a receipt image to extract merchant, total, and line items as a bill draft."
     }
   })
+  .get("/", async ({ user, set }) => {
+    try {
+      const bills = await billService.getMyBills(user.id);
+      return { success: true, data: bills };
+    } catch (e: any) {
+      set.status = 400;
+      return { success: false, error: e.message };
+    }
+  }, {
+    detail: {
+      tags: ["Bills"],
+      summary: "Get all bills created by the current user",
+      description: "Retrieves complete list of bills created by the authenticated user."
+    }
+  })
   .get("/:id", async ({ params: { id }, set }) => {
     try {
       const bill = await billService.getBill(id);
@@ -167,5 +182,29 @@ export const billRoutes = new Elysia()
       tags: ["Bills"],
       summary: "Adjust paid debt (Refund or Additional Debt)",
       description: "Creates an adjustment or refund transaction for already-paid debts without modifying original payment records."
+    }
+  })
+  .delete("/:id", async ({ params: { id }, body, user, set }) => {
+    try {
+      const reason = (body as any)?.reason;
+      const result = await billService.cancelBill(user.id, id, reason);
+      return { success: true, data: result };
+    } catch (e: any) {
+      if (e.message.includes("Unauthorized")) {
+        set.status = 403;
+      } else if (e.message.includes("BILL_NOT_FOUND")) {
+        set.status = 404;
+      } else {
+        set.status = 400;
+      }
+      return { success: false, error: e.message };
+    }
+  }, {
+    params: t.Object({ id: t.String({ format: "uuid" }) }),
+    body: t.Optional(t.Object({ reason: t.Optional(t.String()) })),
+    detail: {
+      tags: ["Bills"],
+      summary: "Cancel bill and write off outstanding debts",
+      description: "Cancels a bill and marks all unpaid items as written off, clearing them from receivables."
     }
   });

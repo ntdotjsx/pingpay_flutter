@@ -139,6 +139,23 @@ class BillConfirmationBottomSheet extends StatelessWidget {
                       ),
                     ),
                   ),
+                  if (state.receiptImageBase64 != null) ...[
+                    const SizedBox(height: 10),
+                    Row(
+                      children: const [
+                        Icon(Icons.check_circle_rounded, size: 16, color: AppColors.success),
+                        SizedBox(width: 6),
+                        Text(
+                          'แนบรูปหลักฐานใบเสร็จแล้ว (Base64)',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: AppColors.success,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ],
               ),
             ),

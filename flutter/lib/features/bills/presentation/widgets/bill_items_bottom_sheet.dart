@@ -2,6 +2,7 @@ import 'package:figma_squircle/figma_squircle.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../../core/theme/theme.dart';
+import '../../../../core/utils/app_toast.dart';
 import '../../models/ocr_models.dart';
 import 'destructive_confirmation_sheet.dart';
 
@@ -96,12 +97,7 @@ class _BillItemsBottomSheetState extends State<BillItemsBottomSheet> {
         _isSelectionMode = false;
       });
       widget.onItemsUpdated(_items);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('ลบ $count รายการเรียบร้อยแล้ว'),
-          backgroundColor: AppColors.primary,
-        ),
-      );
+      AppToast.info(context, 'ลบ $count รายการเรียบร้อยแล้ว');
     }
   }
 
@@ -126,12 +122,7 @@ class _BillItemsBottomSheetState extends State<BillItemsBottomSheet> {
         _isSelectionMode = false;
       });
       widget.onItemsUpdated(_items);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('ลบรายการทั้งหมดเรียบร้อยแล้ว'),
-          backgroundColor: AppColors.primary,
-        ),
-      );
+      AppToast.info(context, 'ลบรายการทั้งหมดเรียบร้อยแล้ว');
     }
   }
 
@@ -147,101 +138,364 @@ class _BillItemsBottomSheetState extends State<BillItemsBottomSheet> {
       text: itemToEdit != null ? itemToEdit.quantity.toString() : '1',
     );
 
-    showDialog(
+    showModalBottomSheet(
       context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text(
-          itemToEdit == null ? 'เพิ่มรายการอาหาร / สินค้า' : 'แก้ไขรายการ',
-        ),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nameController,
-                decoration: InputDecoration(
-                  labelText: 'ชื่อรายการ',
-                  hintText: 'เช่น ข้าวมันไก่, ชาเขียว',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    flex: 2,
-                    child: TextField(
-                      controller: priceController,
-                      keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true,
-                      ),
-                      decoration: InputDecoration(
-                        labelText: 'ราคา (บาท)',
-                        hintText: '0.00',
-                        prefixText: '฿ ',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: TextField(
-                      controller: qtyController,
-                      keyboardType: TextInputType.number,
-                      decoration: InputDecoration(
-                        labelText: 'จำนวน',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                    ),
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        int currentQty = itemToEdit?.quantity ?? 1;
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Container(
+              decoration: BoxDecoration(
+                color: isDark ? AppColors.surfaceTile1 : AppColors.canvas,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.18),
+                    blurRadius: 30,
+                    offset: const Offset(0, -8),
                   ),
                 ],
               ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('ยกเลิก'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              final name = nameController.text.trim();
-              final price = double.tryParse(priceController.text.trim()) ?? 0.0;
-              final qty = int.tryParse(qtyController.text.trim()) ?? 1;
+              padding: EdgeInsets.only(
+                left: 24,
+                right: 24,
+                top: 12,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+              ),
+              child: SafeArea(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Handle Bar
+                    Center(
+                      child: Container(
+                        width: 44,
+                        height: 5,
+                        margin: const EdgeInsets.only(bottom: 20),
+                        decoration: BoxDecoration(
+                          color: isDark ? AppColors.surfaceTile3 : AppColors.hairline,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                    ),
 
-              if (name.isEmpty || price <= 0 || qty <= 0) return;
+                    // Header: Icon + Title + Close Button
+                    Row(
+                      children: [
+                        Container(
+                          width: 42,
+                          height: 42,
+                          decoration: ShapeDecoration(
+                            color: AppColors.primary.withValues(alpha: 0.12),
+                            shape: SmoothRectangleBorder(
+                              borderRadius: SmoothBorderRadius(
+                                cornerRadius: 14,
+                                cornerSmoothing: 0.6,
+                              ),
+                            ),
+                          ),
+                          child: Icon(
+                            itemToEdit == null
+                                ? Icons.add_shopping_cart_rounded
+                                : Icons.edit_note_rounded,
+                            color: AppColors.primary,
+                            size: 22,
+                          ),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                itemToEdit == null ? 'เพิ่มรายการใหม่' : 'แก้ไขรายการสินค้า',
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: -0.3,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                itemToEdit == null
+                                    ? 'ระบุชื่อรายการ ราคา และจำนวน'
+                                    : 'ปรับปรุงข้อมูลรายการอาหารหรือสินค้า',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          icon: Icon(
+                            Icons.close_rounded,
+                            color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
+                            size: 22,
+                          ),
+                          onPressed: () => Navigator.pop(ctx),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
 
-              final newItem = ReceiptItemModel(
-                name: name,
-                amount: price,
-                quantity: qty,
-              );
-              setState(() {
-                if (editIndex != null) {
-                  _items[editIndex] = newItem;
-                } else {
-                  _items.add(newItem);
-                }
-              });
-              widget.onItemsUpdated(_items);
-              Navigator.pop(ctx);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: AppColors.onPrimary,
-            ),
-            child: const Text('บันทึก'),
-          ),
-        ],
-      ),
+                    // Field 1: Item Name
+                    Text(
+                      'ชื่อรายการ',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: isDark ? AppColors.bodyMuted : AppColors.inkMuted80,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: nameController,
+                      autofocus: itemToEdit == null,
+                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
+                      decoration: InputDecoration(
+                        hintText: 'เช่น ข้าวมันไก่, ชาเขียว, ยำยอดมะขาม',
+                        hintStyle: TextStyle(
+                          fontSize: 14,
+                          color: isDark ? AppColors.inkMuted48 : AppColors.inkMuted48.withValues(alpha: 0.6),
+                        ),
+                        prefixIcon: const Icon(Icons.restaurant_menu_rounded, size: 20),
+                        filled: true,
+                        fillColor: isDark ? AppColors.surfaceTile2 : AppColors.canvasParchment,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: BorderSide.none,
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+
+                    // Field 2 & 3: Price + Quantity Stepper
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Price Input
+                        Expanded(
+                          flex: 3,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'ราคาต่อหน่วย',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: isDark ? AppColors.bodyMuted : AppColors.inkMuted80,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              TextField(
+                                controller: priceController,
+                                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: 0.2,
+                                ),
+                                decoration: InputDecoration(
+                                  hintText: '0.00',
+                                  prefixIcon: const Padding(
+                                    padding: EdgeInsets.symmetric(horizontal: 12),
+                                    child: Text(
+                                      '฿',
+                                      style: TextStyle(
+                                        fontSize: 17,
+                                        fontWeight: FontWeight.bold,
+                                        color: AppColors.primary,
+                                      ),
+                                    ),
+                                  ),
+                                  prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
+                                  filled: true,
+                                  fillColor: isDark ? AppColors.surfaceTile2 : AppColors.canvasParchment,
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                    borderSide: BorderSide.none,
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                    borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 14),
+
+                        // Quantity Stepper
+                        Expanded(
+                          flex: 2,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'จำนวน',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: isDark ? AppColors.bodyMuted : AppColors.inkMuted80,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Container(
+                                height: 50,
+                                decoration: BoxDecoration(
+                                  color: isDark ? AppColors.surfaceTile2 : AppColors.canvasParchment,
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    // Minus button
+                                    Material(
+                                      color: Colors.transparent,
+                                      child: InkWell(
+                                        borderRadius: BorderRadius.circular(12),
+                                        onTap: () {
+                                          if (currentQty > 1) {
+                                            setModalState(() {
+                                              currentQty--;
+                                              qtyController.text = currentQty.toString();
+                                            });
+                                          }
+                                        },
+                                        child: const Padding(
+                                          padding: EdgeInsets.all(10.0),
+                                          child: Icon(Icons.remove_rounded, size: 18),
+                                        ),
+                                      ),
+                                    ),
+                                    // Current Qty
+                                    Text(
+                                      '$currentQty',
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    // Plus button
+                                    Material(
+                                      color: Colors.transparent,
+                                      child: InkWell(
+                                        borderRadius: BorderRadius.circular(12),
+                                        onTap: () {
+                                          setModalState(() {
+                                            currentQty++;
+                                            qtyController.text = currentQty.toString();
+                                          });
+                                        },
+                                        child: const Padding(
+                                          padding: EdgeInsets.all(10.0),
+                                          child: Icon(Icons.add_rounded, size: 18, color: AppColors.primary),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 28),
+
+                    // Action Buttons
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () => Navigator.pop(ctx),
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 15),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              side: BorderSide(
+                                color: isDark ? AppColors.surfaceTile3 : AppColors.hairline,
+                              ),
+                            ),
+                            child: Text(
+                              'ยกเลิก',
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                                color: isDark ? AppColors.bodyMuted : AppColors.inkMuted80,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          flex: 2,
+                          child: ElevatedButton(
+                            onPressed: () {
+                              final name = nameController.text.trim();
+                              final price = double.tryParse(priceController.text.trim()) ?? 0.0;
+                              final qty = int.tryParse(qtyController.text.trim()) ?? currentQty;
+
+                              if (name.isEmpty || price <= 0 || qty <= 0) return;
+
+                              final newItem = ReceiptItemModel(
+                                name: name,
+                                amount: price,
+                                quantity: qty,
+                              );
+                              setState(() {
+                                if (editIndex != null) {
+                                  _items[editIndex] = newItem;
+                                } else {
+                                  _items.add(newItem);
+                                }
+                              });
+                              widget.onItemsUpdated(_items);
+                              Navigator.pop(ctx);
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primary,
+                              foregroundColor: AppColors.onPrimary,
+                              elevation: 0,
+                              padding: const EdgeInsets.symmetric(vertical: 15),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                            ),
+                            child: Text(
+                              itemToEdit == null ? 'เพิ่มรายการ' : 'บันทึกการแก้ไข',
+                              style: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 

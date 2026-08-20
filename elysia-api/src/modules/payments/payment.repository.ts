@@ -8,7 +8,7 @@ import {
   editLogs,
   users,
 } from "../../db/schema";
-import { eq, and, desc, sql, or } from "drizzle-orm";
+import { eq, and, desc, sql, or, ne } from "drizzle-orm";
 import { PaymentStatus } from "./payment-state-machine";
 
 export interface CreatePaymentRecordInput {
@@ -160,4 +160,53 @@ export class PaymentRepository {
     // Sort chronologically
     return allPayments.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
   }
+
+  /**
+   * Get all active debts owed by a user across all bills.
+   * Returns debtor bill items joined with the bill and creditor (bill owner).
+   */
+  async getOutstandingDebtsForUser(userId: string) {
+    const items = await db.query.billItems.findMany({
+      where: and(eq(billItems.debtorId, userId), ne(billItems.status, "written_off")),
+      with: {
+        bill: {
+          with: {
+            owner: true,
+          },
+        },
+        payments: {
+          orderBy: (p, { desc }) => [desc(p.createdAt)],
+        },
+      },
+      orderBy: [desc(billItems.createdAt)],
+    });
+
+    // Filter out items belonging to cancelled bills
+    return items.filter((item) => item.bill?.status !== "cancelled");
+  }
+
+  /**
+   * Get all receivables (debts owed to current user as bill owner).
+   * Returns all bill items across bills owned by userId with debtor user and payments.
+   */
+  async getReceivablesForOwner(userId: string) {
+    const ownerBills = await db.query.bills.findMany({
+      where: and(eq(bills.ownerId, userId), ne(bills.status, "cancelled")),
+      with: {
+        items: {
+          with: {
+            debtor: true,
+            payments: {
+              orderBy: (p, { desc }) => [desc(p.createdAt)],
+            },
+          },
+          orderBy: [desc(billItems.createdAt)],
+        },
+      },
+      orderBy: [desc(bills.createdAt)],
+    });
+
+    return ownerBills;
+  }
 }
+

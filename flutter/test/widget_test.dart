@@ -38,6 +38,9 @@ class AuthNotifierMock extends StateNotifier<AuthState>
   AuthNotifierMock(super.state);
 
   @override
+  void forceUnauthenticated() {}
+
+  @override
   Future<void> checkSession() async {}
 
   @override
@@ -55,11 +58,22 @@ class AuthNotifierMock extends StateNotifier<AuthState>
   Future<void> setupPin(String pin) async {}
 
   @override
+  void lockApp() {}
+
+  @override
+  void unlockApp() {}
+
+  @override
+  Future<bool> verifyPin(String pin) async => true;
+
+  @override
   Future<void> completeProfile(
     String fullName, {
     String? displayName,
     String? phone,
     String? address,
+    String? promptPayId,
+    String? bankAccountNumber,
   }) async {}
 
   @override

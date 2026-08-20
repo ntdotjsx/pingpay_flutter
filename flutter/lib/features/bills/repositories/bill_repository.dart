@@ -42,6 +42,7 @@ class BillRepository {
     String? description,
     String? allocationMethod,
     dynamic itemsBreakdown,
+    String? receiptImageUrl,
   }) async {
     final response = await _client.post<Map<String, dynamic>>(
       '/api/v1/bills',
@@ -53,11 +54,22 @@ class BillRepository {
           'description': description,
         if (allocationMethod != null) 'allocationMethod': allocationMethod,
         if (itemsBreakdown != null) 'itemsBreakdown': itemsBreakdown,
+        if (receiptImageUrl != null && receiptImageUrl.isNotEmpty)
+          'receiptImageUrl': receiptImageUrl,
       },
     );
 
     final data = response.data?['data'] as Map<String, dynamic>? ?? {};
     return BillModel.fromJson(data);
+  }
+
+  /// Get all bills created by current user
+  Future<List<BillModel>> getMyBills() async {
+    final response = await _client.get<Map<String, dynamic>>(
+      '/api/v1/bills',
+    );
+    final data = (response.data?['data'] as List?) ?? [];
+    return data.map((e) => BillModel.fromJson(e as Map<String, dynamic>)).toList();
   }
 
   /// Get bill details by ID
@@ -144,6 +156,19 @@ class BillRepository {
         if (reason != null) 'reason': reason,
         if (idempotencyKey != null) 'idempotencyKey': idempotencyKey,
       },
+    );
+
+    return response.data?['data'] as Map<String, dynamic>? ?? {};
+  }
+
+  /// Cancel whole bill
+  Future<Map<String, dynamic>> cancelBill({
+    required String billId,
+    String? reason,
+  }) async {
+    final response = await _client.delete<Map<String, dynamic>>(
+      '/api/v1/bills/$billId',
+      data: {if (reason != null) 'reason': reason},
     );
 
     return response.data?['data'] as Map<String, dynamic>? ?? {};

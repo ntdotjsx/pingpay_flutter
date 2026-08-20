@@ -3,9 +3,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import '../../../core/theme/theme.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../bills/providers/bill_provider.dart';
+import '../../payments/presentation/widgets/debt_card.dart';
+import '../../payments/providers/payment_providers.dart';
+import '../../rewards/providers/reward_providers.dart';
 import '../providers/pull_sensitivity_provider.dart';
+import 'widgets/line_calendar_widget.dart';
+import 'widgets/daily_timeline_section.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -16,9 +23,16 @@ class HomeScreen extends ConsumerStatefulWidget {
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   final ScrollController _scrollController = ScrollController();
-  int _currentTabIndex = 0;
   bool _isPullTriggered = false;
   double _pullDistance = 0.0;
+  late DateTime _selectedDate;
+
+  @override
+  void initState() {
+    super.initState();
+    final now = DateTime.now();
+    _selectedDate = DateTime(now.year, now.month, now.day);
+  }
 
   @override
   void dispose() {
@@ -152,6 +166,238 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
+  void _showPendingDebtRequestsSheet(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return Consumer(
+          builder: (context, ref, _) {
+            final pendingDebts = ref.watch(pendingDebtRequestsProvider);
+
+            return Container(
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(context).size.height * 0.75,
+              ),
+              decoration: BoxDecoration(
+                color: isDark ? AppColors.surfaceTile1 : AppColors.canvas,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+              child: SafeArea(
+                top: false,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 36,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: isDark ? Colors.white24 : AppColors.hairline,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFF9500).withValues(alpha: 0.15),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.notifications_active_rounded,
+                            color: Color(0xFFFF9500),
+                            size: 20,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'คำร้องขอรับเป็นหนี้',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              Text(
+                                pendingDebts.isEmpty
+                                    ? 'ไม่มีคำร้องขอที่รอการยืนยัน'
+                                    : 'เลื่อนเพื่อยอมรับว่าคุณติดหนี้เพื่อนจริง',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: AppColors.inkMuted48,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (pendingDebts.isNotEmpty)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 3,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColors.error.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text(
+                              '${pendingDebts.length} รายการ',
+                              style: const TextStyle(
+                                color: AppColors.error,
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    if (pendingDebts.isEmpty)
+                      Container(
+                        padding: const EdgeInsets.symmetric(vertical: 40),
+                        alignment: Alignment.center,
+                        child: Column(
+                          children: [
+                            const Icon(
+                              Icons.check_circle_outline_rounded,
+                              size: 48,
+                              color: AppColors.success,
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              'คุณไม่มีรายการคำร้องขอเป็นหนี้ค้างอยู่',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: isDark ? AppColors.bodyOnDark : AppColors.ink,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            const Text(
+                              'เมื่อเพื่อนสร้างบิลหารเงิน จะปรากฏที่นี่เพื่อให้คุณกวาดนิ้วยอมรับ',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: AppColors.inkMuted48,
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    else
+                      Flexible(
+                        child: ListView.separated(
+                          shrinkWrap: true,
+                          padding: EdgeInsets.zero,
+                          itemCount: pendingDebts.length,
+                          separatorBuilder: (_, __) => const SizedBox(height: 12),
+                          itemBuilder: (context, index) {
+                            final debt = pendingDebts[index];
+                            return Container(
+                              padding: const EdgeInsets.all(14),
+                              decoration: ShapeDecoration(
+                                color: isDark
+                                    ? AppColors.surfaceTile2
+                                    : AppColors.canvasParchment,
+                                shape: SmoothRectangleBorder(
+                                  side: BorderSide(
+                                    color: const Color(0xFFFF9500).withValues(alpha: 0.3),
+                                    width: 1,
+                                  ),
+                                  borderRadius: const SmoothBorderRadius.all(
+                                    SmoothRadius(cornerRadius: 16, cornerSmoothing: 1.0),
+                                  ),
+                                ),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      CircleAvatar(
+                                        radius: 16,
+                                        backgroundColor: AppColors.primary.withValues(alpha: 0.15),
+                                        child: Text(
+                                          debt.creditor.displayName.isNotEmpty
+                                              ? debt.creditor.displayName[0].toUpperCase()
+                                              : 'U',
+                                          style: const TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.bold,
+                                            color: AppColors.primary,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              debt.billTitle,
+                                              style: TextStyle(
+                                                fontSize: 14,
+                                                fontWeight: FontWeight.bold,
+                                                color: isDark ? AppColors.bodyOnDark : AppColors.ink,
+                                              ),
+                                            ),
+                                            Text(
+                                              'สร้างโดย ${debt.creditor.displayName}',
+                                              style: TextStyle(
+                                                fontSize: 11,
+                                                color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      Text(
+                                        '฿${debt.outstandingAmount.toStringAsFixed(2)}',
+                                        style: const TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                          color: Color(0xFFFF9500),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 12),
+                                  SwipeToAcknowledgeButton(
+                                    label: 'เลื่อนเพื่อยอมรับว่าติดหนี้จริง',
+                                    onAcknowledge: () async {
+                                      await ref
+                                          .read(userDebtsProvider.notifier)
+                                          .acknowledgeDebt(debt.id);
+                                    },
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authStateProvider);
@@ -269,10 +515,70 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
                     const SizedBox(height: 16),
 
-                    // Daily Check-in / Rewards Promo Card
-                    _buildDailyCheckInCard(context),
+                    // Horizontal Line Calendar (Daily Timeline Selector)
+                    Consumer(
+                      builder: (context, ref, _) {
+                        final billsAsync = ref.watch(myBillsProvider);
+                        final bills = billsAsync.valueOrNull ?? [];
+                        final userDebtsState = ref.watch(userDebtsProvider);
+                        final debts = userDebtsState.allDebts;
 
-                    const SizedBox(height: 18),
+                        // Collect dates that have bills created by user (Orange dot)
+                        final activeDates = bills
+                            .where((b) => b.createdAt != null)
+                            .map((b) => DateFormat('yyyy-MM-dd').format(b.createdAt!))
+                            .toSet();
+
+                        // Collect dates where user has accepted/acknowledged debt to friends (Blue dot)
+                        final debtDates = debts
+                            .where((d) => d.isOutstanding && d.outstandingAmount > 0 && d.isAcknowledged)
+                            .map((d) => DateFormat('yyyy-MM-dd').format(d.debtStartDate))
+                            .toSet();
+
+                        // Filter bills for currently selected date
+                        final selectedDateStr =
+                            DateFormat('yyyy-MM-dd').format(_selectedDate);
+                        final filteredBills = bills.where((b) {
+                          if (b.createdAt == null) return false;
+                          return DateFormat('yyyy-MM-dd').format(b.createdAt!) ==
+                              selectedDateStr;
+                        }).toList();
+
+                        // Filter accepted debts for currently selected date
+                        final filteredDebts = debts.where((d) {
+                          if (!d.isOutstanding || d.outstandingAmount <= 0 || !d.isAcknowledged) return false;
+                          return DateFormat('yyyy-MM-dd').format(d.debtStartDate) ==
+                              selectedDateStr;
+                        }).toList();
+
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            LineCalendarWidget(
+                              selectedDate: _selectedDate,
+                              onDateSelected: (date) {
+                                setState(() {
+                                  _selectedDate = date;
+                                });
+                              },
+                              activeEventDates: activeDates,
+                              debtEventDates: debtDates,
+                            ),
+
+                            const SizedBox(height: 14),
+
+                            DailyTimelineSection(
+                              selectedDate: _selectedDate,
+                              bills: filteredBills,
+                              debts: filteredDebts,
+                              onCreateBill: _navigateToCreateBill,
+                            ),
+                          ],
+                        );
+                      },
+                    ),
+
+                    const SizedBox(height: 14),
 
                     // Section Title: Recommended Services
                     Padding(
@@ -292,7 +598,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     // Recommended Banner Card
                     _buildRecommendedPromoCard(context),
 
-                    const SizedBox(height: 100), // padding for bottom nav
+                    const SizedBox(height: 24),
                   ],
                 ),
               ),
@@ -300,9 +606,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ),
         ],
       ),
-
-      // 5-Tab Bottom Navigation Bar
-      bottomNavigationBar: _buildBottomNavigationBar(),
     );
   }
 
@@ -381,82 +684,106 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   const SizedBox(width: 10),
 
                   // Coin Capsule (Squircle)
-                  Container(
-                    height: 38,
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    decoration: ShapeDecoration(
-                      color: Colors.white.withValues(alpha: 0.18),
-                      shape: const SmoothRectangleBorder(
-                        borderRadius: SmoothBorderRadius.all(
-                          SmoothRadius(cornerRadius: 19, cornerSmoothing: 1.0),
-                        ),
-                      ),
-                    ),
-                    child: const Row(
-                      children: [
-                        Icon(
-                          Icons.monetization_on,
-                          size: 18,
-                          color: Color(0xFFFFD700),
-                        ),
-                        SizedBox(width: 4),
-                        Text(
-                          '27',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 13,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 10),
+                  // Rewards & Points Pill (Tap to open Rewards Store)
+                  Consumer(
+                    builder: (context, ref, _) {
+                      final storeState = ref.watch(rewardStoreProvider);
+                      final points = storeState.points;
 
-                  // Notification Bell with Badge (Squircle)
-                  Stack(
-                    clipBehavior: Clip.none,
-                    children: [
-                      Container(
-                        width: 38,
-                        height: 38,
-                        decoration: ShapeDecoration(
-                          color: Colors.white.withValues(alpha: 0.18),
-                          shape: const SmoothRectangleBorder(
-                            borderRadius: SmoothBorderRadius.all(
-                              SmoothRadius(
-                                cornerRadius: 19,
-                                cornerSmoothing: 1.0,
+                      return GestureDetector(
+                        onTap: () => context.push('/rewards'),
+                        child: Container(
+                          height: 38,
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          decoration: ShapeDecoration(
+                            color: Colors.white.withValues(alpha: 0.18),
+                            shape: const SmoothRectangleBorder(
+                              borderRadius: SmoothBorderRadius.all(
+                                SmoothRadius(cornerRadius: 19, cornerSmoothing: 1.0),
                               ),
                             ),
                           ),
-                        ),
-                        child: const Icon(
-                          Icons.notifications_none_rounded,
-                          size: 22,
-                          color: Colors.white,
-                        ),
-                      ),
-                      Positioned(
-                        top: -2,
-                        right: -2,
-                        child: Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: const BoxDecoration(
-                            color: AppColors.error,
-                            shape: BoxShape.circle,
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.monetization_on,
+                                size: 18,
+                                color: Color(0xFFFFD700),
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                '$points',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ],
                           ),
-                          child: const Text(
-                            '4',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(width: 10),
+
+                  // Notification Bell with Badge (Squircle) for Pending Debt Requests
+                  Consumer(
+                    builder: (context, ref, _) {
+                      final pendingCount = ref.watch(pendingDebtRequestsCountProvider);
+
+                      return GestureDetector(
+                        onTap: () => _showPendingDebtRequestsSheet(context),
+                        child: Stack(
+                          clipBehavior: Clip.none,
+                          children: [
+                            Container(
+                              width: 38,
+                              height: 38,
+                              decoration: ShapeDecoration(
+                                color: Colors.white.withValues(alpha: 0.18),
+                                shape: const SmoothRectangleBorder(
+                                  borderRadius: SmoothBorderRadius.all(
+                                    SmoothRadius(
+                                      cornerRadius: 19,
+                                      cornerSmoothing: 1.0,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              child: const Icon(
+                                Icons.notifications_none_rounded,
+                                size: 22,
+                                color: Colors.white,
+                              ),
                             ),
-                          ),
+                            if (pendingCount > 0)
+                              Positioned(
+                                top: -2,
+                                right: -2,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 5,
+                                    vertical: 2,
+                                  ),
+                                  decoration: const BoxDecoration(
+                                    color: AppColors.error,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Text(
+                                    '$pendingCount',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                          ],
                         ),
-                      ),
-                    ],
+                      );
+                    },
                   ),
                   const SizedBox(width: 8),
 
@@ -490,161 +817,177 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               const SizedBox(height: 24),
 
               // 4 Core Action Buttons Row (Debt & Settlement Dashboard)
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  _buildHeaderActionButton(
-                    icon: Icons.folder_shared_rounded,
-                    label: 'บิลของฉัน',
-                    onTap: () {},
-                  ),
-                  _buildHeaderActionButton(
-                    icon: Icons.arrow_downward_rounded,
-                    label: 'เพื่อนติดเรา',
-                    badge: '฿850',
-                    onTap: () {},
-                  ),
-                  _buildHeaderActionButton(
-                    icon: Icons.arrow_upward_rounded,
-                    label: 'เราติดเพื่อน',
-                    badge: '฿240',
-                    onTap: () {},
-                  ),
-                  _buildHeaderActionButton(
-                    icon: Icons.add_circle_rounded,
-                    label: 'สร้างบิล',
-                    onTap: _navigateToCreateBill,
-                  ),
-                ],
+              Consumer(
+                builder: (context, ref, _) {
+                  final debtSummary = ref.watch(paymentSummaryProvider);
+                  final receivableSummary = ref.watch(receivableSummaryProvider);
+
+                  final receivableBadge = receivableSummary.totalOutstandingAmount > 0
+                      ? '฿${receivableSummary.totalOutstandingAmount.toStringAsFixed(0)}'
+                      : null;
+
+                  final debtBadge = debtSummary.totalOutstandingAmount > 0
+                      ? '฿${debtSummary.totalOutstandingAmount.toStringAsFixed(0)}'
+                      : null;
+
+                  return Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      _buildHeaderActionButton(
+                        icon: Icons.folder_shared_rounded,
+                        label: 'บิลของฉัน',
+                        onTap: () => context.push('/bills/my'),
+                      ),
+                      _buildHeaderActionButton(
+                        icon: Icons.arrow_downward_rounded,
+                        label: 'เพื่อนติดเรา',
+                        badge: receivableBadge,
+                        onTap: () => context.push('/payments?tab=receivables'),
+                      ),
+                      _buildHeaderActionButton(
+                        icon: Icons.arrow_upward_rounded,
+                        label: 'เราติดเพื่อน',
+                        badge: debtBadge,
+                        onTap: () => context.push('/payments?tab=debts'),
+                      ),
+                      _buildHeaderActionButton(
+                        icon: Icons.add_circle_rounded,
+                        label: 'สร้างบิล',
+                        onTap: _navigateToCreateBill,
+                      ),
+                    ],
+                  );
+                },
               ),
 
               const SizedBox(height: 20),
 
-              // White/Dark Floating Debt Summary Card (Squircle)
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 18,
-                  vertical: 14,
-                ),
-                decoration: ShapeDecoration(
-                  color: isDark ? AppColors.surfaceTile1 : AppColors.canvas,
-                  shadows: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.08),
-                      blurRadius: 16,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                  shape: const SmoothRectangleBorder(
-                    borderRadius: SmoothBorderRadius.all(
-                      SmoothRadius(cornerRadius: 22, cornerSmoothing: 1.0),
-                    ),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
+              // White/Dark Floating Receivable Summary Card (เงินที่เราต้องได้คืน / เพื่อนติดเรา)
+              Consumer(
+                builder: (context, ref, _) {
+                  final summary = ref.watch(receivableSummaryProvider);
+
+                  return GestureDetector(
+                    onTap: () => context.push('/payments?tab=receivables'),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 18,
+                        vertical: 14,
+                      ),
                       decoration: ShapeDecoration(
-                        color: AppColors.primary.withValues(
-                          alpha: isDark ? 0.2 : 0.1,
-                        ),
+                        color: isDark
+                            ? AppColors.surfaceTile1
+                            : AppColors.canvas,
+                        shadows: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.08),
+                            blurRadius: 16,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
                         shape: const SmoothRectangleBorder(
                           borderRadius: SmoothBorderRadius.all(
                             SmoothRadius(
-                              cornerRadius: 12,
+                              cornerRadius: 22,
                               cornerSmoothing: 1.0,
                             ),
                           ),
                         ),
                       ),
-                      child: const Icon(
-                        Icons.handshake_rounded,
-                        size: 20,
-                        color: AppColors.primary,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      child: Row(
                         children: [
-                          Row(
-                            children: [
-                              Text(
-                                user?.displayName ?? 'ยอดสุทธิที่รอเคลียร์',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: isDark
-                                      ? AppColors.bodyMuted
-                                      : AppColors.inkMuted48,
-                                  fontWeight: FontWeight.w500,
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: ShapeDecoration(
+                              color: AppColors.primary.withValues(
+                                alpha: isDark ? 0.2 : 0.1,
+                              ),
+                              shape: const SmoothRectangleBorder(
+                                borderRadius: SmoothBorderRadius.all(
+                                  SmoothRadius(
+                                    cornerRadius: 12,
+                                    cornerSmoothing: 1.0,
+                                  ),
                                 ),
                               ),
-                              const SizedBox(width: 4),
-                              const Icon(
-                                Icons.info_outline_rounded,
-                                size: 14,
-                                color: AppColors.inkMuted48,
-                              ),
-                            ],
+                            ),
+                            child: const Icon(
+                              Icons.call_received_rounded,
+                              size: 20,
+                              color: AppColors.primary,
+                            ),
                           ),
-                          const SizedBox(height: 2),
-                          Row(
-                            children: [
-                              Text(
-                                '610.00 บาท',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w700,
-                                  color: isDark
-                                      ? AppColors.bodyOnDark
-                                      : AppColors.ink,
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Text(
+                                      'รอรับเงินคืน (${summary.debtorCount} คน)',
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        color: isDark
+                                            ? AppColors.bodyMuted
+                                            : AppColors.inkMuted48,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    const Icon(
+                                      Icons.chevron_right_rounded,
+                                      size: 16,
+                                      color: AppColors.inkMuted48,
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  '฿${summary.totalOutstandingAmount.toStringAsFixed(2)}',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w700,
+                                    color: isDark
+                                        ? AppColors.bodyOnDark
+                                        : AppColors.ink,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          ElevatedButton(
+                            onPressed: () => context.push('/payments?tab=receivables'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primary,
+                              foregroundColor: AppColors.onPrimary,
+                              elevation: 0,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 8,
+                              ),
+                              shape: const SmoothRectangleBorder(
+                                borderRadius: SmoothBorderRadius.all(
+                                  SmoothRadius(
+                                    cornerRadius: 20,
+                                    cornerSmoothing: 1.0,
+                                  ),
                                 ),
                               ),
-                              const SizedBox(width: 6),
-                              const Text(
-                                '(รอรับเงิน)',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  color: AppColors.success,
-                                  fontWeight: FontWeight.bold,
-                                ),
+                            ),
+                            child: const Text(
+                              'ดูรายการ',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
                               ),
-                            ],
+                            ),
                           ),
                         ],
                       ),
                     ),
-                    ElevatedButton(
-                      onPressed: _navigateToCreateBill,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        foregroundColor: AppColors.onPrimary,
-                        elevation: 0,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 8,
-                        ),
-                        shape: const SmoothRectangleBorder(
-                          borderRadius: SmoothBorderRadius.all(
-                            SmoothRadius(
-                              cornerRadius: 20,
-                              cornerSmoothing: 1.0,
-                            ),
-                          ),
-                        ),
-                      ),
-                      child: const Text(
-                        'หารบิลใหม่',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+                  );
+                },
               ),
             ],
           ),
@@ -722,161 +1065,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  Widget _buildDailyCheckInCard(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      padding: const EdgeInsets.all(16),
-      decoration: ShapeDecoration(
-        color: isDark ? AppColors.surfaceTile1 : AppColors.canvas,
-        shape: SmoothRectangleBorder(
-          side: BorderSide(
-            color: isDark ? Colors.white10 : AppColors.dividerSoft,
-          ),
-          borderRadius: const SmoothBorderRadius.all(
-            SmoothRadius(cornerRadius: 24, cornerSmoothing: 1.0),
-          ),
-        ),
-      ),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 38,
-                height: 38,
-                decoration: ShapeDecoration(
-                  color: AppColors.primary.withValues(
-                    alpha: isDark ? 0.2 : 0.1,
-                  ),
-                  shape: const SmoothRectangleBorder(
-                    borderRadius: SmoothBorderRadius.all(
-                      SmoothRadius(cornerRadius: 12, cornerSmoothing: 1.0),
-                    ),
-                  ),
-                ),
-                child: const Icon(
-                  Icons.card_giftcard_rounded,
-                  color: AppColors.primary,
-                  size: 22,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'เช็คอินรับเหรียญทุกวัน',
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                        color: isDark ? AppColors.bodyOnDark : AppColors.ink,
-                      ),
-                    ),
-                    const Text(
-                      'กลับมาเช็คอินอีกครั้งพรุ่งนี้นะ 😉',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: AppColors.inkMuted48,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              ElevatedButton(
-                onPressed: () {},
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: AppColors.onPrimary,
-                  elevation: 0,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 6,
-                  ),
-                  shape: const SmoothRectangleBorder(
-                    borderRadius: SmoothBorderRadius.all(
-                      SmoothRadius(cornerRadius: 16, cornerSmoothing: 1.0),
-                    ),
-                  ),
-                ),
-                child: const Text(
-                  'รับส่วนลด',
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-
-          // 7-Day Streak Rewards Row
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _buildRewardDay('5 บาท', 'วันที่1', isChecked: true),
-              _buildRewardDay('3 coins', 'วันที่2', isChecked: false),
-              _buildRewardDay('12 บาท', 'วันที่3', isChecked: false),
-              _buildRewardDay('15 บาท', 'วันที่4', isChecked: false),
-              _buildRewardDay('5 coins', 'วันที่5', isChecked: false),
-              _buildRewardDay('15 บาท', 'วันที่6', isChecked: false),
-              _buildRewardDay('20 บาท', 'วันที่7', isChecked: false),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildRewardDay(String reward, String day, {required bool isChecked}) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Column(
-      children: [
-        Container(
-          width: 38,
-          height: 38,
-          decoration: ShapeDecoration(
-            color: isChecked
-                ? AppColors.success
-                : (isDark ? AppColors.surfaceTile2 : AppColors.canvasParchment),
-            shape: SmoothRectangleBorder(
-              side: BorderSide(
-                color: isChecked
-                    ? AppColors.success
-                    : (isDark ? Colors.white10 : AppColors.hairline),
-              ),
-              borderRadius: const SmoothBorderRadius.all(
-                SmoothRadius(cornerRadius: 12, cornerSmoothing: 1.0),
-              ),
-            ),
-          ),
-          alignment: Alignment.center,
-          child: isChecked
-              ? const Icon(Icons.check, color: Colors.white, size: 18)
-              : const Icon(
-                  Icons.monetization_on_outlined,
-                  color: Color(0xFFFFD700),
-                  size: 18,
-                ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          reward,
-          style: TextStyle(
-            fontSize: 9,
-            fontWeight: FontWeight.bold,
-            color: isDark ? AppColors.bodyOnDark : AppColors.ink,
-          ),
-        ),
-        Text(
-          day,
-          style: const TextStyle(fontSize: 9, color: AppColors.inkMuted48),
-        ),
-      ],
-    );
-  }
-
   Widget _buildRecommendedPromoCard(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -942,77 +1130,5 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       ),
     );
   }
-
-  Widget _buildBottomNavigationBar() {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Container(
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.surfaceTile1 : AppColors.canvas,
-        border: Border(
-          top: BorderSide(
-            color: isDark ? Colors.white10 : AppColors.dividerSoft,
-            width: 1,
-          ),
-        ),
-      ),
-      child: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 6),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _buildNavItem(0, Icons.home_rounded, 'หน้าหลัก'),
-              _buildNavItem(
-                1,
-                Icons.account_balance_wallet_outlined,
-                'การเงิน',
-              ),
-              _buildNavItem(2, Icons.receipt_long_outlined, 'รายการ'),
-              _buildNavItem(3, Icons.card_giftcard_outlined, 'แลกคอยน์'),
-              _buildNavItem(4, Icons.person_outline_rounded, 'ฉัน'),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNavItem(int index, IconData icon, String label) {
-    final isSelected = _currentTabIndex == index;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    final color = isSelected
-        ? (isDark ? AppColors.primaryOnDark : AppColors.primary)
-        : AppColors.inkMuted48;
-
-    return GestureDetector(
-      onTap: () {
-        if (index == 4) {
-          _showSensitivitySettingsSheet();
-        } else {
-          setState(() {
-            _currentTabIndex = index;
-          });
-        }
-      },
-      behavior: HitTestBehavior.opaque,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 24, color: color),
-          const SizedBox(height: 2),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-              color: color,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }
+
