@@ -90,21 +90,29 @@
 </script>
 
 <div>
-  <h1 class="mb-6 text-2xl font-bold text-gray-900">User Management</h1>
+  <div class="mb-6 flex items-center justify-between">
+    <div>
+      <h1 class="text-2xl font-bold tracking-tight text-[#000000]">User Management</h1>
+      <p class="mt-0.5 text-xs text-[#615d59]">Inspect user credentials, verify roles, and manage suspensions.</p>
+    </div>
+  </div>
 
   {#if actionMessage}
-    <div class="mb-4 rounded-md bg-green-50 p-3 text-sm text-green-700">{actionMessage}</div>
+    <div class="mb-4 rounded-md bg-[#e8f8eb] border border-[#e8f8eb] p-3 text-xs text-[#138029] flex justify-between items-center">
+      <span>{actionMessage}</span>
+      <button onclick={() => actionMessage = ''} class="text-[#138029] font-bold">&times;</button>
+    </div>
   {/if}
 
-  <div class="mb-6 rounded-lg bg-white p-4 shadow">
-    <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+  <div class="mb-6 rounded-xl border border-[#e6e6e6] bg-white p-4 shadow-sm">
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
       <div>
-        <label for="filter-user-search" class="block text-xs font-medium text-gray-600">Search User</label>
-        <input id="filter-user-search" type="text" bind:value={filters.search} class="mt-1 block w-full rounded border border-gray-300 px-3 py-1.5 text-sm" placeholder="Name, code, phone..." />
+        <label for="filter-user-search" class="block text-[11px] font-medium text-[#615d59]">Search User</label>
+        <input id="filter-user-search" type="text" bind:value={filters.search} class="mt-1 block w-full rounded-[4px] border border-[#e6e6e6] bg-white px-2.5 py-1.5 text-xs text-[#000000] focus:border-[#0075de] focus:ring-1 focus:ring-[#0075de] focus:outline-none" placeholder="Name, code, phone..." />
       </div>
       <div>
-        <label for="filter-user-status" class="block text-xs font-medium text-gray-600">Account Status</label>
-        <select id="filter-user-status" bind:value={filters.accountStatus} class="mt-1 block w-full rounded border border-gray-300 px-3 py-1.5 text-sm">
+        <label for="filter-user-status" class="block text-[11px] font-medium text-[#615d59]">Account Status</label>
+        <select id="filter-user-status" bind:value={filters.accountStatus} class="mt-1 block w-full rounded-[4px] border border-[#e6e6e6] bg-white px-2.5 py-1.5 text-xs text-[#000000] focus:border-[#0075de] focus:ring-1 focus:ring-[#0075de] focus:outline-none">
           <option value="">All Statuses</option>
           <option value="active">Active</option>
           <option value="suspended">Suspended</option>
@@ -112,73 +120,75 @@
         </select>
       </div>
       <div>
-        <label for="filter-user-role" class="block text-xs font-medium text-gray-600">Role</label>
-        <select id="filter-user-role" bind:value={filters.role} class="mt-1 block w-full rounded border border-gray-300 px-3 py-1.5 text-sm">
+        <label for="filter-user-role" class="block text-[11px] font-medium text-[#615d59]">Role</label>
+        <select id="filter-user-role" bind:value={filters.role} class="mt-1 block w-full rounded-[4px] border border-[#e6e6e6] bg-white px-2.5 py-1.5 text-xs text-[#000000] focus:border-[#0075de] focus:ring-1 focus:ring-[#0075de] focus:outline-none">
           <option value="">All Roles</option>
           <option value="user">User</option>
           <option value="developer">Developer</option>
         </select>
       </div>
     </div>
-    <div class="mt-4 flex justify-between items-center">
-      <button onclick={applyFilters} class="rounded bg-blue-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-blue-700">Filter</button>
-      <span class="text-xs text-gray-500">Total: {total} users</span>
+    <div class="mt-4 flex items-center justify-between border-t border-[#e6e6e6] pt-3">
+      <button onclick={applyFilters} class="rounded-md bg-[#0075de] px-4 py-1.5 text-xs font-medium text-white hover:bg-[#005bab] transition-colors">Filter</button>
+      <span class="text-xs text-[#615d59] font-mono">Total: {total} users</span>
     </div>
   </div>
 
   {#if loading}
-    <p class="text-gray-500">Loading...</p>
+    <div class="rounded-xl border border-[#e6e6e6] bg-white p-8 text-center shadow-sm">
+      <p class="text-xs text-[#615d59]">Loading users...</p>
+    </div>
   {:else if error}
-    <div class="rounded-md bg-red-50 p-4 text-red-700">{error}</div>
+    <div class="rounded-md bg-[#fde8e8] border border-[#fde8e8] p-3 text-xs text-[#c53030]">{error}</div>
   {:else}
-    <div class="overflow-x-auto rounded-lg bg-white shadow">
-      <table class="min-w-full divide-y divide-gray-200">
-        <thead class="bg-gray-50">
+    <div class="overflow-x-auto rounded-xl border border-[#e6e6e6] bg-white shadow-sm">
+      <table class="min-w-full divide-y divide-[#e6e6e6]">
+        <thead class="bg-[#f6f5f4]">
           <tr>
-            <th class="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">User</th>
-            <th class="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">Code</th>
-            <th class="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">Role</th>
-            <th class="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">Status</th>
-            <th class="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">Joined</th>
-            <th class="px-4 py-3 text-right text-xs font-medium uppercase text-gray-500">Actions</th>
+            <th class="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-[#615d59]">User</th>
+            <th class="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-[#615d59]">Code</th>
+            <th class="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-[#615d59]">Role</th>
+            <th class="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-[#615d59]">Status</th>
+            <th class="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-[#615d59]">Joined</th>
+            <th class="px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wider text-[#615d59]">Actions</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-gray-200">
+        <tbody class="divide-y divide-[#e6e6e6] bg-white">
           {#each rows as user}
-            <tr class="hover:bg-gray-50">
+            <tr class="hover:bg-[#faf9f8] transition-colors">
               <td class="px-4 py-3">
-                <div class="flex items-center gap-2">
+                <div class="flex items-center gap-2.5">
                   {#if user.avatarUrl}
-                    <img src={user.avatarUrl} alt="" class="h-8 w-8 rounded-full object-cover" />
+                    <img src={user.avatarUrl} alt="" class="h-7 w-7 rounded-full object-cover border border-[#e6e6e6]" />
                   {:else}
-                    <div class="flex h-8 w-8 items-center justify-center rounded-full bg-gray-200 text-xs font-medium text-gray-600">
+                    <div class="flex h-7 w-7 items-center justify-center rounded-full bg-[#f0efed] text-xs font-semibold text-[#615d59]">
                       {(user.displayName || user.fullName || '?')[0]}
                     </div>
                   {/if}
                   <div>
-                    <div class="text-sm font-medium">{user.displayName || user.fullName || '-'}</div>
-                    <div class="text-xs text-gray-500">{user.phoneNumber || ''}</div>
+                    <div class="text-xs font-semibold text-[#000000]">{user.displayName || user.fullName || '-'}</div>
+                    <div class="text-[11px] text-[#615d59]">{user.phoneNumber || ''}</div>
                   </div>
                 </div>
               </td>
-              <td class="px-4 py-3 text-sm font-mono text-gray-600">{user.userCode}</td>
+              <td class="px-4 py-3 text-xs font-mono text-[#615d59]">{user.userCode}</td>
               <td class="px-4 py-3"><StatusBadge status={user.role} /></td>
               <td class="px-4 py-3"><StatusBadge status={user.accountStatus} /></td>
-              <td class="px-4 py-3 text-sm text-gray-500">{new Date(user.createdAt).toLocaleDateString()}</td>
+              <td class="px-4 py-3 text-xs text-[#615d59]">{new Date(user.createdAt).toLocaleDateString()}</td>
               <td class="px-4 py-3 text-right">
-                <div class="inline-flex gap-1">
+                <div class="inline-flex gap-1.5">
                   {#if user.accountStatus === 'active' && user.role !== 'developer'}
-                    <button onclick={() => openAction('suspend', user)} class="rounded bg-yellow-100 px-2 py-1 text-xs font-medium text-yellow-800 hover:bg-yellow-200">Suspend</button>
-                    <button onclick={() => openAction('ban', user)} class="rounded bg-red-100 px-2 py-1 text-xs font-medium text-red-800 hover:bg-red-200">Ban</button>
+                    <button onclick={() => openAction('suspend', user)} class="rounded-md border border-[#e6e6e6] bg-white px-2 py-1 text-[11px] font-medium text-[#dd5b00] hover:bg-[#fef2e8] transition-colors">Suspend</button>
+                    <button onclick={() => openAction('ban', user)} class="rounded-md border border-[#e6e6e6] bg-white px-2 py-1 text-[11px] font-medium text-[#c53030] hover:bg-[#fde8e8] transition-colors">Ban</button>
                   {:else if user.accountStatus === 'suspended' || user.accountStatus === 'banned'}
-                    <button onclick={() => openAction('unsuspend', user)} class="rounded bg-green-100 px-2 py-1 text-xs font-medium text-green-800 hover:bg-green-200">Restore</button>
+                    <button onclick={() => openAction('unsuspend', user)} class="rounded-md border border-[#e6e6e6] bg-white px-2 py-1 text-[11px] font-medium text-[#138029] hover:bg-[#e8f8eb] transition-colors">Restore</button>
                   {/if}
-                  <a href="/users/{user.id}" class="rounded bg-blue-100 px-2 py-1 text-xs font-medium text-blue-800 hover:bg-blue-200">Detail</a>
+                  <a href="/users/{user.id}" class="rounded-md border border-[#e6e6e6] bg-white px-2.5 py-1 text-[11px] font-medium text-[#0075de] hover:bg-[#e8f3fc] transition-colors">Detail</a>
                 </div>
               </td>
             </tr>
           {:else}
-            <tr><td colspan="6" class="px-4 py-8 text-center text-gray-500">No users found</td></tr>
+            <tr><td colspan="6" class="px-4 py-8 text-center text-xs text-[#615d59]">No users found</td></tr>
           {/each}
         </tbody>
       </table>
@@ -188,29 +198,29 @@
 </div>
 
 {#if actionModal.show}
-  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-    <div class="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
-      <h3 class="mb-4 text-lg font-bold capitalize">{actionModal.type} Account</h3>
-      <p class="mb-4 text-sm text-gray-600">Target: <strong>{actionModal.userName}</strong></p>
-      <div class="space-y-4">
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+    <div class="w-full max-w-md rounded-xl bg-white p-6 shadow-xl border border-[#e6e6e6]">
+      <h3 class="mb-3 text-base font-bold text-[#000000] capitalize">{actionModal.type} Account</h3>
+      <p class="mb-4 text-xs text-[#615d59]">Target: <strong class="text-[#000000]">{actionModal.userName}</strong></p>
+      <div class="space-y-3">
         <div>
-          <label for="modal-action-reason" class="block text-sm font-medium text-gray-700">Reason</label>
-          <textarea id="modal-action-reason" bind:value={actionModal.reason} rows={3} class="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm" placeholder="Provide audit reason..."></textarea>
+          <label for="modal-action-reason" class="block text-[11px] font-medium text-[#615d59]">Reason for audit</label>
+          <textarea id="modal-action-reason" bind:value={actionModal.reason} rows={3} class="mt-1 block w-full rounded-[4px] border border-[#e6e6e6] bg-white px-2.5 py-1.5 text-xs text-[#000000] focus:border-[#0075de] focus:ring-1 focus:ring-[#0075de] focus:outline-none" placeholder="Provide audit reason..."></textarea>
         </div>
         {#if actionModal.type === 'suspend'}
           <div>
-            <label for="modal-action-duration" class="block text-sm font-medium text-gray-700">Duration (days)</label>
-            <input id="modal-action-duration" type="number" bind:value={actionModal.durationDays} min={1} class="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm" />
-            <p class="mt-1 text-xs text-gray-500">Leave empty for indefinite suspension</p>
+            <label for="modal-action-duration" class="block text-[11px] font-medium text-[#615d59]">Duration (days)</label>
+            <input id="modal-action-duration" type="number" bind:value={actionModal.durationDays} min={1} class="mt-1 block w-full rounded-[4px] border border-[#e6e6e6] bg-white px-2.5 py-1.5 text-xs text-[#000000] focus:border-[#0075de] focus:ring-1 focus:ring-[#0075de] focus:outline-none" />
+            <p class="mt-1 text-[11px] text-[#a39e98]">Leave empty for indefinite suspension</p>
           </div>
         {/if}
       </div>
-      <div class="mt-6 flex justify-end gap-3">
-        <button onclick={() => actionModal.show = false} class="rounded border border-gray-300 px-4 py-2 text-sm">Cancel</button>
+      <div class="mt-6 flex justify-end gap-2 border-t border-[#e6e6e6] pt-3">
+        <button onclick={() => actionModal.show = false} class="rounded-md border border-[#e6e6e6] bg-white px-3 py-1.5 text-xs font-medium text-[#31302e] hover:bg-[#f6f5f4] transition-colors">Cancel</button>
         <button
           onclick={executeAction}
           disabled={!actionModal.reason}
-          class="rounded px-4 py-2 text-sm font-medium text-white disabled:opacity-50 {actionModal.type === 'ban' ? 'bg-red-600 hover:bg-red-700' : actionModal.type === 'suspend' ? 'bg-yellow-600 hover:bg-yellow-700' : 'bg-green-600 hover:bg-green-700'}"
+          class="rounded-md px-3.5 py-1.5 text-xs font-medium text-white disabled:opacity-50 transition-colors {actionModal.type === 'ban' ? 'bg-[#c53030] hover:bg-[#a82525]' : actionModal.type === 'suspend' ? 'bg-[#dd5b00] hover:bg-[#b34900]' : 'bg-[#1aae39] hover:bg-[#138029]'}"
         >
           Confirm {actionModal.type}
         </button>
