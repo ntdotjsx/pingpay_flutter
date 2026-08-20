@@ -22,19 +22,19 @@
 <div>
   <div class="mb-6 flex items-center justify-between">
     <div>
-      <h1 class="text-2xl font-bold text-gray-900">Dashboard Overview</h1>
-      <p class="text-sm text-gray-500">Live operational metrics and monitoring across PingPay</p>
+      <h1 class="text-2xl font-bold tracking-tight text-[#000000]">Dashboard Overview</h1>
+      <p class="text-xs text-[#615d59] mt-0.5">Live operational metrics and monitoring across PingPay</p>
     </div>
   </div>
 
   {#if loading}
-    <div class="rounded-lg bg-white p-8 text-center shadow-sm">
-      <p class="text-gray-500">Loading system metrics...</p>
+    <div class="rounded-xl border border-[#e6e6e6] bg-white p-8 text-center shadow-sm">
+      <p class="text-xs text-[#615d59]">Loading system metrics...</p>
     </div>
   {:else if error}
-    <div class="rounded-md bg-red-50 p-4 text-red-700">{error}</div>
+    <div class="rounded-md bg-[#fde8e8] border border-[#fde8e8] p-3 text-xs text-[#c53030]">{error}</div>
   {:else if stats}
-    <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
       <StatCard label="Total Users" value={stats.totalUsers} color="blue" />
       <StatCard label="Active Users" value={stats.activeUsers} color="green" />
       <StatCard label="Suspended Users" value={stats.suspendedUsers} color="yellow" />
@@ -45,23 +45,23 @@
     </div>
 
     <!-- Quick Navigation Panels -->
-    <div class="mt-8 grid grid-cols-1 gap-6 md:grid-cols-3">
-      <a href="/transactions" class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm hover:border-blue-300 hover:shadow transition">
+    <div class="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3">
+      <a href="/transactions" class="rounded-xl border border-[#e6e6e6] bg-white p-5 shadow-sm hover:border-[#0075de] hover:shadow transition-all group">
         <div class="text-2xl mb-2">💰</div>
-        <h3 class="font-bold text-gray-900">Transactions Explorer</h3>
-        <p class="mt-1 text-xs text-gray-500">Filter financial movements by user, group, date, and transaction type.</p>
+        <h3 class="font-bold text-sm text-[#000000] group-hover:text-[#0075de] transition-colors">Transactions Explorer</h3>
+        <p class="mt-1 text-xs text-[#615d59] leading-relaxed">Filter financial movements by user, group, date, and transaction type.</p>
       </a>
 
-      <a href="/disputes" class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm hover:border-yellow-300 hover:shadow transition">
+      <a href="/disputes" class="rounded-xl border border-[#e6e6e6] bg-white p-5 shadow-sm hover:border-[#dd5b00] hover:shadow transition-all group">
         <div class="text-2xl mb-2">⚖️</div>
-        <h3 class="font-bold text-gray-900">Dispute Management</h3>
-        <p class="mt-1 text-xs text-gray-500">Review transfer slips, check SlipOK verification hashes, and make determinations.</p>
+        <h3 class="font-bold text-sm text-[#000000] group-hover:text-[#dd5b00] transition-colors">Dispute Management</h3>
+        <p class="mt-1 text-xs text-[#615d59] leading-relaxed">Review transfer slips, check SlipOK verification hashes, and make determinations.</p>
       </a>
 
-      <a href="/suspicious" class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm hover:border-red-300 hover:shadow transition">
+      <a href="/suspicious" class="rounded-xl border border-[#e6e6e6] bg-white p-5 shadow-sm hover:border-[#e03e3e] hover:shadow transition-all group">
         <div class="text-2xl mb-2">🚨</div>
-        <h3 class="font-bold text-gray-900">Suspicious Activity Logs</h3>
-        <p class="mt-1 text-xs text-gray-500">Investigate duplicate slips, multi-account abuse, and unusual write-offs.</p>
+        <h3 class="font-bold text-sm text-[#000000] group-hover:text-[#e03e3e] transition-colors">Suspicious Activity Logs</h3>
+        <p class="mt-1 text-xs text-[#615d59] leading-relaxed">Investigate duplicate slips, multi-account abuse, and unusual write-offs.</p>
       </a>
     </div>
   {/if}
