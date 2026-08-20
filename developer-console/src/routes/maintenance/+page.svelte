@@ -71,50 +71,50 @@
 
 <div>
   <div class="mb-6">
-    <h1 class="text-2xl font-bold text-gray-900">Data Cleanup & System Maintenance</h1>
-    <p class="mt-1 text-sm text-gray-500">Purge, clean, and manage system log records and database state.</p>
+    <h1 class="text-2xl font-bold tracking-tight text-[#000000]">Data Cleanup & System Maintenance</h1>
+    <p class="mt-0.5 text-xs text-[#615d59]">Purge, clean, and manage system log records and database state.</p>
   </div>
 
   {#if message}
-    <div class="mb-5 rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-800 flex justify-between items-center shadow-sm">
+    <div class="mb-5 rounded-lg border border-[#e8f8eb] bg-[#e8f8eb] p-3.5 text-xs text-[#138029] flex justify-between items-center shadow-sm">
       <div class="flex items-center gap-2">
         <span>✓</span>
         <span>{message}</span>
       </div>
-      <button onclick={() => message = ''} class="text-green-600 hover:text-green-900 font-bold">&times;</button>
+      <button onclick={() => message = ''} class="text-[#138029] font-bold">&times;</button>
     </div>
   {/if}
 
   {#if error}
-    <div class="mb-5 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700 flex justify-between items-center shadow-sm">
+    <div class="mb-5 rounded-lg border border-[#fde8e8] bg-[#fde8e8] p-3.5 text-xs text-[#c53030] flex justify-between items-center shadow-sm">
       <div class="flex items-center gap-2">
         <span>✕</span>
         <span>{error}</span>
       </div>
-      <button onclick={() => error = ''} class="text-red-500 hover:text-red-800 font-bold">&times;</button>
+      <button onclick={() => error = ''} class="text-[#c53030] font-bold">&times;</button>
     </div>
   {/if}
 
   <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
     <!-- Activity Logs Cleanup -->
-    <div class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-      <div class="flex items-center gap-3 mb-4">
-        <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100 text-blue-700 text-xl">
+    <div class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-sm">
+      <div class="flex items-center gap-3 mb-3">
+        <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-[#e8f3fc] text-[#0075de] text-lg font-bold">
           📋
         </div>
         <div>
-          <h2 class="text-base font-bold text-gray-900">Activity Logs Cleanup</h2>
-          <p class="text-xs text-gray-500">Regular per-user / group event tracking</p>
+          <h2 class="text-sm font-bold text-[#000000]">Activity Logs Cleanup</h2>
+          <p class="text-[11px] text-[#615d59]">Regular per-user / group event tracking</p>
         </div>
       </div>
-      <p class="text-sm text-gray-600 mb-6 leading-relaxed">
+      <p class="text-xs text-[#615d59] mb-5 leading-relaxed">
         Regular activity logs track logins, bills, and payments. They can be purged on the 1-month retention schedule or wiped completely.
       </p>
-      <div class="flex flex-col gap-3">
+      <div class="flex flex-col gap-2.5">
         <button
           onclick={() => runCleanup('purge_old')}
           disabled={actionLoading}
-          class="flex items-center justify-center gap-2 rounded-lg bg-yellow-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-yellow-700 active:scale-[0.99] disabled:opacity-50"
+          class="flex items-center justify-center gap-2 rounded-md border border-[#e6e6e6] bg-white px-4 py-2 text-xs font-medium text-[#dd5b00] shadow-sm hover:bg-[#fef2e8] active:scale-[0.99] disabled:opacity-50 transition-colors"
         >
           <span>🧹</span>
           <span>Purge Old Logs (&gt;1 Month)</span>
@@ -122,7 +122,7 @@
         <button
           onclick={() => runCleanup('clear_activity')}
           disabled={actionLoading}
-          class="flex items-center justify-center gap-2 rounded-lg border border-red-300 bg-red-50 px-4 py-2.5 text-sm font-medium text-red-700 hover:bg-red-100 active:scale-[0.99] disabled:opacity-50"
+          class="flex items-center justify-center gap-2 rounded-md bg-[#fde8e8] px-4 py-2 text-xs font-medium text-[#c53030] hover:bg-[#fbd5d5] active:scale-[0.99] disabled:opacity-50 transition-colors"
         >
           <span>🗑️</span>
           <span>Clear ALL Regular Activity Logs</span>
@@ -131,30 +131,30 @@
     </div>
 
     <!-- Suspicious Logs Cleanup -->
-    <div class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-      <div class="flex items-center gap-3 mb-4">
-        <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-red-100 text-red-700 text-xl">
+    <div class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-sm">
+      <div class="flex items-center gap-3 mb-3">
+        <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-[#fde8e8] text-[#c53030] text-lg font-bold">
           🚨
         </div>
         <div>
-          <h2 class="text-base font-bold text-gray-900">Suspicious Threat Logs</h2>
-          <p class="text-xs text-gray-500">Security flags, fraud attempts, duplicate slips</p>
+          <h2 class="text-sm font-bold text-[#000000]">Suspicious Threat Logs</h2>
+          <p class="text-[11px] text-[#615d59]">Security flags, fraud attempts, duplicate slips</p>
         </div>
       </div>
-      <p class="text-sm text-gray-600 mb-6 leading-relaxed">
+      <p class="text-xs text-[#615d59] mb-5 leading-relaxed">
         Suspicious logs are retained permanently by default for dispute evidence. Use this only when resetting test fraud data.
       </p>
-      <div class="flex flex-col gap-3">
+      <div class="flex flex-col gap-2.5">
         <a
           href="/suspicious"
-          class="flex items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          class="flex items-center justify-center gap-2 rounded-md border border-[#e6e6e6] bg-white px-4 py-2 text-xs font-medium text-[#31302e] hover:bg-[#f6f5f4] transition-colors"
         >
           <span>Inspect Logs ({stats?.suspiciousLogs ?? 0})</span>
         </a>
         <button
           onclick={() => runCleanup('clear_suspicious')}
           disabled={actionLoading}
-          class="flex items-center justify-center gap-2 rounded-lg bg-red-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-red-700 active:scale-[0.99] disabled:opacity-50"
+          class="flex items-center justify-center gap-2 rounded-md bg-[#c53030] px-4 py-2 text-xs font-medium text-white shadow-sm hover:bg-[#a82525] active:scale-[0.99] disabled:opacity-50 transition-colors"
         >
           <span>🗑️</span>
           <span>Clear ALL Suspicious Logs</span>
@@ -163,30 +163,30 @@
     </div>
 
     <!-- Admin Audit Logs Cleanup -->
-    <div class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-      <div class="flex items-center gap-3 mb-4">
-        <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-100 text-purple-700 text-xl">
+    <div class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-sm">
+      <div class="flex items-center gap-3 mb-3">
+        <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-[#f5eefc] text-[#6e2fb5] text-lg font-bold">
           🔍
         </div>
         <div>
-          <h2 class="text-base font-bold text-gray-900">Admin Audit Trail</h2>
-          <p class="text-xs text-gray-500">Developer actions, suspensions, dispute determinations</p>
+          <h2 class="text-sm font-bold text-[#000000]">Admin Audit Trail</h2>
+          <p class="text-[11px] text-[#615d59]">Developer actions, suspensions, dispute determinations</p>
         </div>
       </div>
-      <p class="text-sm text-gray-600 mb-6 leading-relaxed">
+      <p class="text-xs text-[#615d59] mb-5 leading-relaxed">
         Admin action logs record all developer and administrator actions. You can wipe this audit history during local dev testing.
       </p>
-      <div class="flex flex-col gap-3">
+      <div class="flex flex-col gap-2.5">
         <a
           href="/audit-logs"
-          class="flex items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          class="flex items-center justify-center gap-2 rounded-md border border-[#e6e6e6] bg-white px-4 py-2 text-xs font-medium text-[#31302e] hover:bg-[#f6f5f4] transition-colors"
         >
           <span>View Audit Log History</span>
         </a>
         <button
           onclick={() => runCleanup('clear_audit')}
           disabled={actionLoading}
-          class="flex items-center justify-center gap-2 rounded-lg bg-red-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-red-700 active:scale-[0.99] disabled:opacity-50"
+          class="flex items-center justify-center gap-2 rounded-md bg-[#c53030] px-4 py-2 text-xs font-medium text-white shadow-sm hover:bg-[#a82525] active:scale-[0.99] disabled:opacity-50 transition-colors"
         >
           <span>🗑️</span>
           <span>Clear ALL Admin Audit Logs</span>
@@ -195,29 +195,29 @@
     </div>
 
     <!-- Quick Navigation Card -->
-    <div class="rounded-xl border border-emerald-200 bg-emerald-50/50 p-6 shadow-sm flex flex-col justify-between">
+    <div class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-sm flex flex-col justify-between">
       <div>
-        <div class="flex items-center gap-3 mb-4">
-          <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700 text-xl">
+        <div class="flex items-center gap-3 mb-3">
+          <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-[#e8f8eb] text-[#138029] text-lg font-bold">
             ⚡
           </div>
           <div>
-            <h2 class="text-base font-bold text-gray-900">Quick Links</h2>
-            <p class="text-xs text-emerald-700">Explore and manage platform data</p>
+            <h2 class="text-sm font-bold text-[#000000]">Quick Shortcuts</h2>
+            <p class="text-[11px] text-[#615d59]">Platform data explorer</p>
           </div>
         </div>
-        <ul class="text-xs text-gray-600 space-y-2 mb-4">
-          <li>• <strong>Transactions:</strong> Filter bills and payments by user or group.</li>
-          <li>• <strong>Disputes:</strong> Investigate and resolve debtor claims.</li>
-          <li>• <strong>Users:</strong> Suspend or ban offending accounts.</li>
+        <ul class="text-xs text-[#615d59] space-y-1.5 mb-4">
+          <li>• <strong class="text-[#000000]">Transactions:</strong> Filter bills and payments by user or group.</li>
+          <li>• <strong class="text-[#000000]">Disputes:</strong> Investigate and resolve debtor claims.</li>
+          <li>• <strong class="text-[#000000]">Users:</strong> Suspend or ban offending accounts.</li>
         </ul>
       </div>
 
-      <div class="flex gap-2">
-        <a href="/transactions" class="flex-1 text-center rounded-lg bg-white border border-emerald-300 px-3 py-2 text-xs font-semibold text-emerald-800 hover:bg-emerald-100">
+      <div class="flex gap-2 border-t border-[#e6e6e6] pt-3">
+        <a href="/transactions" class="flex-1 text-center rounded-md border border-[#e6e6e6] bg-white px-3 py-1.5 text-xs font-semibold text-[#0075de] hover:bg-[#e8f3fc] transition-colors">
           Transactions &rarr;
         </a>
-        <a href="/users" class="flex-1 text-center rounded-lg bg-white border border-emerald-300 px-3 py-2 text-xs font-semibold text-emerald-800 hover:bg-emerald-100">
+        <a href="/users" class="flex-1 text-center rounded-md border border-[#e6e6e6] bg-white px-3 py-1.5 text-xs font-semibold text-[#0075de] hover:bg-[#e8f3fc] transition-colors">
           Users &rarr;
         </a>
       </div>
