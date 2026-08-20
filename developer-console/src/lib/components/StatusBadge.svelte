@@ -2,40 +2,40 @@
   let { status, size = 'sm' }: { status: string; size?: 'sm' | 'md' } = $props();
 
   const colorMap: Record<string, string> = {
-    active: 'bg-green-100 text-green-800',
-    confirmed: 'bg-green-100 text-green-800',
-    resolved_paid: 'bg-green-100 text-green-800',
-    paid: 'bg-green-100 text-green-800',
-    payment: 'bg-green-100 text-green-800',
-    user: 'bg-blue-100 text-blue-800',
-    developer: 'bg-purple-100 text-purple-800',
-    suspended: 'bg-yellow-100 text-yellow-800',
-    pending_verification: 'bg-yellow-100 text-yellow-800',
-    pending_owner_confirmation: 'bg-yellow-100 text-yellow-800',
-    under_review: 'bg-yellow-100 text-yellow-800',
-    open: 'bg-yellow-100 text-yellow-800',
-    debt_created: 'bg-blue-100 text-blue-800',
-    debt_adjusted: 'bg-indigo-100 text-indigo-800',
-    banned: 'bg-red-100 text-red-800',
-    rejected: 'bg-red-100 text-red-800',
-    verification_failed: 'bg-red-100 text-red-800',
-    resolved_rejected: 'bg-red-100 text-red-800',
-    duplicate_slip: 'bg-red-100 text-red-800',
-    multi_account_ip: 'bg-red-100 text-red-800',
-    frequent_writeoff: 'bg-orange-100 text-orange-800',
-    frequent_bill_edit: 'bg-yellow-100 text-yellow-800',
-    fake_slip_manipulation: 'bg-red-100 text-red-800',
-    cancelled: 'bg-gray-100 text-gray-800',
-    written_off: 'bg-gray-100 text-gray-800',
-    write_off: 'bg-gray-100 text-gray-800',
-    resolved_written_off: 'bg-gray-100 text-gray-800',
-    refund: 'bg-orange-100 text-orange-800',
+    active: 'bg-[#e8f8eb] text-[#138029]',
+    confirmed: 'bg-[#e8f8eb] text-[#138029]',
+    resolved_paid: 'bg-[#e8f8eb] text-[#138029]',
+    paid: 'bg-[#e8f8eb] text-[#138029]',
+    payment: 'bg-[#e8f8eb] text-[#138029]',
+    user: 'bg-[#e8f3fc] text-[#005bab]',
+    developer: 'bg-[#f5eefc] text-[#6e2fb5]',
+    suspended: 'bg-[#fef2e8] text-[#b34900]',
+    pending_verification: 'bg-[#fef2e8] text-[#b34900]',
+    pending_owner_confirmation: 'bg-[#fef2e8] text-[#b34900]',
+    under_review: 'bg-[#fef2e8] text-[#b34900]',
+    open: 'bg-[#fef2e8] text-[#b34900]',
+    debt_created: 'bg-[#e8f3fc] text-[#005bab]',
+    debt_adjusted: 'bg-[#e8f3fc] text-[#005bab]',
+    banned: 'bg-[#fde8e8] text-[#c53030]',
+    rejected: 'bg-[#fde8e8] text-[#c53030]',
+    verification_failed: 'bg-[#fde8e8] text-[#c53030]',
+    resolved_rejected: 'bg-[#fde8e8] text-[#c53030]',
+    duplicate_slip: 'bg-[#fde8e8] text-[#c53030]',
+    multi_account_ip: 'bg-[#fde8e8] text-[#c53030]',
+    fake_slip_manipulation: 'bg-[#fde8e8] text-[#c53030]',
+    frequent_writeoff: 'bg-[#faeee3] text-[#793400]',
+    frequent_bill_edit: 'bg-[#fef2e8] text-[#b34900]',
+    cancelled: 'bg-[#f0efed] text-[#45423f]',
+    written_off: 'bg-[#f0efed] text-[#45423f]',
+    write_off: 'bg-[#f0efed] text-[#45423f]',
+    resolved_written_off: 'bg-[#f0efed] text-[#45423f]',
+    refund: 'bg-[#faeee3] text-[#793400]',
   };
 
-  let sizeClass = $derived(size === 'md' ? 'px-3 py-1 text-sm' : 'px-2 py-0.5 text-xs');
-  let color = $derived(colorMap[status] || 'bg-blue-100 text-blue-800');
+  let sizeClass = $derived(size === 'md' ? 'px-3 py-1 text-xs font-semibold' : 'px-2.5 py-0.5 text-[11px] font-medium');
+  let color = $derived(colorMap[status] || 'bg-[#e8f3fc] text-[#005bab]');
 </script>
 
-<span class="inline-flex items-center rounded-full font-medium {sizeClass} {color}">
+<span class="inline-flex items-center rounded-full {sizeClass} {color}">
   {status ? status.replace(/_/g, ' ') : '-'}
 </span>

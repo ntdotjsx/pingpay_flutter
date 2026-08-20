@@ -9,25 +9,25 @@
 </script>
 
 {#if totalPages > 1}
-<div class="mt-4 flex items-center justify-between px-4 py-3">
-  <div class="text-sm text-gray-700">
-    Showing <span class="font-medium">{(page - 1) * limit + 1}</span> to
-    <span class="font-medium">{Math.min(page * limit, total)}</span> of
-    <span class="font-medium">{total}</span>
+<div class="mt-4 flex items-center justify-between px-2 py-3">
+  <div class="text-xs text-[#615d59]">
+    Showing <span class="font-medium text-[#000000]">{(page - 1) * limit + 1}</span> to
+    <span class="font-medium text-[#000000]">{Math.min(page * limit, total)}</span> of
+    <span class="font-medium text-[#000000]">{total}</span>
   </div>
-  <div class="flex gap-2">
+  <div class="flex items-center gap-2">
     <button
-      class="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+      class="rounded-md border border-[#e6e6e6] bg-white px-3 py-1.5 text-xs font-medium text-[#31302e] hover:bg-[#f6f5f4] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
       disabled={!canPrev}
       onclick={() => onPageChange(page - 1)}
     >
       Previous
     </button>
-    <span class="flex items-center px-2 text-sm text-gray-500">
+    <span class="px-2 text-xs font-mono text-[#615d59]">
       {page} / {totalPages}
     </span>
     <button
-      class="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+      class="rounded-md border border-[#e6e6e6] bg-white px-3 py-1.5 text-xs font-medium text-[#31302e] hover:bg-[#f6f5f4] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
       disabled={!canNext}
       onclick={() => onPageChange(page + 1)}
     >
