@@ -448,7 +448,56 @@ export class PaymentService {
         })
         .where(eq(bills.id, bill.id));
 
-      // 5. Create Audit Log
+      // 5. Award Points upon full debt settlement (คืนเงินหรือเพื่อนจ่ายเงินครบ)
+      if (isFullySettled) {
+        const amountNum = Number(payment.amount);
+        // Tier Level Multiplier based on transaction amount
+        // Lv 1 (<= 100 THB) -> 10 pts
+        // Lv 2 (101 - 500 THB) -> 25 pts
+        // Lv 3 (501 - 2,000 THB) -> 60 pts
+        // Lv 4 (2,001 - 5,000 THB) -> 150 pts
+        // Lv 5 (> 5,000 THB) -> 300 pts
+        let earnedPoints = 10;
+        if (amountNum > 5000) {
+          earnedPoints = 300;
+        } else if (amountNum > 2000) {
+          earnedPoints = 150;
+        } else if (amountNum > 500) {
+          earnedPoints = 60;
+        } else if (amountNum > 100) {
+          earnedPoints = 25;
+        }
+
+        // Award points to debtor (คนคืนเงินครบ)
+        const debtorUser = await tx.query.users.findFirst({
+          where: eq(users.id, item.debtorId),
+        });
+        if (debtorUser) {
+          await tx
+            .update(users)
+            .set({
+              rewardPoints: (debtorUser.rewardPoints ?? 0) + earnedPoints,
+              updatedAt: new Date(),
+            })
+            .where(eq(users.id, item.debtorId));
+        }
+
+        // Award points to creditor / bill owner (คนได้รับเงินคืนครบ)
+        const creditorUser = await tx.query.users.findFirst({
+          where: eq(users.id, userId),
+        });
+        if (creditorUser) {
+          await tx
+            .update(users)
+            .set({
+              rewardPoints: (creditorUser.rewardPoints ?? 0) + earnedPoints,
+              updatedAt: new Date(),
+            })
+            .where(eq(users.id, userId));
+        }
+      }
+
+      // 6. Create Audit Log
       await tx.insert(editLogs).values({
         action: "bill_item_edited",
         billId: bill.id,

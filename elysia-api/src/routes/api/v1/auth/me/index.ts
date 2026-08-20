@@ -6,7 +6,28 @@ import { eq } from "drizzle-orm";
 
 export default new Elysia()
   .use(onboardingGuard)
-  .get("/", ({ user, onboardingState }) => {
+  .get("/", async ({ user, onboardingState }) => {
+    let isLineFriend = false;
+
+    // Check real-time friendship with LINE Official Account (@553ltsju)
+    try {
+      const identity = await db.query.authIdentities.findFirst({
+        where: (ai, { and, eq }) => and(eq(ai.userId, user.id), eq(ai.provider, "line"))
+      });
+
+      if (identity?.providerUserId) {
+        const token = process.env.LINE_CHANNEL_ACCESS_TOKEN;
+        if (token) {
+          const profileRes = await fetch(`https://api.line.me/v2/bot/profile/${identity.providerUserId}`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          isLineFriend = profileRes.status === 200;
+        }
+      }
+    } catch (_) {
+      isLineFriend = false;
+    }
+
     return {
       userId: user.id,
       userCode: user.userCode,
@@ -23,6 +44,7 @@ export default new Elysia()
       shippingPhone: user.shippingPhone,
       shippingRecipientName: user.shippingRecipientName,
       onboardingState,
+      isLineFriend,
     };
   }, { detail: { tags: ["Auth"], summary: "Get current user session info" } })
   .post("/logout", async ({ cookie: { access_token, refresh_token }, set }) => {

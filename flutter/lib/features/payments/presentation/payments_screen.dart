@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/app_skeleton.dart';
 import '../providers/payment_providers.dart';
 import 'widgets/debt_card.dart';
 import 'widgets/payment_detail_bottom_sheet.dart';
@@ -394,6 +395,8 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
         // Summary Skeleton
         Container(
           height: 140,
+          margin: const EdgeInsets.only(bottom: 16),
+          padding: const EdgeInsets.all(20),
           decoration: ShapeDecoration(
             color: isDark ? AppColors.surfaceTile1 : Colors.white,
             shape: const SmoothRectangleBorder(
@@ -402,24 +405,18 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
               ),
             ),
           ),
-        ),
-        const SizedBox(height: 16),
-        // Debt Cards Skeleton
-        ...List.generate(
-          3,
-          (index) => Container(
-            margin: const EdgeInsets.only(bottom: 12),
-            height: 130,
-            decoration: ShapeDecoration(
-              color: isDark ? AppColors.surfaceTile1 : Colors.white,
-              shape: const SmoothRectangleBorder(
-                borderRadius: SmoothBorderRadius.all(
-                  SmoothRadius(cornerRadius: 20, cornerSmoothing: 1.0),
-                ),
-              ),
-            ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: const [
+              AppSkeleton(width: 120, height: 16, cornerRadius: 8),
+              AppSkeleton(width: 180, height: 32, cornerRadius: 10),
+              AppSkeleton(width: 150, height: 14, cornerRadius: 6),
+            ],
           ),
         ),
+        // Debt Cards Shimmer Skeleton
+        ...List.generate(4, (index) => const DebtCardSkeleton()),
       ],
     );
   }

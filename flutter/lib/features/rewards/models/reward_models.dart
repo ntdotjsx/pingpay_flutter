@@ -48,27 +48,106 @@ class RewardItemModel {
   };
 }
 
+class UserTierLevel {
+  final int level;
+  final String title;
+  final String badge;
+  final int minAmount;
+  final int maxAmount;
+  final int rewardPointsEarned;
+  final double nextTierProgress;
+
+  const UserTierLevel({
+    required this.level,
+    required this.title,
+    required this.badge,
+    required this.minAmount,
+    required this.maxAmount,
+    required this.rewardPointsEarned,
+    this.nextTierProgress = 0.0,
+  });
+
+  static UserTierLevel calculateFromPoints(int points) {
+    if (points >= 1000) {
+      return const UserTierLevel(
+        level: 5,
+        title: 'Diamond Member',
+        badge: '💎',
+        minAmount: 5000,
+        maxAmount: 99999,
+        rewardPointsEarned: 300,
+        nextTierProgress: 1.0,
+      );
+    } else if (points >= 500) {
+      return UserTierLevel(
+        level: 4,
+        title: 'Platinum Member',
+        badge: '👑',
+        minAmount: 2000,
+        maxAmount: 5000,
+        rewardPointsEarned: 150,
+        nextTierProgress: ((points - 500) / 500).clamp(0.0, 1.0),
+      );
+    } else if (points >= 200) {
+      return UserTierLevel(
+        level: 3,
+        title: 'Gold Member',
+        badge: '🥇',
+        minAmount: 500,
+        maxAmount: 2000,
+        rewardPointsEarned: 60,
+        nextTierProgress: ((points - 200) / 300).clamp(0.0, 1.0),
+      );
+    } else if (points >= 50) {
+      return UserTierLevel(
+        level: 2,
+        title: 'Silver Member',
+        badge: '🥈',
+        minAmount: 100,
+        maxAmount: 500,
+        rewardPointsEarned: 25,
+        nextTierProgress: ((points - 50) / 150).clamp(0.0, 1.0),
+      );
+    } else {
+      return UserTierLevel(
+        level: 1,
+        title: 'Bronze Member',
+        badge: '🥉',
+        minAmount: 0,
+        maxAmount: 100,
+        rewardPointsEarned: 10,
+        nextTierProgress: (points / 50).clamp(0.0, 1.0),
+      );
+    }
+  }
+}
+
 class UserPointsInfoModel {
   final int rewardPoints;
   final String? shippingAddress;
   final String? shippingPhone;
   final String? shippingRecipientName;
+  final UserTierLevel tier;
 
-  const UserPointsInfoModel({
+  UserPointsInfoModel({
     this.rewardPoints = 27,
     this.shippingAddress,
     this.shippingPhone,
     this.shippingRecipientName,
-  });
+    UserTierLevel? tier,
+  }) : tier = tier ?? UserTierLevel.calculateFromPoints(rewardPoints);
 
   factory UserPointsInfoModel.fromJson(Map<String, dynamic> json) {
+    final pts = json['rewardPoints'] is int
+        ? json['rewardPoints'] as int
+        : (int.tryParse(json['rewardPoints']?.toString() ?? '27') ?? 27);
+
     return UserPointsInfoModel(
-      rewardPoints: json['rewardPoints'] is int
-          ? json['rewardPoints'] as int
-          : (int.tryParse(json['rewardPoints']?.toString() ?? '27') ?? 27),
+      rewardPoints: pts,
       shippingAddress: json['shippingAddress'] as String?,
       shippingPhone: json['shippingPhone'] as String?,
       shippingRecipientName: json['shippingRecipientName'] as String?,
+      tier: UserTierLevel.calculateFromPoints(pts),
     );
   }
 }

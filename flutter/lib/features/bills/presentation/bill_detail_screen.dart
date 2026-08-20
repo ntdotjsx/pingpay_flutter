@@ -1,11 +1,15 @@
 import 'dart:convert';
+import 'dart:ui';
 import 'package:figma_squircle/figma_squircle.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/theme.dart';
 import '../../../core/utils/app_toast.dart';
+import '../../../core/widgets/app_skeleton.dart';
+import '../../payments/models/payment_models.dart';
 import '../../payments/providers/payment_providers.dart';
+import 'widgets/debt_offset_dialog.dart';
 import 'widgets/destructive_confirmation_sheet.dart';
 import '../models/bill_models.dart';
 import '../providers/bill_provider.dart';
@@ -53,7 +57,7 @@ class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
         ],
       ),
       body: billAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const BillDetailSkeleton(),
         error: (err, _) => Center(
           child: Padding(
             padding: const EdgeInsets.all(24.0),
@@ -141,22 +145,57 @@ class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Container(
-                            width: 44,
-                            height: 44,
-                            decoration: ShapeDecoration(
-                              color: AppColors.primary.withValues(alpha: 0.12),
-                              shape: const SmoothRectangleBorder(
-                                borderRadius: SmoothBorderRadius.all(
-                                  SmoothRadius(cornerRadius: 14, cornerSmoothing: 1.0),
+                          // Header Icon or Receipt Thumbnail (if available)
+                          GestureDetector(
+                            onTap: (bill.receiptImageUrl != null && bill.receiptImageUrl!.isNotEmpty)
+                                ? () => _showFullReceiptDialog(context, bill.receiptImageUrl!)
+                                : null,
+                            child: Container(
+                              width: 48,
+                              height: 48,
+                              decoration: ShapeDecoration(
+                                color: AppColors.primary.withValues(alpha: 0.12),
+                                shape: const SmoothRectangleBorder(
+                                  borderRadius: SmoothBorderRadius.all(
+                                    SmoothRadius(cornerRadius: 14, cornerSmoothing: 0.6),
+                                  ),
                                 ),
                               ),
-                            ),
-                            alignment: Alignment.center,
-                            child: const Icon(
-                              Icons.receipt_long_rounded,
-                              color: AppColors.primary,
-                              size: 24,
+                              child: ClipSmoothRect(
+                                radius: const SmoothBorderRadius.all(
+                                  SmoothRadius(cornerRadius: 14, cornerSmoothing: 0.6),
+                                ),
+                                child: (bill.receiptImageUrl != null && bill.receiptImageUrl!.isNotEmpty)
+                                    ? (bill.receiptImageUrl!.startsWith('data:image')
+                                        ? Image.memory(
+                                            base64Decode(
+                                              bill.receiptImageUrl!.replaceFirst(
+                                                RegExp(r'data:image/[^;]+;base64,'),
+                                                '',
+                                              ),
+                                            ),
+                                            fit: BoxFit.cover,
+                                            errorBuilder: (_, __, ___) => const Icon(
+                                              Icons.receipt_long_rounded,
+                                              color: AppColors.primary,
+                                              size: 24,
+                                            ),
+                                          )
+                                        : Image.network(
+                                            bill.receiptImageUrl!,
+                                            fit: BoxFit.cover,
+                                            errorBuilder: (_, __, ___) => const Icon(
+                                              Icons.receipt_long_rounded,
+                                              color: AppColors.primary,
+                                              size: 24,
+                                            ),
+                                          ))
+                                    : const Icon(
+                                        Icons.receipt_long_rounded,
+                                        color: AppColors.primary,
+                                        size: 24,
+                                      ),
+                              ),
                             ),
                           ),
                           const SizedBox(width: 12),
@@ -376,24 +415,72 @@ class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
                           // Debtor Header: Avatar + Name + ID + Status Pill
                           Row(
                             children: [
-                              CircleAvatar(
-                                radius: 20,
-                                backgroundColor: AppColors.primary.withValues(alpha: 0.15),
-                                backgroundImage: item.debtor?.avatarUrl != null
-                                    ? NetworkImage(item.debtor!.avatarUrl!)
-                                    : null,
-                                child: item.debtor?.avatarUrl == null
-                                    ? Text(
-                                        debtorName.isNotEmpty
-                                            ? debtorName[0].toUpperCase()
-                                            : 'U',
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 14,
-                                          color: AppColors.primary,
+                              // Debtor Squircle Avatar
+                              Container(
+                                width: 40,
+                                height: 40,
+                                decoration: ShapeDecoration(
+                                  color: AppColors.primary.withValues(alpha: 0.15),
+                                  shape: const SmoothRectangleBorder(
+                                    borderRadius: SmoothBorderRadius.all(
+                                      SmoothRadius(cornerRadius: 13, cornerSmoothing: 0.6),
+                                    ),
+                                  ),
+                                ),
+                                child: ClipSmoothRect(
+                                  radius: const SmoothBorderRadius.all(
+                                    SmoothRadius(cornerRadius: 13, cornerSmoothing: 0.6),
+                                  ),
+                                  child: Stack(
+                                    fit: StackFit.expand,
+                                    children: [
+                                      item.debtor?.avatarUrl != null && item.debtor!.avatarUrl!.isNotEmpty
+                                          ? Image.network(
+                                              item.debtor!.avatarUrl!,
+                                              fit: BoxFit.cover,
+                                              errorBuilder: (_, __, ___) => Center(
+                                                child: Text(
+                                                  debtorName.isNotEmpty
+                                                      ? debtorName[0].toUpperCase()
+                                                      : 'U',
+                                                  style: const TextStyle(
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: 15,
+                                                    color: AppColors.primary,
+                                                  ),
+                                                ),
+                                              ),
+                                            )
+                                          : Center(
+                                              child: Text(
+                                                debtorName.isNotEmpty
+                                                    ? debtorName[0].toUpperCase()
+                                                    : 'U',
+                                                style: const TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 15,
+                                                  color: AppColors.primary,
+                                                ),
+                                              ),
+                                            ),
+                                      if (!item.isAcknowledged && !item.isFullyPaid)
+                                        Positioned.fill(
+                                          child: BackdropFilter(
+                                            filter: ImageFilter.blur(sigmaX: 3.5, sigmaY: 3.5),
+                                            child: Container(
+                                              color: Colors.black.withValues(alpha: 0.25),
+                                              alignment: Alignment.center,
+                                              child: const Icon(
+                                                Icons.hourglass_top_rounded,
+                                                color: Colors.white,
+                                                size: 16,
+                                              ),
+                                            ),
+                                          ),
                                         ),
-                                      )
-                                    : null,
+                                    ],
+                                  ),
+                                ),
                               ),
                               const SizedBox(width: 12),
                               Expanded(
@@ -419,7 +506,7 @@ class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
                                   ],
                                 ),
                               ),
-                              _buildItemStatusBadge(item.status),
+                              _buildItemStatusBadge(item),
                             ],
                           ),
 
@@ -714,27 +801,32 @@ class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
     );
   }
 
-  Widget _buildItemStatusBadge(String status) {
+  Widget _buildItemStatusBadge(BillItemParticipantModel item) {
     String text = 'ยังไม่ชำระ';
     Color bg = AppColors.primary.withValues(alpha: 0.12);
     Color fg = AppColors.primary;
     IconData icon = Icons.schedule_rounded;
 
-    if (status == 'paid') {
+    if (item.status == 'paid') {
       text = 'ชำระแล้ว';
       bg = AppColors.success.withValues(alpha: 0.12);
       fg = AppColors.success;
       icon = Icons.check_circle_rounded;
-    } else if (status == 'partially_paid') {
+    } else if (item.status == 'partially_paid') {
       text = 'ชำระบางส่วน';
       bg = AppColors.warning.withValues(alpha: 0.12);
       fg = AppColors.warning;
       icon = Icons.hourglass_top_rounded;
-    } else if (status == 'written_off') {
+    } else if (item.status == 'written_off') {
       text = 'ยกหนี้ให้';
       bg = AppColors.inkMuted48.withValues(alpha: 0.12);
       fg = AppColors.inkMuted48;
       icon = Icons.money_off_rounded;
+    } else if (!item.isAcknowledged) {
+      text = 'รอการยอมรับ';
+      bg = const Color(0xFFFF9500).withValues(alpha: 0.12);
+      fg = const Color(0xFFFF9500);
+      icon = Icons.hourglass_top_rounded;
     }
 
     return Container(
@@ -798,9 +890,57 @@ class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
           ElevatedButton(
             onPressed: () async {
               final newAmt = double.tryParse(controller.text.trim());
-              if (newAmt == null || newAmt < 0) return;
+              if (newAmt == null || newAmt < 0) {
+                AppToast.warning(ctx, 'กรุณาระบุจำนวนเงินที่ถูกต้อง (ตั้งแต่ 0 ขึ้นไป)');
+                return;
+              }
 
               Navigator.pop(ctx);
+
+              // ── Check if debtor has mutual debts with bill owner ──
+              final userDebts = ref.read(userDebtsProvider).allDebts;
+              final matchingDebt = userDebts.firstWhere(
+                (d) => (d.creditor.id == item.debtorId || (item.debtor?.userCode != null && d.creditor.userCode == item.debtor!.userCode)) && d.outstandingAmount > 0,
+                orElse: () => DebtItemModel(
+                  id: '',
+                  billId: '',
+                  debtorId: '',
+                  billTitle: '',
+                  originalAmount: 0,
+                  currentAmount: 0,
+                  outstandingAmount: 0,
+                  status: '',
+                  debtStartDate: DateTime.now(),
+                  creditor: const CreditorUserModel(id: '', userCode: '', displayName: ''),
+                ),
+              );
+
+              bool shouldOffset = false;
+              DebtOffsetMatch? offsetMatch;
+
+              if (matchingDebt.id.isNotEmpty && matchingDebt.outstandingAmount > 0) {
+                final offsetAmt = newAmt < matchingDebt.outstandingAmount ? newAmt : matchingDebt.outstandingAmount;
+                final remainingShare = (newAmt - offsetAmt).clamp(0.0, double.infinity);
+                final remainingDebt = (matchingDebt.outstandingAmount - offsetAmt).clamp(0.0, double.infinity);
+
+                offsetMatch = DebtOffsetMatch(
+                  participantId: item.debtorId,
+                  participantName: item.debtor?.displayName ?? 'เพื่อน',
+                  currentBillShare: newAmt,
+                  existingDebt: matchingDebt,
+                  offsetAmount: offsetAmt,
+                  remainingShareAfterOffset: remainingShare,
+                  remainingDebtAfterOffset: remainingDebt,
+                );
+
+                final offsetChoice = await DebtOffsetConfirmationDialog.show(
+                  context,
+                  matches: [offsetMatch],
+                );
+                if (offsetChoice == null) return; // User closed
+                shouldOffset = offsetChoice;
+              }
+
               try {
                 final repo = ref.read(billRepositoryProvider);
                 await repo.editParticipantAmount(
@@ -808,11 +948,49 @@ class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
                   participantId: item.id,
                   newAmount: newAmt,
                 );
+
+                if (shouldOffset && offsetMatch != null) {
+                  try {
+                    // 1. Write off existing debt owed to friend
+                    await repo.writeOffDebt(
+                      billId: offsetMatch.existingDebt.billId,
+                      participants: [
+                        {
+                          'participantId': offsetMatch.existingDebt.id,
+                          'amount': offsetMatch.offsetAmount,
+                        }
+                      ],
+                      reason: 'หักล้างหนี้อัตโนมัติจากการแก้ไขยอดบิล',
+                    );
+
+                    // 2. Write off friend's new share in this bill by offset amount
+                    await repo.writeOffDebt(
+                      billId: widget.billId,
+                      participants: [
+                        {
+                          'participantId': item.id,
+                          'amount': offsetMatch.offsetAmount,
+                        }
+                      ],
+                      reason: 'หักล้างหนี้อัตโนมัติจากหนี้เดิม (${offsetMatch.existingDebt.billTitle})',
+                    );
+                  } catch (e) {
+                    // Graceful handling
+                  }
+                }
+
                 ref.invalidate(billDetailProvider(widget.billId));
                 ref.read(userReceivablesProvider.notifier).loadReceivables(showLoading: false);
+                ref.read(userDebtsProvider.notifier).loadDebts(showLoading: false);
                 ref.invalidate(myBillsProvider);
+
                 if (mounted) {
-                  AppToast.success(context, 'อัปเดตยอดและเฉลี่ยหนี้เรียบร้อย');
+                  AppToast.success(
+                    context,
+                    shouldOffset
+                        ? 'อัปเดตยอดและหักล้างหนี้เดิมเรียบร้อยแล้ว'
+                        : 'อัปเดตยอดและเฉลี่ยหนี้เรียบร้อย',
+                  );
                 }
               } catch (e) {
                 if (mounted) {
@@ -962,5 +1140,56 @@ class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
         }
       }
     }
+  }
+
+  void _showFullReceiptDialog(BuildContext context, String imageUrl) {
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+        child: Stack(
+          alignment: Alignment.topRight,
+          children: [
+            InteractiveViewer(
+              minScale: 0.5,
+              maxScale: 4.0,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: imageUrl.startsWith('data:image')
+                    ? Image.memory(
+                        base64Decode(
+                          imageUrl.replaceFirst(
+                            RegExp(r'data:image/[^;]+;base64,'),
+                            '',
+                          ),
+                        ),
+                        fit: BoxFit.contain,
+                      )
+                    : Image.network(
+                        imageUrl,
+                        fit: BoxFit.contain,
+                      ),
+              ),
+            ),
+            Positioned(
+              top: 8,
+              right: 8,
+              child: IconButton(
+                onPressed: () => Navigator.pop(ctx),
+                icon: Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.6),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.close_rounded, color: Colors.white, size: 20),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

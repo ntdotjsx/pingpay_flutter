@@ -28,7 +28,10 @@ class _AddFriendScreenState extends ConsumerState<AddFriendScreen> {
 
   Future<void> _performSearch() async {
     final query = _codeController.text.trim();
-    if (query.isEmpty) return;
+    if (query.isEmpty) {
+      AppToast.warning(context, 'กรุณากรอกรหัสผู้ใช้เพื่อค้นหา');
+      return;
+    }
 
     setState(() {
       _isSearching = true;

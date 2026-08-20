@@ -57,9 +57,9 @@ export class BillRepository {
           currentAmount: item.amount,
           status: "unpaid" as const,
         }));
-        
+
         const createdItems = await tx.insert(billItems).values(billItemValues).returning();
-        
+
         const finTxValues = createdItems.map(item => ({
           billId: bill.id,
           billItemId: item.id,
@@ -154,7 +154,7 @@ export class BillRepository {
         })
         .where(eq(bills.id, id))
         .returning();
-      
+
       await tx.insert(editLogs).values({
         action: "bill_amount_edited",
         billId: id,

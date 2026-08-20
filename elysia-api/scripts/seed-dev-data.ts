@@ -122,10 +122,11 @@ async function main() {
       amountPaid: "0.00",
       amountWrittenOff: "0.00",
       status: "unpaid",
+      isAcknowledged: false, // Pending swipe acknowledgement!
     });
 
     console.log(`  🍖 [บิลที่ 1] "${bill1.title}" โดย ${friend1.displayName}`);
-    console.log(`     👉 คุณต้องจ่ายให้ ${friend1.displayName}: ฿320.00 (ยังไม่ชำระ)`);
+    console.log(`     👉 คุณต้องจ่ายให้ ${friend1.displayName}: ฿320.00 (รอปัดขวาเพื่อยืนยัน)`);
   }
 
   // 1.2 Friend 2 created a bill for ค่า Grab Car (We owe ฿150.00 - partially paid ฿50)
@@ -150,6 +151,7 @@ async function main() {
       amountPaid: "50.00",
       amountWrittenOff: "0.00",
       status: "partially_paid",
+      isAcknowledged: true, // Already acknowledged
     });
 
     console.log(`  🚗 [บิลที่ 2] "${bill2.title}" โดย ${friend2.displayName}`);

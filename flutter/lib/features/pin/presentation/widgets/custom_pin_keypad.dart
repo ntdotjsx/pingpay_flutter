@@ -24,9 +24,9 @@ class PinDotsIndicator extends StatelessWidget {
         final isFilled = index < filledLength;
         return AnimatedContainer(
           duration: const Duration(milliseconds: 200),
-          margin: const EdgeInsets.symmetric(horizontal: 8),
-          width: 18,
-          height: 18,
+          margin: const EdgeInsets.symmetric(horizontal: 6),
+          width: 16,
+          height: 16,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: hasError
@@ -40,7 +40,7 @@ class PinDotsIndicator extends StatelessWidget {
                   : (isFilled
                       ? AppColors.primary
                       : (isDark ? Colors.white38 : const Color(0xFFCBD0DC))),
-              width: 2,
+              width: 1.5,
             ),
             boxShadow: isFilled && !hasError
                 ? [
@@ -80,11 +80,11 @@ class CustomPinKeypad extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         _buildKeyRow(['1', '2', '3'], isDark),
-        const SizedBox(height: 16),
+        const SizedBox(height: 12),
         _buildKeyRow(['4', '5', '6'], isDark),
-        const SizedBox(height: 16),
+        const SizedBox(height: 12),
         _buildKeyRow(['7', '8', '9'], isDark),
-        const SizedBox(height: 16),
+        const SizedBox(height: 12),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [

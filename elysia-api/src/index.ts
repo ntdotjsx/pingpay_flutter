@@ -43,11 +43,14 @@ export const app = new Elysia()
       }
     }
   }))
-  .get("/", () => "Hello Elysia", { detail: { tags: ["General"], summary: "Health Check" } })
   .listen(env.PORT);
+
+// Start background notification worker for sending real LINE Messaging API notifications
+import { defaultNotificationWorkerService } from "./modules/notifications/notification-worker.service";
+defaultNotificationWorkerService.start(3000);
 
 export type App = typeof app;
 
 console.log(
-  `🦊 Elysia is running at ${app.server?.hostname}:${app.server?.port}`
+  `🦊 Elysia is running at ${app.server?.hostname}:${app.server?.port} (Notification worker active)`
 );

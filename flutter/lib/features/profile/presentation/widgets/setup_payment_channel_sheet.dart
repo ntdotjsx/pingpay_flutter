@@ -1,9 +1,11 @@
 import 'package:figma_squircle/figma_squircle.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/constants/thai_banks.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/app_toast.dart';
+import '../../../../core/utils/input_validators.dart';
 import '../../../../core/widgets/app_text_field.dart';
 import '../../../auth/providers/auth_provider.dart';
 
@@ -307,22 +309,16 @@ class _SetupPaymentChannelSheetState
                 hint: 'เช่น 0812345678 หรือ 1100501234567',
                 controller: _promptPayController,
                 keyboardType: TextInputType.number,
+                autovalidateMode: AutovalidateMode.onUserInteraction,
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  LengthLimitingTextInputFormatter(15),
+                ],
                 prefixIcon: const Icon(
                   Icons.qr_code_rounded,
                   color: AppColors.primary,
                 ),
-                validator: (v) {
-                  if (v == null || v.trim().isEmpty) {
-                    return 'กรุณาระบุเบอร์พร้อมเพย์';
-                  }
-                  final clean = v.replaceAll(RegExp(r'[^0-9]'), '');
-                  if (clean.length != 10 &&
-                      clean.length != 13 &&
-                      clean.length != 15) {
-                    return 'พร้อมเพย์ต้องเป็นเบอร์โทร 10 หลัก หรือเลขบัตร 13 หลัก';
-                  }
-                  return null;
-                },
+                validator: (v) => InputValidators.validatePromptPay(v, required: true),
               ),
 
               const SizedBox(height: 14),
@@ -380,7 +376,7 @@ class _SetupPaymentChannelSheetState
                         const SizedBox(width: 10),
                         const Expanded(
                           child: Text(
-                            'แตะเพื่อเลือกธนาคาร',
+                            'แตะเพื่อเลือกธนาคาร (ไม่บังคับ)',
                             style: TextStyle(
                               fontSize: 13,
                               color: AppColors.inkMuted48,
@@ -402,13 +398,24 @@ class _SetupPaymentChannelSheetState
               // Bank Account Number Field
               AppTextField(
                 label: 'เลขบัญชีธนาคาร (ไม่บังคับ)',
-                hint: 'เช่น 123-4-56789-0',
+                hint: 'เช่น 1234567890 (ตัวเลข 10-12 หลัก)',
                 controller: _bankAccountController,
                 keyboardType: TextInputType.number,
+                autovalidateMode: AutovalidateMode.onUserInteraction,
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  LengthLimitingTextInputFormatter(12),
+                ],
                 prefixIcon: const Icon(
                   Icons.numbers_rounded,
                   color: Colors.blueGrey,
                 ),
+                validator: (v) {
+                  if (_selectedBank != null && (v == null || v.trim().isEmpty)) {
+                    return 'กรุณาระบุเลขบัญชีเมื่อเลือกธนาคาร';
+                  }
+                  return InputValidators.validateBankAccount(v, required: false);
+                },
               ),
 
               if (_errorMessage != null) ...[

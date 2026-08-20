@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:figma_squircle/figma_squircle.dart';
 import 'package:flutter/material.dart';
@@ -214,6 +215,57 @@ class _PaymentDetailBottomSheetState
     );
   }
 
+  void _showFullReceiptDialog(BuildContext context, String imageUrl) {
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+        child: Stack(
+          alignment: Alignment.topRight,
+          children: [
+            InteractiveViewer(
+              minScale: 0.5,
+              maxScale: 4.0,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: imageUrl.startsWith('data:image')
+                    ? Image.memory(
+                        base64Decode(
+                          imageUrl.replaceFirst(
+                            RegExp(r'data:image/[^;]+;base64,'),
+                            '',
+                          ),
+                        ),
+                        fit: BoxFit.contain,
+                      )
+                    : Image.network(
+                        imageUrl,
+                        fit: BoxFit.contain,
+                      ),
+              ),
+            ),
+            Positioned(
+              top: 8,
+              right: 8,
+              child: IconButton(
+                onPressed: () => Navigator.pop(ctx),
+                icon: Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.6),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.close_rounded, color: Colors.white, size: 20),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -329,6 +381,104 @@ class _PaymentDetailBottomSheetState
                       ),
                     ],
                   ),
+
+                  // Receipt / Evidence Image Thumbnail if available
+                  if (widget.debt.receiptImageUrl != null &&
+                      widget.debt.receiptImageUrl!.isNotEmpty) ...[
+                    const SizedBox(height: 14),
+                    Divider(
+                      height: 1,
+                      thickness: 1,
+                      color: isDark ? Colors.white10 : AppColors.dividerSoft,
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.receipt_long_rounded,
+                          size: 16,
+                          color: AppColors.primary,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          'หลักฐานบิล / ใบเสร็จจากเพื่อน',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: isDark ? AppColors.bodyOnDark : AppColors.ink,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    GestureDetector(
+                      onTap: () => _showFullReceiptDialog(context, widget.debt.receiptImageUrl!),
+                      child: Container(
+                        height: 90,
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: isDark ? Colors.white12 : AppColors.hairline,
+                          ),
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Stack(
+                            fit: StackFit.expand,
+                            children: [
+                              widget.debt.receiptImageUrl!.startsWith('data:image')
+                                  ? Image.memory(
+                                      base64Decode(
+                                        widget.debt.receiptImageUrl!.replaceFirst(
+                                          RegExp(r'data:image/[^;]+;base64,'),
+                                          '',
+                                        ),
+                                      ),
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (ctx, _, __) => const Center(
+                                        child: Icon(Icons.broken_image_rounded, color: Colors.grey),
+                                      ),
+                                    )
+                                  : Image.network(
+                                      widget.debt.receiptImageUrl!,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (ctx, _, __) => const Center(
+                                        child: Icon(Icons.broken_image_rounded, color: Colors.grey),
+                                      ),
+                                    ),
+                              Positioned(
+                                right: 8,
+                                bottom: 8,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: Colors.black.withValues(alpha: 0.65),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: const Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(Icons.zoom_in_rounded, size: 14, color: Colors.white),
+                                      SizedBox(width: 4),
+                                      Text(
+                                        'แตะดูรูปเต็ม',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),

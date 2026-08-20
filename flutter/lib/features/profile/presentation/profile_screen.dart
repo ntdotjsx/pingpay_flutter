@@ -298,6 +298,16 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 ),
                 _buildTileDivider(isDark),
                 _buildSettingsTile(
+                  icon: Icons.mark_chat_unread_rounded,
+                  iconColor: const Color(0xFF00B900),
+                  title: 'ทดสอบส่งข้อความ LINE (Push Message)',
+                  subtitle: 'ส่งข้อความทดสอบความปลอดภัยเข้า LINE ส่วนตัว',
+                  isDark: isDark,
+                  onTap: () => _testSendLineMessage(context),
+                  trailing: const Icon(Icons.send_rounded, color: Color(0xFF00B900), size: 18),
+                ),
+                _buildTileDivider(isDark),
+                _buildSettingsTile(
                   icon: Icons.policy_outlined,
                   iconColor: Colors.teal,
                   title: 'นโยบายความเป็นส่วนตัว (PDPA)',
@@ -825,6 +835,25 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       await ref.read(authStateProvider.notifier).logout();
       if (!mounted) return;
       GoRouter.of(this.context).go('/login');
+    }
+  }
+
+  Future<void> _testSendLineMessage(BuildContext context) async {
+    try {
+      AppToast.info(context, 'กำลังส่งข้อความทดสอบเข้า LINE...');
+      final repo = ref.read(authRepositoryProvider);
+      final res = await repo.testLineNotification();
+      if (context.mounted) {
+        if (res['success'] == true) {
+          AppToast.success(context, res['message'] ?? 'ส่งข้อความเข้า LINE สำเร็จแล้ว!');
+        } else {
+          AppToast.error(context, res['error'] ?? 'ไม่สามารถส่งข้อความได้');
+        }
+      }
+    } catch (e) {
+      if (context.mounted) {
+        AppToast.error(context, 'เกิดข้อผิดพลาด: ${e.toString()}');
+      }
     }
   }
 }

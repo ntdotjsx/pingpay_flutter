@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/utils/app_toast.dart';
+import '../../../core/utils/input_validators.dart';
 import '../../../core/widgets/app_button.dart';
 import '../../../core/widgets/app_text_field.dart';
 import '../../auth/providers/auth_provider.dart';
@@ -95,7 +96,7 @@ class _UsernameSetupScreenState extends ConsumerState<UsernameSetupScreen> {
                 ),
                 const SizedBox(height: AppSpacing.xs),
                 Text(
-                  'ชื่อนี้จะใช้แสดงในกลุ่มและบนรายการบิลหารเงินกับเพื่อน',
+                  'ชื่อนี้จะใช้แสดงบนรายการบิลและให้เพื่อนค้นหา',
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
@@ -105,20 +106,28 @@ class _UsernameSetupScreenState extends ConsumerState<UsernameSetupScreen> {
                   label: 'ชื่อที่แสดง / ชื่อเล่น (Display Name / Username)',
                   hint: 'เช่น นัท ธนพล หรือ Nut',
                   controller: _usernameController,
+                  autovalidateMode: AutovalidateMode.onUserInteraction,
                   prefixIcon: const Icon(Icons.person_outline),
-                  validator: (v) => (v == null || v.trim().isEmpty)
-                      ? 'กรุณาระบุชื่อที่แสดง'
-                      : null,
+                  validator: (v) => InputValidators.validateRequired(
+                    v,
+                    fieldName: 'ชื่อที่แสดง',
+                    minLength: 2,
+                    maxLength: 50,
+                  ),
                 ),
                 const SizedBox(height: AppSpacing.md),
                 AppTextField(
                   label: 'ชื่อ-นามสกุลจริง (Full Name)',
                   hint: 'เช่น นายธนพล สุขใจ',
                   controller: _fullNameController,
+                  autovalidateMode: AutovalidateMode.onUserInteraction,
                   prefixIcon: const Icon(Icons.badge_outlined),
-                  validator: (v) => (v == null || v.trim().isEmpty)
-                      ? 'กรุณาระบุชื่อ-นามสกุลจริง'
-                      : null,
+                  validator: (v) => InputValidators.validateRequired(
+                    v,
+                    fieldName: 'ชื่อ-นามสกุลจริง',
+                    minLength: 3,
+                    maxLength: 100,
+                  ),
                 ),
                 const SizedBox(height: AppSpacing.xxl),
 

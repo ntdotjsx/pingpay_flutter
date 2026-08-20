@@ -93,6 +93,11 @@ class AuthRepository {
     );
   }
 
+  Future<Map<String, dynamic>> testLineNotification() async {
+    final response = await _client.post('/api/v1/profile/test-line-notification');
+    return response.data as Map<String, dynamic>;
+  }
+
   Future<void> logout() async {
     try {
       await _client.post('/api/v1/auth/me/logout');

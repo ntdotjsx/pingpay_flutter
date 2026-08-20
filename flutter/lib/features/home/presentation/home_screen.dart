@@ -5,9 +5,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/theme.dart';
+import '../../../core/widgets/app_skeleton.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../bills/providers/bill_provider.dart';
-import '../../payments/presentation/widgets/debt_card.dart';
+import '../../payments/presentation/widgets/debt_acknowledgement_detail_sheet.dart';
 import '../../payments/providers/payment_providers.dart';
 import '../../rewards/providers/reward_providers.dart';
 import '../providers/pull_sensitivity_provider.dart';
@@ -32,6 +33,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     super.initState();
     final now = DateTime.now();
     _selectedDate = DateTime(now.year, now.month, now.day);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(userDebtsProvider.notifier).loadDebts(showLoading: false);
+      ref.read(userReceivablesProvider.notifier).loadReceivables(showLoading: false);
+    });
   }
 
   @override
@@ -286,7 +291,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             ),
                             const SizedBox(height: 4),
                             const Text(
-                              'เมื่อเพื่อนสร้างบิลหารเงิน จะปรากฏที่นี่เพื่อให้คุณกวาดนิ้วยอมรับ',
+                              'เมื่อเพื่อนสร้างบิลหารเงิน จะปรากฏที่นี่เพื่อให้คุณตรวจสอบรายละเอียดและยอมรับ',
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 fontSize: 12,
@@ -305,84 +310,159 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           separatorBuilder: (_, __) => const SizedBox(height: 12),
                           itemBuilder: (context, index) {
                             final debt = pendingDebts[index];
-                            return Container(
-                              padding: const EdgeInsets.all(14),
-                              decoration: ShapeDecoration(
-                                color: isDark
-                                    ? AppColors.surfaceTile2
-                                    : AppColors.canvasParchment,
-                                shape: SmoothRectangleBorder(
-                                  side: BorderSide(
-                                    color: const Color(0xFFFF9500).withValues(alpha: 0.3),
-                                    width: 1,
-                                  ),
-                                  borderRadius: const SmoothBorderRadius.all(
-                                    SmoothRadius(cornerRadius: 16, cornerSmoothing: 1.0),
+                            return GestureDetector(
+                              onTap: () {
+                                Navigator.of(context).pop(); // Close current summary modal
+                                DebtAcknowledgementDetailSheet.show(context, debt);
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.all(14),
+                                decoration: ShapeDecoration(
+                                  color: isDark
+                                      ? AppColors.surfaceTile2
+                                      : AppColors.canvasParchment,
+                                  shape: SmoothRectangleBorder(
+                                    side: BorderSide(
+                                      color: const Color(0xFFFF9500).withValues(alpha: 0.35),
+                                      width: 1.2,
+                                    ),
+                                    borderRadius: const SmoothBorderRadius.all(
+                                      SmoothRadius(cornerRadius: 18, cornerSmoothing: 1.0),
+                                    ),
                                   ),
                                 ),
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: [
-                                      CircleAvatar(
-                                        radius: 16,
-                                        backgroundColor: AppColors.primary.withValues(alpha: 0.15),
-                                        child: Text(
-                                          debt.creditor.displayName.isNotEmpty
-                                              ? debt.creditor.displayName[0].toUpperCase()
-                                              : 'U',
-                                          style: const TextStyle(
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.bold,
-                                            color: AppColors.primary,
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      width: 40,
+                                      height: 40,
+                                      decoration: ShapeDecoration(
+                                        color: AppColors.primary.withValues(alpha: 0.15),
+                                        shape: const SmoothRectangleBorder(
+                                          borderRadius: SmoothBorderRadius.all(
+                                            SmoothRadius(cornerRadius: 14, cornerSmoothing: 0.6),
                                           ),
                                         ),
                                       ),
-                                      const SizedBox(width: 10),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              debt.billTitle,
-                                              style: TextStyle(
-                                                fontSize: 14,
-                                                fontWeight: FontWeight.bold,
-                                                color: isDark ? AppColors.bodyOnDark : AppColors.ink,
+                                      child: ClipSmoothRect(
+                                        radius: const SmoothBorderRadius.all(
+                                          SmoothRadius(cornerRadius: 14, cornerSmoothing: 0.6),
+                                        ),
+                                        child: debt.creditor.avatarUrl != null && debt.creditor.avatarUrl!.isNotEmpty
+                                            ? Image.network(
+                                                debt.creditor.avatarUrl!,
+                                                fit: BoxFit.cover,
+                                                errorBuilder: (_, __, ___) => Center(
+                                                  child: Text(
+                                                    debt.creditor.displayName.isNotEmpty
+                                                        ? debt.creditor.displayName[0].toUpperCase()
+                                                        : 'U',
+                                                    style: const TextStyle(
+                                                      fontSize: 14,
+                                                      fontWeight: FontWeight.bold,
+                                                      color: AppColors.primary,
+                                                    ),
+                                                  ),
+                                                ),
+                                              )
+                                            : Center(
+                                                child: Text(
+                                                  debt.creditor.displayName.isNotEmpty
+                                                      ? debt.creditor.displayName[0].toUpperCase()
+                                                      : 'U',
+                                                  style: const TextStyle(
+                                                    fontSize: 14,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: AppColors.primary,
+                                                  ),
+                                                ),
                                               ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            debt.billTitle,
+                                            style: TextStyle(
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.bold,
+                                              color: isDark ? AppColors.bodyOnDark : AppColors.ink,
                                             ),
-                                            Text(
-                                              'สร้างโดย ${debt.creditor.displayName}',
-                                              style: TextStyle(
-                                                fontSize: 11,
-                                                color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            'สร้างโดย ${debt.creditor.displayName}',
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
+                                            ),
+                                          ),
+                                          if (debt.amountWrittenOff > 0) ...[
+                                            const SizedBox(height: 4),
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                              decoration: BoxDecoration(
+                                                color: AppColors.success.withValues(alpha: 0.12),
+                                                borderRadius: BorderRadius.circular(6),
+                                              ),
+                                              child: Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  const Icon(Icons.sync_alt_rounded, size: 10, color: AppColors.success),
+                                                  const SizedBox(width: 4),
+                                                  Text(
+                                                    'หักล้างหนี้เดิม -฿${debt.amountWrittenOff.toStringAsFixed(2)}',
+                                                    style: const TextStyle(
+                                                      fontSize: 10,
+                                                      fontWeight: FontWeight.bold,
+                                                      color: AppColors.success,
+                                                    ),
+                                                  ),
+                                                ],
                                               ),
                                             ),
                                           ],
-                                        ),
+                                        ],
                                       ),
-                                      Text(
-                                        '฿${debt.outstandingAmount.toStringAsFixed(2)}',
-                                        style: const TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.bold,
-                                          color: Color(0xFFFF9500),
+                                    ),
+                                    Column(
+                                      crossAxisAlignment: CrossAxisAlignment.end,
+                                      children: [
+                                        Text(
+                                          '฿${debt.outstandingAmount.toStringAsFixed(2)}',
+                                          style: const TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.bold,
+                                            color: Color(0xFFFF9500),
+                                          ),
                                         ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 12),
-                                  SwipeToAcknowledgeButton(
-                                    label: 'เลื่อนเพื่อยอมรับว่าติดหนี้จริง',
-                                    onAcknowledge: () async {
-                                      await ref
-                                          .read(userDebtsProvider.notifier)
-                                          .acknowledgeDebt(debt.id);
-                                    },
-                                  ),
-                                ],
+                                        const SizedBox(height: 4),
+                                        Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: const [
+                                            Text(
+                                              'กดดูรายละเอียด',
+                                              style: TextStyle(
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.w600,
+                                                color: AppColors.primary,
+                                              ),
+                                            ),
+                                            SizedBox(width: 2),
+                                            Icon(
+                                              Icons.arrow_forward_ios_rounded,
+                                              size: 10,
+                                              color: AppColors.primary,
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
                               ),
                             );
                           },
@@ -477,9 +557,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               if (notification is ScrollUpdateNotification) {
                 final overscroll = notification.metrics.pixels;
                 if (overscroll < 0) {
-                  setState(() {
-                    _pullDistance = -overscroll;
-                  });
+                  final newDist = -overscroll;
+                  if ((newDist - _pullDistance).abs() > 4 ||
+                      (newDist >= targetThreshold && _pullDistance < targetThreshold) ||
+                      (newDist < targetThreshold && _pullDistance >= targetThreshold)) {
+                    setState(() {
+                      _pullDistance = newDist;
+                    });
+                  }
                   // Trigger only when pulled past user-configured threshold
                   if (overscroll <= -targetThreshold && !_isPullTriggered) {
                     _isPullTriggered = true;
@@ -567,12 +652,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
                             const SizedBox(height: 14),
 
-                            DailyTimelineSection(
-                              selectedDate: _selectedDate,
-                              bills: filteredBills,
-                              debts: filteredDebts,
-                              onCreateBill: _navigateToCreateBill,
-                            ),
+                            billsAsync.isLoading && bills.isEmpty
+                                ? const Padding(
+                                    padding: EdgeInsets.symmetric(horizontal: 16),
+                                    child: BillTimelineSkeleton(),
+                                  )
+                                : DailyTimelineSection(
+                                    selectedDate: _selectedDate,
+                                    bills: filteredBills,
+                                    debts: filteredDebts,
+                                    onCreateBill: _navigateToCreateBill,
+                                  ),
                           ],
                         );
                       },
@@ -1106,7 +1196,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'จัดการเพื่อนและกลุ่มหารบิล',
+                    'จัดการเพื่อนและรายชื่อ',
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
@@ -1130,5 +1220,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       ),
     );
   }
+
 }
 

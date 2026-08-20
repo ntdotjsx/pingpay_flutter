@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../theme/app_spacing.dart';
 
 class AppTextField extends StatelessWidget {
@@ -12,6 +13,8 @@ class AppTextField extends StatelessWidget {
   final Widget? suffixIcon;
   final bool readOnly;
   final VoidCallback? onTap;
+  final List<TextInputFormatter>? inputFormatters;
+  final AutovalidateMode? autovalidateMode;
 
   const AppTextField({
     super.key,
@@ -25,6 +28,8 @@ class AppTextField extends StatelessWidget {
     this.suffixIcon,
     this.readOnly = false,
     this.onTap,
+    this.inputFormatters,
+    this.autovalidateMode,
   });
 
   @override
@@ -46,6 +51,8 @@ class AppTextField extends StatelessWidget {
           validator: validator,
           readOnly: readOnly,
           onTap: onTap,
+          inputFormatters: inputFormatters,
+          autovalidateMode: autovalidateMode,
           decoration: InputDecoration(
             hintText: hint,
             prefixIcon: prefixIcon,

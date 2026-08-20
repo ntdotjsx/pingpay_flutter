@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../models/payment_models.dart';
 import '../../services/debt_age_calculator.dart';
+import 'debt_acknowledgement_detail_sheet.dart';
 
 class DebtCard extends StatelessWidget {
   final DebtItemModel debt;
@@ -57,27 +58,52 @@ class DebtCard extends StatelessWidget {
                 // Header: Creditor Info & Status Badge
                 Row(
                   children: [
-                    // Creditor Avatar
-                    CircleAvatar(
-                      radius: 18,
-                      backgroundColor: AppColors.primary.withValues(
-                        alpha: 0.15,
+                    // Creditor Squircle Avatar
+                    Container(
+                      width: 36,
+                      height: 36,
+                      decoration: ShapeDecoration(
+                        color: AppColors.primary.withValues(alpha: 0.15),
+                        shape: const SmoothRectangleBorder(
+                          borderRadius: SmoothBorderRadius.all(
+                            SmoothRadius(cornerRadius: 12, cornerSmoothing: 0.6),
+                          ),
+                        ),
                       ),
-                      backgroundImage: debt.creditor.avatarUrl != null
-                          ? NetworkImage(debt.creditor.avatarUrl!)
-                          : null,
-                      child: debt.creditor.avatarUrl == null
-                          ? Text(
-                              debt.creditor.displayName.isNotEmpty
-                                  ? debt.creditor.displayName[0].toUpperCase()
-                                  : 'U',
-                              style: const TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.primary,
+                      child: ClipSmoothRect(
+                        radius: const SmoothBorderRadius.all(
+                          SmoothRadius(cornerRadius: 12, cornerSmoothing: 0.6),
+                        ),
+                        child: debt.creditor.avatarUrl != null && debt.creditor.avatarUrl!.isNotEmpty
+                            ? Image.network(
+                                debt.creditor.avatarUrl!,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => Center(
+                                  child: Text(
+                                    debt.creditor.displayName.isNotEmpty
+                                        ? debt.creditor.displayName[0].toUpperCase()
+                                        : 'U',
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.primary,
+                                    ),
+                                  ),
+                                ),
+                              )
+                            : Center(
+                                child: Text(
+                                  debt.creditor.displayName.isNotEmpty
+                                      ? debt.creditor.displayName[0].toUpperCase()
+                                      : 'U',
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.primary,
+                                  ),
+                                ),
                               ),
-                            )
-                          : null,
+                      ),
                     ),
                     const SizedBox(width: 10),
                     Expanded(
@@ -247,41 +273,99 @@ class DebtCard extends StatelessWidget {
 
                 const SizedBox(height: 12),
 
-                // Pay Button Action
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    ElevatedButton(
-                      onPressed: onPayTap,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        foregroundColor: AppColors.onPrimary,
-                        elevation: 0,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 8,
+                // Action Area: Verify & Acknowledge (if not yet acknowledged) OR Pay Button (if acknowledged)
+                if (!debt.isAcknowledged && debt.outstandingAmount > 0)
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFF9500).withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(10),
                         ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                      ),
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.payment_rounded, size: 16),
-                          SizedBox(width: 6),
-                          Text(
-                            'จ่ายเงิน',
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.bold,
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.info_outline_rounded, size: 14, color: Color(0xFFFF9500)),
+                            SizedBox(width: 4),
+                            Text(
+                              'รอตรวจสอบและยอมรับ',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFFFF9500),
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
-                ),
+                      ElevatedButton(
+                        onPressed: () => DebtAcknowledgementDetailSheet.show(context, debt),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFFF9500),
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.visibility_rounded, size: 16),
+                            SizedBox(width: 6),
+                            Text(
+                              'ตรวจสอบและยอมรับ',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  )
+                else
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      ElevatedButton(
+                        onPressed: onPayTap,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: AppColors.onPrimary,
+                          elevation: 0,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 8,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.payment_rounded, size: 16),
+                            SizedBox(width: 6),
+                            Text(
+                              'จ่ายเงิน',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
               ],
             ),
           ),

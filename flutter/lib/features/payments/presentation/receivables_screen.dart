@@ -2,6 +2,7 @@ import 'package:figma_squircle/figma_squircle.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/app_skeleton.dart';
 import '../providers/payment_providers.dart';
 import 'widgets/friend_receivable_detail_bottom_sheet.dart';
 import 'widgets/receivable_friend_card.dart';
@@ -377,31 +378,28 @@ class ReceivablesScreenBody extends ConsumerWidget {
       children: [
         Container(
           height: 140,
-          decoration: BoxDecoration(
+          margin: const EdgeInsets.only(bottom: 16),
+          padding: const EdgeInsets.all(20),
+          decoration: ShapeDecoration(
             color: isDark ? AppColors.surfaceTile1 : Colors.white,
-            borderRadius: BorderRadius.circular(22),
-          ),
-        ),
-        const SizedBox(height: 16),
-        Container(
-          height: 44,
-          decoration: BoxDecoration(
-            color: isDark ? AppColors.surfaceTile1 : Colors.white,
-            borderRadius: BorderRadius.circular(14),
-          ),
-        ),
-        const SizedBox(height: 16),
-        ...List.generate(
-          3,
-          (i) => Container(
-            height: 110,
-            margin: const EdgeInsets.only(bottom: 12),
-            decoration: BoxDecoration(
-              color: isDark ? AppColors.surfaceTile1 : Colors.white,
-              borderRadius: BorderRadius.circular(18),
+            shape: const SmoothRectangleBorder(
+              borderRadius: SmoothBorderRadius.all(
+                SmoothRadius(cornerRadius: 22, cornerSmoothing: 1.0),
+              ),
             ),
           ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: const [
+              AppSkeleton(width: 140, height: 16, cornerRadius: 8),
+              AppSkeleton(width: 200, height: 32, cornerRadius: 10),
+              AppSkeleton(width: 160, height: 14, cornerRadius: 6),
+            ],
+          ),
         ),
+        const AppSkeleton(width: double.infinity, height: 44, cornerRadius: 14, margin: EdgeInsets.only(bottom: 16)),
+        ...List.generate(3, (i) => const DebtCardSkeleton()),
       ],
     );
   }

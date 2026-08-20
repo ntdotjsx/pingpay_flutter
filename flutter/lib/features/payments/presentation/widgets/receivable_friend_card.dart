@@ -229,28 +229,52 @@ class ReceivableFriendCard extends StatelessWidget {
   }
 
   Widget _buildAvatar(bool isDark) {
-    return CircleAvatar(
-      radius: 20,
-      backgroundColor: AppColors.primary.withValues(alpha: 0.15),
-      backgroundImage:
-          (friend.debtor.avatarUrl != null &&
-              friend.debtor.avatarUrl!.trim().isNotEmpty)
-          ? NetworkImage(friend.debtor.avatarUrl!)
-          : null,
-      child:
-          (friend.debtor.avatarUrl == null ||
-              friend.debtor.avatarUrl!.trim().isEmpty)
-          ? Text(
-              friend.debtor.displayName.isNotEmpty
-                  ? friend.debtor.displayName[0].toUpperCase()
-                  : '?',
-              style: const TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.bold,
-                color: AppColors.primary,
+    return Container(
+      width: 40,
+      height: 40,
+      decoration: ShapeDecoration(
+        color: AppColors.primary.withValues(alpha: 0.15),
+        shape: const SmoothRectangleBorder(
+          borderRadius: SmoothBorderRadius.all(
+            SmoothRadius(cornerRadius: 13, cornerSmoothing: 0.6),
+          ),
+        ),
+      ),
+      child: ClipSmoothRect(
+        radius: const SmoothBorderRadius.all(
+          SmoothRadius(cornerRadius: 13, cornerSmoothing: 0.6),
+        ),
+        child: (friend.debtor.avatarUrl != null &&
+                friend.debtor.avatarUrl!.trim().isNotEmpty)
+            ? Image.network(
+                friend.debtor.avatarUrl!,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => Center(
+                  child: Text(
+                    friend.debtor.displayName.isNotEmpty
+                        ? friend.debtor.displayName[0].toUpperCase()
+                        : '?',
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                ),
+              )
+            : Center(
+                child: Text(
+                  friend.debtor.displayName.isNotEmpty
+                      ? friend.debtor.displayName[0].toUpperCase()
+                      : '?',
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.primary,
+                  ),
+                ),
               ),
-            )
-          : null,
+      ),
     );
   }
 }

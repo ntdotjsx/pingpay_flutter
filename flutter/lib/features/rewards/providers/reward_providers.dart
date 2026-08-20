@@ -21,8 +21,9 @@ class RewardStoreState {
   final bool isRedeeming;
   final String? errorMessage;
   final String? successMessage;
+  final UserTierLevel tier;
 
-  const RewardStoreState({
+  RewardStoreState({
     this.points = 27,
     this.shippingAddress,
     this.shippingPhone,
@@ -30,7 +31,8 @@ class RewardStoreState {
     this.isRedeeming = false,
     this.errorMessage,
     this.successMessage,
-  });
+    UserTierLevel? tier,
+  }) : tier = tier ?? UserTierLevel.calculateFromPoints(points);
 
   RewardStoreState copyWith({
     int? points,
@@ -40,15 +42,18 @@ class RewardStoreState {
     bool? isRedeeming,
     String? errorMessage,
     String? successMessage,
+    UserTierLevel? tier,
   }) {
+    final nextPoints = points ?? this.points;
     return RewardStoreState(
-      points: points ?? this.points,
+      points: nextPoints,
       shippingAddress: shippingAddress ?? this.shippingAddress,
       shippingPhone: shippingPhone ?? this.shippingPhone,
       shippingRecipientName: shippingRecipientName ?? this.shippingRecipientName,
       isRedeeming: isRedeeming ?? this.isRedeeming,
       errorMessage: errorMessage,
       successMessage: successMessage,
+      tier: tier ?? UserTierLevel.calculateFromPoints(nextPoints),
     );
   }
 }
@@ -57,7 +62,7 @@ class RewardStoreNotifier extends StateNotifier<RewardStoreState> {
   final RewardRepository _repo;
   final Ref _ref;
 
-  RewardStoreNotifier(this._repo, this._ref) : super(const RewardStoreState()) {
+  RewardStoreNotifier(this._repo, this._ref) : super(RewardStoreState()) {
     loadUserPointsInfo();
   }
 

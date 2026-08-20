@@ -1,8 +1,11 @@
 import 'package:figma_squircle/figma_squircle.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/app_toast.dart';
+import '../../../core/utils/input_validators.dart';
+import '../../../core/widgets/pingpay_loading.dart';
 import '../models/reward_models.dart';
 import '../providers/reward_providers.dart';
 
@@ -49,7 +52,7 @@ class _RewardsStoreScreenState extends ConsumerState<RewardsStoreScreen>
       ),
       body: Column(
         children: [
-          // 1. Points Balance Card
+          // 1. Points Balance & Dynamic Level Card
           Container(
             margin: const EdgeInsets.fromLTRB(16, 8, 16, 12),
             padding: const EdgeInsets.all(20),
@@ -72,78 +75,134 @@ class _RewardsStoreScreenState extends ConsumerState<RewardsStoreScreen>
                 ),
               ),
             ),
-            child: Row(
+            child: Column(
               children: [
-                Container(
-                  width: 52,
-                  height: 52,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.25),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.monetization_on_rounded,
-                    size: 32,
-                    color: Color(0xFFFFD700),
-                  ),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'แต้มสะสมของคุณ',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
-                        ),
+                Row(
+                  children: [
+                    Container(
+                      width: 52,
+                      height: 52,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.25),
+                        shape: BoxShape.circle,
                       ),
-                      const SizedBox(height: 2),
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.baseline,
-                        textBaseline: TextBaseline.alphabetic,
+                      child: const Icon(
+                        Icons.monetization_on_rounded,
+                        size: 32,
+                        color: Color(0xFFFFD700),
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            '${storeState.points}',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 32,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: -0.5,
-                            ),
-                          ),
-                          const SizedBox(width: 6),
                           const Text(
-                            'แต้ม',
+                            'แต้มสะสมของคุณ',
                             style: TextStyle(
                               color: Colors.white,
-                              fontSize: 15,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.baseline,
+                            textBaseline: TextBaseline.alphabetic,
+                            children: [
+                              Text(
+                                '${storeState.points}',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 32,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: -0.5,
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              const Text(
+                                'แต้ม',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: () => _showLevelDetailsDialog(context),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.25),
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              storeState.tier.badge,
+                              style: const TextStyle(fontSize: 14),
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Lv.${storeState.tier.level}',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+
+                // Level Progress Bar & Info
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'ระดับ: ${storeState.tier.title}',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          Text(
+                            'ได้แต้มสูงสุด +${storeState.tier.rewardPointsEarned} แต้ม/บิล',
+                            style: const TextStyle(
+                              color: Color(0xFFFFD700),
+                              fontSize: 11,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
                         ],
                       ),
-                    ],
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: const Row(
-                    children: [
-                      Icon(Icons.verified_rounded, size: 14, color: Colors.white),
-                      SizedBox(width: 4),
-                      Text(
-                        'ใช้ได้ทันที',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
+                      const SizedBox(height: 6),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(6),
+                        child: LinearProgressIndicator(
+                          value: storeState.tier.nextTierProgress,
+                          backgroundColor: Colors.white.withValues(alpha: 0.2),
+                          valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFFFD700)),
+                          minHeight: 6,
                         ),
                       ),
                     ],
@@ -186,7 +245,10 @@ class _RewardsStoreScreenState extends ConsumerState<RewardsStoreScreen>
               children: [
                 // Tab 1: Reward Catalog Grid
                 catalogAsync.when(
-                  loading: () => const Center(child: CircularProgressIndicator()),
+                  loading: () => const PingPayLoadingWidget(
+                    message: 'กำลังโหลดรายการของรางวัล...',
+                    size: 130,
+                  ),
                   error: (err, _) => Center(
                     child: Text('เกิดข้อผิดพลาด: $err'),
                   ),
@@ -357,7 +419,10 @@ class _RewardsStoreScreenState extends ConsumerState<RewardsStoreScreen>
     final historyAsync = ref.watch(redemptionHistoryProvider);
 
     return historyAsync.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
+      loading: () => const PingPayLoadingWidget(
+        message: 'กำลังโหลดประวัติการแลก...',
+        size: 130,
+      ),
       error: (err, _) => Center(child: Text('เกิดข้อผิดพลาด: $err')),
       data: (items) {
         if (items.isEmpty) {
@@ -658,9 +723,10 @@ class _RewardsStoreScreenState extends ConsumerState<RewardsStoreScreen>
                         // Recipient Name
                         TextFormField(
                           controller: nameController,
+                          autovalidateMode: AutovalidateMode.onUserInteraction,
                           decoration: InputDecoration(
-                            labelText: 'ชื่อ-นามสกุล ผู้รับ',
-                            prefixIcon: const Icon(Icons.person_outline_rounded, size: 20),
+                            labelText: 'ชื่อ-นามสกุลผู้รับ *',
+                            prefixIcon: const Icon(Icons.person_outline, size: 20),
                             filled: true,
                             fillColor: isDark ? AppColors.surfaceTile2 : const Color(0xFFF6F7F9),
                             border: OutlineInputBorder(
@@ -668,12 +734,12 @@ class _RewardsStoreScreenState extends ConsumerState<RewardsStoreScreen>
                               borderSide: BorderSide.none,
                             ),
                           ),
-                          validator: (val) {
-                            if (val == null || val.trim().isEmpty) {
-                              return 'กรุณาระบุชื่อผู้รับ';
-                            }
-                            return null;
-                          },
+                          validator: (val) => InputValidators.validateRequired(
+                            val,
+                            fieldName: 'ชื่อผู้รับ',
+                            minLength: 2,
+                            maxLength: 100,
+                          ),
                         ),
                         const SizedBox(height: 10),
 
@@ -681,8 +747,13 @@ class _RewardsStoreScreenState extends ConsumerState<RewardsStoreScreen>
                         TextFormField(
                           controller: phoneController,
                           keyboardType: TextInputType.phone,
+                          autovalidateMode: AutovalidateMode.onUserInteraction,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly,
+                            LengthLimitingTextInputFormatter(10),
+                          ],
                           decoration: InputDecoration(
-                            labelText: 'เบอร์โทรศัพท์ติดต่อ',
+                            labelText: 'เบอร์โทรศัพท์ติดต่อ (10 หลัก) *',
                             prefixIcon: const Icon(Icons.phone_outlined, size: 20),
                             filled: true,
                             fillColor: isDark ? AppColors.surfaceTile2 : const Color(0xFFF6F7F9),
@@ -691,12 +762,7 @@ class _RewardsStoreScreenState extends ConsumerState<RewardsStoreScreen>
                               borderSide: BorderSide.none,
                             ),
                           ),
-                          validator: (val) {
-                            if (val == null || val.trim().length < 9) {
-                              return 'กรุณาระบุเบอร์โทรศัพท์ที่ถูกต้อง';
-                            }
-                            return null;
-                          },
+                          validator: (val) => InputValidators.validatePhoneNumber(val, required: true),
                         ),
                         const SizedBox(height: 10),
 
@@ -704,8 +770,9 @@ class _RewardsStoreScreenState extends ConsumerState<RewardsStoreScreen>
                         TextFormField(
                           controller: addressController,
                           maxLines: 3,
+                          autovalidateMode: AutovalidateMode.onUserInteraction,
                           decoration: InputDecoration(
-                            labelText: 'ที่อยู่จัดส่ง (บ้านเลขที่, ถนน, ตำบล, อำเภอ, จังหวัด, รหัสไปรษณีย์)',
+                            labelText: 'ที่อยู่จัดส่ง (บ้านเลขที่, ถนน, ตำบล, อำเภอ, จังหวัด, รหัสไปรษณีย์) *',
                             prefixIcon: const Padding(
                               padding: EdgeInsets.only(bottom: 40),
                               child: Icon(Icons.location_on_outlined, size: 20),
@@ -717,12 +784,12 @@ class _RewardsStoreScreenState extends ConsumerState<RewardsStoreScreen>
                               borderSide: BorderSide.none,
                             ),
                           ),
-                          validator: (val) {
-                            if (val == null || val.trim().length < 5) {
-                              return 'กรุณาระบุที่อยู่จัดส่งให้ครบถ้วน';
-                            }
-                            return null;
-                          },
+                          validator: (val) => InputValidators.validateRequired(
+                            val,
+                            fieldName: 'ที่อยู่จัดส่ง',
+                            minLength: 8,
+                            maxLength: 250,
+                          ),
                         ),
                         const SizedBox(height: 20),
 
@@ -790,6 +857,170 @@ class _RewardsStoreScreenState extends ConsumerState<RewardsStoreScreen>
               ),
             );
           },
+        );
+      },
+    );
+  }
+
+  void _showLevelDetailsDialog(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final storeState = ref.read(rewardStoreProvider);
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: isDark ? AppColors.surfaceTile1 : AppColors.canvas,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) {
+        final tiers = [
+          const {'lv': 1, 'badge': '🥉', 'name': 'Bronze', 'amount': '0 - 100 บาท', 'points': '+10 แต้ม/บิล'},
+          const {'lv': 2, 'badge': '🥈', 'name': 'Silver', 'amount': '101 - 500 บาท', 'points': '+25 แต้ม/บิล'},
+          const {'lv': 3, 'badge': '🥇', 'name': 'Gold', 'amount': '501 - 2,000 บาท', 'points': '+60 แต้ม/บิล'},
+          const {'lv': 4, 'badge': '👑', 'name': 'Platinum', 'amount': '2,001 - 5,000 บาท', 'points': '+150 แต้ม/บิล'},
+          const {'lv': 5, 'badge': '💎', 'name': 'Diamond', 'amount': 'มากกว่า 5,000 บาท', 'points': '+300 แต้ม/บิล'},
+        ];
+
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: isDark ? Colors.white24 : AppColors.hairline,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFF9500).withValues(alpha: 0.15),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.military_tech_rounded,
+                        color: Color(0xFFFF9500),
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'ระดับสมาชิกและสิทธิพิเศษ',
+                            style: TextStyle(
+                              fontSize: 17,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          Text(
+                            'ได้แต้มเมื่อคืนเงิน หรือเพื่อนจ่ายเงินครบตามยอดบิล',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: AppColors.inkMuted48,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 18),
+                ...tiers.map((t) {
+                  final isCurrent = storeState.tier.level == t['lv'];
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: isCurrent
+                          ? const Color(0xFFFF9500).withValues(alpha: isDark ? 0.2 : 0.1)
+                          : (isDark ? AppColors.surfaceTile2 : AppColors.canvasParchment),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: isCurrent
+                            ? const Color(0xFFFF9500)
+                            : (isDark ? Colors.white10 : AppColors.dividerSoft),
+                        width: isCurrent ? 1.5 : 1.0,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Text(
+                          t['badge'] as String,
+                          style: const TextStyle(fontSize: 24),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Text(
+                                    'Lv.${t['lv']} ${t['name']}',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
+                                      color: isCurrent ? const Color(0xFFFF9500) : null,
+                                    ),
+                                  ),
+                                  if (isCurrent) ...[
+                                    const SizedBox(width: 6),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFFF9500),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: const Text(
+                                        'ระดับปัจจุบัน',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 9,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'ยอดบิล: ${t['amount']}',
+                                style: const TextStyle(fontSize: 11, color: AppColors.inkMuted48),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Text(
+                          t['points'] as String,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                            color: Color(0xFFFF9500),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }),
+                const SizedBox(height: 12),
+              ],
+            ),
+          ),
         );
       },
     );

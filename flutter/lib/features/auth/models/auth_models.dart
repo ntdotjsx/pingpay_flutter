@@ -36,6 +36,7 @@ class UserModel {
   final String? shippingPhone;
   final String? shippingRecipientName;
   final OnboardingState onboardingState;
+  final bool isLineFriend;
 
   UserModel({
     required this.id,
@@ -52,6 +53,7 @@ class UserModel {
     this.shippingPhone,
     this.shippingRecipientName,
     this.onboardingState = OnboardingState.unknown,
+    this.isLineFriend = false,
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
@@ -67,11 +69,12 @@ class UserModel {
       bankAccountNumber: json['bankAccountNumber'],
       rewardPoints: json['rewardPoints'] is int
           ? json['rewardPoints'] as int
-          : (int.tryParse(json['rewardPoints']?.toString() ?? '') ?? 27),
+          : (int.tryParse(json['rewardPoints']?.toString() ?? '27') ?? 27),
       shippingAddress: json['shippingAddress'],
       shippingPhone: json['shippingPhone'],
       shippingRecipientName: json['shippingRecipientName'],
       onboardingState: OnboardingState.fromString(json['onboardingState']),
+      isLineFriend: json['isLineFriend'] == true,
     );
   }
 }

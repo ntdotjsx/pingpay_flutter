@@ -1,5 +1,6 @@
 import 'package:figma_squircle/figma_squircle.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../auth/providers/auth_provider.dart';
@@ -12,10 +13,40 @@ class PinLockScreen extends ConsumerStatefulWidget {
   ConsumerState<PinLockScreen> createState() => _PinLockScreenState();
 }
 
-class _PinLockScreenState extends ConsumerState<PinLockScreen> {
+class _PinLockScreenState extends ConsumerState<PinLockScreen>
+    with SingleTickerProviderStateMixin {
   String _pin = '';
   String? _errorMessage;
   bool _isVerifying = false;
+  late AnimationController _shakeController;
+  late Animation<double> _shakeAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _shakeController = AnimationController(
+      duration: const Duration(milliseconds: 500),
+      vsync: this,
+    );
+    // Sine wave oscillation for realistic haptic shake
+    _shakeAnimation = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween(begin: 0.0, end: -14.0), weight: 1),
+      TweenSequenceItem(tween: Tween(begin: -14.0, end: 14.0), weight: 2),
+      TweenSequenceItem(tween: Tween(begin: 14.0, end: -10.0), weight: 2),
+      TweenSequenceItem(tween: Tween(begin: -10.0, end: 10.0), weight: 2),
+      TweenSequenceItem(tween: Tween(begin: 10.0, end: -5.0), weight: 2),
+      TweenSequenceItem(tween: Tween(begin: -5.0, end: 0.0), weight: 1),
+    ]).animate(CurvedAnimation(
+      parent: _shakeController,
+      curve: Curves.easeInOut,
+    ));
+  }
+
+  @override
+  void dispose() {
+    _shakeController.dispose();
+    super.dispose();
+  }
 
   void _onDigitPressed(String digit) {
     if (_isVerifying) return;
@@ -43,6 +74,23 @@ class _PinLockScreenState extends ConsumerState<PinLockScreen> {
     }
   }
 
+  Future<void> _triggerShakeAndReset(String message) async {
+    HapticFeedback.heavyImpact();
+    _shakeController.forward(from: 0.0);
+    setState(() {
+      _errorMessage = message;
+      _isVerifying = false;
+    });
+
+    // Pause briefly to show the red dots shaking, then reset for typing
+    await Future.delayed(const Duration(milliseconds: 550));
+    if (mounted) {
+      setState(() {
+        _pin = '';
+      });
+    }
+  }
+
   Future<void> _verifyPin(String pin) async {
     setState(() {
       _isVerifying = true;
@@ -52,19 +100,11 @@ class _PinLockScreenState extends ConsumerState<PinLockScreen> {
     try {
       final success = await ref.read(authStateProvider.notifier).verifyPin(pin);
       if (!success && mounted) {
-        setState(() {
-          _errorMessage = 'รหัส PIN ไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง';
-          _isVerifying = false;
-          _pin = '';
-        });
+        await _triggerShakeAndReset('รหัส PIN ไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง');
       }
     } catch (e) {
       if (mounted) {
-        setState(() {
-          _errorMessage = e.toString().replaceAll('Exception:', '').trim();
-          _isVerifying = false;
-          _pin = '';
-        });
+        await _triggerShakeAndReset(e.toString().replaceAll('Exception:', '').trim());
       }
     }
   }
@@ -79,48 +119,89 @@ class _PinLockScreenState extends ConsumerState<PinLockScreen> {
       backgroundColor: isDark ? AppColors.surfaceBlack : AppColors.canvas,
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20.0),
+          padding: const EdgeInsets.symmetric(horizontal: 24.0),
           child: Column(
             children: [
-              const SizedBox(height: 24),
+              const Spacer(flex: 2),
 
-              // PingPay Lock Icon Badge
-              Container(
-                width: 64,
-                height: 64,
-                decoration: ShapeDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFFFF5000), Color(0xFFFF6A00)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  shadows: [
-                    BoxShadow(
-                      color: AppColors.primary.withValues(alpha: 0.35),
-                      blurRadius: 14,
-                      offset: const Offset(0, 5),
+              // Profile Avatar Container with Squircle & Lock Indicator
+              Stack(
+                clipBehavior: Clip.none,
+                alignment: Alignment.bottomRight,
+                children: [
+                  Container(
+                    width: 76,
+                    height: 76,
+                    decoration: ShapeDecoration(
+                      color: const Color(0xFFFF5000).withValues(alpha: 0.15),
+                      shadows: [
+                        BoxShadow(
+                          color: const Color(0xFFFF5000).withValues(alpha: 0.25),
+                          blurRadius: 18,
+                          offset: const Offset(0, 6),
+                        ),
+                      ],
+                      shape: SmoothRectangleBorder(
+                        side: BorderSide(
+                          color: isDark ? AppColors.surfaceTile2 : Colors.white,
+                          width: 2.5,
+                        ),
+                        borderRadius: const SmoothBorderRadius.all(
+                          SmoothRadius(cornerRadius: 26, cornerSmoothing: 0.6),
+                        ),
+                      ),
                     ),
-                  ],
-                  shape: const SmoothRectangleBorder(
-                    borderRadius: SmoothBorderRadius.all(
-                      SmoothRadius(cornerRadius: 22, cornerSmoothing: 1.0),
+                    child: ClipSmoothRect(
+                      radius: const SmoothBorderRadius.all(
+                        SmoothRadius(cornerRadius: 26, cornerSmoothing: 0.6),
+                      ),
+                      child: (user?.avatarUrl != null && user!.avatarUrl!.isNotEmpty)
+                          ? Image.network(
+                              user.avatarUrl!,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => _buildUserInitial(user.displayName ?? 'PingPay', 76),
+                            )
+                          : _buildUserInitial(user?.displayName ?? 'PingPay', 76),
                     ),
                   ),
-                ),
-                child: const Icon(
-                  Icons.lock_rounded,
-                  size: 32,
-                  color: Colors.white,
-                ),
+
+                  // Mini Lock Status Badge
+                  Positioned(
+                    bottom: -2,
+                    right: -2,
+                    child: Container(
+                      width: 24,
+                      height: 24,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFFFF5000), Color(0xFFFF6A00)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: isDark ? AppColors.surfaceBlack : AppColors.canvas,
+                          width: 2,
+                        ),
+                      ),
+                      child: const Icon(
+                        Icons.lock_rounded,
+                        size: 12,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ],
               ),
 
-              const SizedBox(height: 18),
+              const SizedBox(height: 16),
 
               Text(
                 'ยินดีต้อนรับกลับ, ${user?.displayName ?? 'คุณ'}',
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
+                  letterSpacing: -0.3,
                   color: isDark ? AppColors.bodyOnDark : AppColors.ink,
                 ),
               ),
@@ -133,20 +214,29 @@ class _PinLockScreenState extends ConsumerState<PinLockScreen> {
                 ),
               ),
 
-              const SizedBox(height: 24),
+              const SizedBox(height: 20),
 
-              // PIN Dots Indicator
-              PinDotsIndicator(
-                pinLength: 6,
-                filledLength: _pin.length,
-                hasError: _errorMessage != null,
+              // PIN Dots Indicator with Shake Animation
+              AnimatedBuilder(
+                animation: _shakeAnimation,
+                builder: (context, child) {
+                  return Transform.translate(
+                    offset: Offset(_shakeAnimation.value, 0),
+                    child: child,
+                  );
+                },
+                child: PinDotsIndicator(
+                  pinLength: 6,
+                  filledLength: _pin.length,
+                  hasError: _errorMessage != null,
+                ),
               ),
 
-              const SizedBox(height: 10),
+              const SizedBox(height: 8),
 
               // Error or Loading indicator
               SizedBox(
-                height: 32,
+                height: 28,
                 child: Center(
                   child: _isVerifying
                       ? const SizedBox(
@@ -175,7 +265,7 @@ class _PinLockScreenState extends ConsumerState<PinLockScreen> {
                 ),
               ),
 
-              const Spacer(),
+              const Spacer(flex: 3),
 
               // Custom Keypad
               CustomPinKeypad(
@@ -183,7 +273,7 @@ class _PinLockScreenState extends ConsumerState<PinLockScreen> {
                 onDeletePressed: _onDeletePressed,
               ),
 
-              const SizedBox(height: 16),
+              const Spacer(flex: 1),
 
               // Logout Option
               TextButton.icon(
@@ -201,9 +291,27 @@ class _PinLockScreenState extends ConsumerState<PinLockScreen> {
                 ),
               ),
 
-              const SizedBox(height: 8),
+              const SizedBox(height: 12),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildUserInitial(String name, double size) {
+    final initial = name.isNotEmpty ? name[0].toUpperCase() : 'P';
+    return Container(
+      width: size,
+      height: size,
+      color: const Color(0xFFFF5000).withValues(alpha: 0.15),
+      alignment: Alignment.center,
+      child: Text(
+        initial,
+        style: TextStyle(
+          fontSize: size * 0.45,
+          fontWeight: FontWeight.bold,
+          color: const Color(0xFFFF5000),
         ),
       ),
     );

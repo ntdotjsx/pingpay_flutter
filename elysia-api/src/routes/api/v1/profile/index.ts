@@ -105,4 +105,66 @@ export default new Elysia()
       shippingRecipientName: t.Optional(t.String()),
     }),
     detail: { tags: ["Profile & Consent"], summary: "Save user profile" }
+  })
+  .post("/test-line-notification", async ({ userId, set }) => {
+    try {
+      const user = await db.query.users.findFirst({
+        where: eq(users.id, userId)
+      });
+
+      if (!user) {
+        set.status = 404;
+        return { success: false, error: "User not found" };
+      }
+
+      // Look up linked LINE identity
+      const identity = await db.query.authIdentities.findFirst({
+        where: (ai, { and, eq }) => and(eq(ai.userId, userId), eq(ai.provider, "line"))
+      });
+
+      const targetLineId = identity?.providerUserId;
+
+      if (!targetLineId) {
+        set.status = 400;
+        return {
+          success: false,
+          error: "NO_LINE_ACCOUNT: บัญชีนี้ยังไม่ได้ผูกกับ LINE ID หรือไม่ได้เข้าสู่ระบบผ่าน LINE",
+        };
+      }
+
+      const { defaultLineNotificationProvider } = await import("../../../../modules/notifications/line-notification.provider");
+      
+      const sendResult = await defaultLineNotificationProvider.send(
+        userId,
+        targetLineId,
+        {
+          title: "🔔 PingPay ข้อความทดสอบ",
+          body: `สวัสดีคุณ ${user.displayName || user.fullName || "ผู้ใช้งาน"}!\n\n🎉 การเชื่อมต่อ LINE Messaging API กับ PingPay สำเร็จเรียบร้อยแล้ว!\nระบบพร้อมส่งการแจ้งเตือนบิลและการชำระเงินให้คุณแบบ Real-time ✨`,
+          data: { test: true }
+        }
+      );
+
+      if (!sendResult.success) {
+        set.status = 400;
+        let userFriendlyError = sendResult.error || "LINE_SEND_FAILED";
+        if (userFriendlyError.includes("Failed to send messages")) {
+          userFriendlyError = "กรุณาเพิ่มเพื่อน LINE Bot (@986qgvvz - น้องปิง) ก่อนทดสอบส่งข้อความ (LINE ไม่อนุญาตให้ Bot ส่งข้อความถึงผู้ใช้ที่ยังไม่ได้เพิ่มเพื่อน)";
+        }
+        return {
+          success: false,
+          error: userFriendlyError,
+        };
+      }
+
+      return {
+        success: true,
+        message: `ส่งข้อความแจ้งเตือนเข้า LINE (${targetLineId}) สำเร็จแล้ว!`,
+        lineUserId: targetLineId,
+      };
+    } catch (e: any) {
+      set.status = 500;
+      return { success: false, error: e.message };
+    }
+  }, {
+    detail: { tags: ["Profile & Consent"], summary: "Send Test LINE Push Notification" }
   });

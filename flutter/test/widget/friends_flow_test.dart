@@ -29,7 +29,7 @@ void main() {
         await tester.pumpAndSettle();
 
         // Check header and tabs
-        expect(find.text('จัดการเพื่อน (Friends)'), findsOneWidget);
+        expect(find.text('เพื่อน (Friends)'), findsOneWidget);
         expect(find.text('เพื่อนของฉัน'), findsOneWidget);
         expect(find.text('คำขอเข้า'), findsOneWidget);
         expect(find.text('คำขอที่ส่ง'), findsOneWidget);

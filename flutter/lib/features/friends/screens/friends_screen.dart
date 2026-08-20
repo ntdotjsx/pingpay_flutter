@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/theme.dart';
+import '../../../../core/widgets/pingpay_loading.dart';
 import '../models/friend_models.dart';
 import '../providers/friends_provider.dart';
 
@@ -48,28 +49,43 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
           : const Color(0xFFF6F7F9),
       appBar: AppBar(
         title: const Text(
-          'จัดการเพื่อน (Friends)',
-          style: TextStyle(fontWeight: FontWeight.bold),
+          'เพื่อน (Friends)',
+          style: TextStyle(
+            fontWeight: FontWeight.w700,
+            fontSize: 18,
+            letterSpacing: -0.3,
+          ),
         ),
         centerTitle: true,
+        elevation: 0,
+        backgroundColor: isDark ? AppColors.surfaceBlack : const Color(0xFFF6F7F9),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
           onPressed: () => context.pop(),
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.person_add_alt_1_rounded),
+            icon: const Icon(Icons.person_add_alt_1_rounded, size: 22),
             tooltip: 'เพิ่มเพื่อน',
             onPressed: () => context.push('/friends/add'),
           ),
+          const SizedBox(width: 4),
         ],
         bottom: TabBar(
           controller: _tabController,
           dividerColor: Colors.transparent,
           labelColor: const Color(0xFFFF5000),
-          unselectedLabelColor: isDark ? Colors.white60 : Colors.black54,
+          unselectedLabelColor: isDark ? Colors.white60 : AppColors.inkMuted48,
           indicatorColor: const Color(0xFFFF5000),
           indicatorWeight: 3,
+          labelStyle: const TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 14,
+          ),
+          unselectedLabelStyle: const TextStyle(
+            fontWeight: FontWeight.w500,
+            fontSize: 14,
+          ),
           tabs: [
             const Tab(text: 'เพื่อนของฉัน'),
             Tab(
@@ -116,14 +132,32 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
           _buildOutgoingRequestsTab(context, isDark),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => context.push('/friends/add'),
-        backgroundColor: const Color(0xFFFF5000),
-        foregroundColor: Colors.white,
-        icon: const Icon(Icons.person_add_rounded),
-        label: const Text(
-          'เพิ่มเพื่อน',
-          style: TextStyle(fontWeight: FontWeight.bold),
+      floatingActionButton: Container(
+        decoration: BoxDecoration(
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFFFF5000).withValues(alpha: 0.35),
+              blurRadius: 16,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: FloatingActionButton.extended(
+          onPressed: () => context.push('/friends/add'),
+          backgroundColor: const Color(0xFFFF5000),
+          foregroundColor: Colors.white,
+          elevation: 0,
+          highlightElevation: 2,
+          shape: const SmoothRectangleBorder(
+            borderRadius: SmoothBorderRadius.all(
+              SmoothRadius(cornerRadius: 16, cornerSmoothing: 0.6),
+            ),
+          ),
+          icon: const Icon(Icons.person_add_rounded, size: 20),
+          label: const Text(
+            'เพิ่มเพื่อน',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+          ),
         ),
       ),
     );
@@ -142,7 +176,7 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
             child: Container(
-              height: 44,
+              height: 46,
               decoration: ShapeDecoration(
                 color: isDark ? AppColors.surfaceTile1 : Colors.white,
                 shape: const SmoothRectangleBorder(
@@ -150,21 +184,38 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
                     SmoothRadius(cornerRadius: 14, cornerSmoothing: 1.0),
                   ),
                 ),
+                shadows: isDark
+                    ? []
+                    : [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.03),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
               ),
               padding: const EdgeInsets.symmetric(horizontal: 14),
               child: Row(
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.search_rounded,
                     size: 20,
-                    color: Colors.grey,
+                    color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 10),
                   Expanded(
                     child: TextField(
                       controller: _searchController,
-                      decoration: const InputDecoration(
-                        hintText: 'ค้นหาเพื่อนด้วยชื่อหรือรหัส...',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: isDark ? AppColors.bodyOnDark : AppColors.ink,
+                      ),
+                      decoration: InputDecoration(
+                        hintText: 'ค้นหาเพื่อนด้วยชื่อหรือรหัส User ID...',
+                        hintStyle: TextStyle(
+                          fontSize: 13,
+                          color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
+                        ),
                         border: InputBorder.none,
                         isDense: true,
                       ),
@@ -173,10 +224,10 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
                   if (_searchController.text.isNotEmpty)
                     GestureDetector(
                       onTap: () => _searchController.clear(),
-                      child: const Icon(
+                      child: Icon(
                         Icons.cancel_rounded,
                         size: 18,
-                        color: Colors.grey,
+                        color: isDark ? AppColors.bodyMuted : Colors.grey,
                       ),
                     ),
                 ],
@@ -187,7 +238,10 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
           // Friends List View
           Expanded(
             child: friendsAsync.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
+              loading: () => const PingPayLoadingWidget(
+                message: 'กำลังโหลดรายชื่อเพื่อน...',
+                size: 130,
+              ),
               error: (err, _) => Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -225,9 +279,9 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
                 }
 
                 return ListView.separated(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 80),
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 88),
                   itemCount: filtered.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 8),
+                  separatorBuilder: (_, __) => const SizedBox(height: 10),
                   itemBuilder: (context, index) {
                     final friend = filtered[index];
                     return _buildFriendCard(context, friend, isDark);
@@ -246,37 +300,113 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
     FriendItemModel friend,
     bool isDark,
   ) {
-    return Material(
-      color: isDark ? AppColors.surfaceTile1 : Colors.white,
-      shape: const SmoothRectangleBorder(
-        borderRadius: SmoothBorderRadius.all(
-          SmoothRadius(cornerRadius: 18, cornerSmoothing: 1.0),
+    return Container(
+      decoration: ShapeDecoration(
+        color: isDark ? AppColors.surfaceTile1 : Colors.white,
+        shape: const SmoothRectangleBorder(
+          borderRadius: SmoothBorderRadius.all(
+            SmoothRadius(cornerRadius: 18, cornerSmoothing: 1.0),
+          ),
         ),
+        shadows: isDark
+            ? []
+            : [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.03),
+                  blurRadius: 10,
+                  offset: const Offset(0, 2),
+                ),
+              ],
       ),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-        leading: CircleAvatar(
-          backgroundColor: const Color(0xFFFFF0E6),
-          child: Text(
-            friend.user.displayName.isNotEmpty
-                ? friend.user.displayName[0].toUpperCase()
-                : 'U',
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              color: Color(0xFFFF5000),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(18),
+          onTap: () => context.push('/friends/${friend.friendshipId}'),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: ShapeDecoration(
+                    color: const Color(0xFFFF5000).withValues(alpha: 0.12),
+                    shape: const SmoothRectangleBorder(
+                      borderRadius: SmoothBorderRadius.all(
+                        SmoothRadius(cornerRadius: 14, cornerSmoothing: 0.6),
+                      ),
+                    ),
+                  ),
+                  child: ClipSmoothRect(
+                    radius: const SmoothBorderRadius.all(
+                      SmoothRadius(cornerRadius: 14, cornerSmoothing: 0.6),
+                    ),
+                    child: friend.user.avatarUrl != null && friend.user.avatarUrl!.isNotEmpty
+                        ? Image.network(
+                            friend.user.avatarUrl!,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => Center(
+                              child: Text(
+                                friend.user.displayName.isNotEmpty
+                                    ? friend.user.displayName[0].toUpperCase()
+                                    : 'U',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                  color: Color(0xFFFF5000),
+                                ),
+                              ),
+                            ),
+                          )
+                        : Center(
+                            child: Text(
+                              friend.user.displayName.isNotEmpty
+                                  ? friend.user.displayName[0].toUpperCase()
+                                  : 'U',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                                color: Color(0xFFFF5000),
+                              ),
+                            ),
+                          ),
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        friend.user.displayName,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 15,
+                          color: isDark ? AppColors.bodyOnDark : AppColors.ink,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        'รหัส: ${friend.user.userCode}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
+                          letterSpacing: 0.2,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  Icons.chevron_right_rounded,
+                  color: isDark ? Colors.white38 : AppColors.hairline,
+                  size: 20,
+                ),
+              ],
             ),
           ),
         ),
-        title: Text(
-          friend.user.displayName,
-          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-        ),
-        subtitle: Text(
-          'รหัส: ${friend.user.userCode}',
-          style: const TextStyle(fontSize: 12, color: Colors.grey),
-        ),
-        trailing: const Icon(Icons.chevron_right_rounded, color: Colors.grey),
-        onTap: () => context.push('/friends/${friend.friendshipId}'),
       ),
     );
   }
@@ -288,7 +418,10 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
     return RefreshIndicator(
       onRefresh: () async => ref.invalidate(incomingFriendRequestsProvider),
       child: requestsAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const PingPayLoadingWidget(
+          message: 'กำลังโหลดคำขอเป็นเพื่อน...',
+          size: 130,
+        ),
         error: (err, _) => Center(child: Text('เกิดข้อผิดพลาด: $err')),
         data: (requests) {
           if (requests.isEmpty) {
@@ -320,16 +453,48 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
                   children: [
                     Row(
                       children: [
-                        CircleAvatar(
-                          backgroundColor: const Color(0xFFFFF0E6),
-                          child: Text(
-                            req.user.displayName.isNotEmpty
-                                ? req.user.displayName[0].toUpperCase()
-                                : 'U',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFFFF5000),
+                        Container(
+                          width: 40,
+                          height: 40,
+                          decoration: ShapeDecoration(
+                            color: const Color(0xFFFFF0E6),
+                            shape: const SmoothRectangleBorder(
+                              borderRadius: SmoothBorderRadius.all(
+                                SmoothRadius(cornerRadius: 13, cornerSmoothing: 0.6),
+                              ),
                             ),
+                          ),
+                          child: ClipSmoothRect(
+                            radius: const SmoothBorderRadius.all(
+                              SmoothRadius(cornerRadius: 13, cornerSmoothing: 0.6),
+                            ),
+                            child: req.user.avatarUrl != null && req.user.avatarUrl!.isNotEmpty
+                                ? Image.network(
+                                    req.user.avatarUrl!,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (_, __, ___) => Center(
+                                      child: Text(
+                                        req.user.displayName.isNotEmpty
+                                            ? req.user.displayName[0].toUpperCase()
+                                            : 'U',
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          color: Color(0xFFFF5000),
+                                        ),
+                                      ),
+                                    ),
+                                  )
+                                : Center(
+                                    child: Text(
+                                      req.user.displayName.isNotEmpty
+                                          ? req.user.displayName[0].toUpperCase()
+                                          : 'U',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFFFF5000),
+                                      ),
+                                    ),
+                                  ),
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -466,7 +631,10 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
     return RefreshIndicator(
       onRefresh: () async => ref.invalidate(outgoingFriendRequestsProvider),
       child: requestsAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const PingPayLoadingWidget(
+          message: 'กำลังโหลดคำขอที่ส่ง...',
+          size: 130,
+        ),
         error: (err, _) => Center(child: Text('เกิดข้อผิดพลาด: $err')),
         data: (requests) {
           if (requests.isEmpty) {
@@ -495,16 +663,48 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
                 ),
                 child: Row(
                   children: [
-                    CircleAvatar(
-                      backgroundColor: const Color(0xFFFFF0E6),
-                      child: Text(
-                        req.user.displayName.isNotEmpty
-                            ? req.user.displayName[0].toUpperCase()
-                            : 'U',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFFFF5000),
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: ShapeDecoration(
+                        color: const Color(0xFFFFF0E6),
+                        shape: const SmoothRectangleBorder(
+                          borderRadius: SmoothBorderRadius.all(
+                            SmoothRadius(cornerRadius: 13, cornerSmoothing: 0.6),
+                          ),
                         ),
+                      ),
+                      child: ClipSmoothRect(
+                        radius: const SmoothBorderRadius.all(
+                          SmoothRadius(cornerRadius: 13, cornerSmoothing: 0.6),
+                        ),
+                        child: req.user.avatarUrl != null && req.user.avatarUrl!.isNotEmpty
+                            ? Image.network(
+                                req.user.avatarUrl!,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => Center(
+                                  child: Text(
+                                    req.user.displayName.isNotEmpty
+                                        ? req.user.displayName[0].toUpperCase()
+                                        : 'U',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFFFF5000),
+                                    ),
+                                  ),
+                                ),
+                              )
+                            : Center(
+                                child: Text(
+                                  req.user.displayName.isNotEmpty
+                                      ? req.user.displayName[0].toUpperCase()
+                                      : 'U',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFFFF5000),
+                                  ),
+                                ),
+                              ),
                       ),
                     ),
                     const SizedBox(width: 12),

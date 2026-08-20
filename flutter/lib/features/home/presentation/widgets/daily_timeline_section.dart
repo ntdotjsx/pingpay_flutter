@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:ui';
 import 'package:figma_squircle/figma_squircle.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -312,17 +313,22 @@ class DailyTimelineSection extends StatelessWidget {
     final receiptImg = debt.receiptImageUrl;
     final displayName = debt.creditor.displayName;
 
-    // Helper to build creditor circular avatar
-    Widget buildAvatarCircle({double size = 42, double borderWidth = 0}) {
+    // Helper to build creditor squircle avatar
+    Widget buildAvatarSquircle({double size = 42, double cornerRadius = 14, double borderWidth = 0}) {
       return Container(
         width: size,
         height: size,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          border: borderWidth > 0
-              ? Border.all(color: Colors.white, width: borderWidth)
-              : null,
-          boxShadow: borderWidth > 0
+        decoration: ShapeDecoration(
+          shape: SmoothRectangleBorder(
+            side: borderWidth > 0
+                ? BorderSide(color: Colors.white, width: borderWidth)
+                : BorderSide.none,
+            borderRadius: SmoothBorderRadius(
+              cornerRadius: cornerRadius,
+              cornerSmoothing: 0.6,
+            ),
+          ),
+          shadows: borderWidth > 0
               ? [
                   BoxShadow(
                     color: Colors.black.withValues(alpha: 0.15),
@@ -332,19 +338,23 @@ class DailyTimelineSection extends StatelessWidget {
                 ]
               : null,
         ),
-        child: ClipOval(
+        child: ClipSmoothRect(
+          radius: SmoothBorderRadius(
+            cornerRadius: cornerRadius,
+            cornerSmoothing: 0.6,
+          ),
           child: avatarUrl != null && avatarUrl.isNotEmpty
               ? Image.network(
                   avatarUrl,
                   fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => _buildInitialAvatar(displayName, size),
+                  errorBuilder: (_, __, ___) => _buildInitialAvatar(displayName, size, cornerRadius: cornerRadius),
                 )
-              : _buildInitialAvatar(displayName, size),
+              : _buildInitialAvatar(displayName, size, cornerRadius: cornerRadius),
         ),
       );
     }
 
-    // If there is an evidence/receipt image: show receipt image thumbnail with creditor avatar at bottom-left
+    // If there is an evidence/receipt image: show receipt image thumbnail with creditor squircle avatar at bottom-left
     if (receiptImg != null && receiptImg.isNotEmpty) {
       return SizedBox(
         width: 48,
@@ -352,10 +362,12 @@ class DailyTimelineSection extends StatelessWidget {
         child: Stack(
           clipBehavior: Clip.none,
           children: [
-            // Receipt image thumbnail
+            // Receipt image thumbnail (Squircle)
             Positioned.fill(
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(12),
+              child: ClipSmoothRect(
+                radius: const SmoothBorderRadius.all(
+                  SmoothRadius(cornerRadius: 14, cornerSmoothing: 0.6),
+                ),
                 child: receiptImg.startsWith('data:image')
                     ? Image.memory(
                         base64Decode(
@@ -380,27 +392,35 @@ class DailyTimelineSection extends StatelessWidget {
                       ),
               ),
             ),
-            // Creditor Avatar at Bottom-Left
+            // Creditor Squircle Avatar at Bottom-Left
             Positioned(
-              bottom: -3,
-              left: -3,
-              child: buildAvatarCircle(size: 22, borderWidth: 1.5),
+              bottom: -4,
+              left: -4,
+              child: buildAvatarSquircle(size: 22, cornerRadius: 7, borderWidth: 1.5),
             ),
           ],
         ),
       );
     }
 
-    // Default: Creditor avatar
-    return buildAvatarCircle(size: 42);
+    // Default: Creditor Squircle avatar
+    return buildAvatarSquircle(size: 42, cornerRadius: 14);
   }
 
-  Widget _buildInitialAvatar(String name, double size) {
+  Widget _buildInitialAvatar(String name, double size, {double cornerRadius = 14}) {
     final initial = name.isNotEmpty ? name.characters.first.toUpperCase() : 'U';
     return Container(
       width: size,
       height: size,
-      color: const Color(0xFF007AFF).withValues(alpha: 0.15),
+      decoration: ShapeDecoration(
+        color: const Color(0xFF007AFF).withValues(alpha: 0.15),
+        shape: SmoothRectangleBorder(
+          borderRadius: SmoothBorderRadius(
+            cornerRadius: cornerRadius,
+            cornerSmoothing: 0.6,
+          ),
+        ),
+      ),
       alignment: Alignment.center,
       child: Text(
         initial,
@@ -528,24 +548,8 @@ class DailyTimelineSection extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
             child: Row(
               children: [
-                Container(
-                  width: 38,
-                  height: 38,
-                  decoration: ShapeDecoration(
-                    color: AppColors.primary.withValues(alpha: isDark ? 0.2 : 0.1),
-                    shape: const SmoothRectangleBorder(
-                      borderRadius: SmoothBorderRadius.all(
-                        SmoothRadius(cornerRadius: 11, cornerSmoothing: 1.0),
-                      ),
-                    ),
-                  ),
-                  child: const Icon(
-                    Icons.receipt_long_rounded,
-                    color: AppColors.primary,
-                    size: 20,
-                  ),
-                ),
-                const SizedBox(width: 10),
+                _buildBillDebtorsAvatars(bill, isDark),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -563,13 +567,21 @@ class DailyTimelineSection extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 2),
-                      Text(
-                        '${bill.items.length} ผู้ร่วมหาร • ${_formatStatus(bill.status)}',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: _getStatusColor(bill.status),
-                          fontWeight: FontWeight.w500,
-                        ),
+                      Builder(
+                        builder: (context) {
+                          final hasUnacknowledged = bill.items.any((i) => !i.isAcknowledged && !i.isFullyPaid);
+                          final statusText = _formatStatus(bill.status);
+                          final displayStatus = hasUnacknowledged ? '$statusText (รอการยอมรับ)' : statusText;
+
+                          return Text(
+                            '${bill.items.length} ผู้ร่วมหาร • $displayStatus',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: hasUnacknowledged ? const Color(0xFFFF9500) : _getStatusColor(bill.status),
+                              fontWeight: FontWeight.w500,
+                            ),
+                          );
+                        },
                       ),
                     ],
                   ),
@@ -585,6 +597,219 @@ class DailyTimelineSection extends StatelessWidget {
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  /// Builds stacked overlapping squircle avatars of debtors who owe money in the bill
+  Widget _buildBillDebtorsAvatars(BillModel bill, bool isDark) {
+    // If there are no participants, show default bill icon
+    if (bill.items.isEmpty) {
+      return Container(
+        width: 40,
+        height: 40,
+        decoration: ShapeDecoration(
+          color: AppColors.primary.withValues(alpha: isDark ? 0.2 : 0.1),
+          shape: const SmoothRectangleBorder(
+            borderRadius: SmoothBorderRadius.all(
+              SmoothRadius(cornerRadius: 12, cornerSmoothing: 0.6),
+            ),
+          ),
+        ),
+        child: const Icon(
+          Icons.receipt_long_rounded,
+          color: AppColors.primary,
+          size: 20,
+        ),
+      );
+    }
+
+    final items = bill.items;
+    final debtors = items.map((i) => i.debtor).whereType<BillDebtorUserModel>().toList();
+    // If no debtor objects populated, fallback to item names or receipt icon
+    if (debtors.isEmpty) {
+      return Container(
+        width: 40,
+        height: 40,
+        decoration: ShapeDecoration(
+          color: AppColors.primary.withValues(alpha: isDark ? 0.2 : 0.1),
+          shape: const SmoothRectangleBorder(
+            borderRadius: SmoothBorderRadius.all(
+              SmoothRadius(cornerRadius: 12, cornerSmoothing: 0.6),
+            ),
+          ),
+        ),
+        child: const Icon(
+          Icons.receipt_long_rounded,
+          color: AppColors.primary,
+          size: 20,
+        ),
+      );
+    }
+
+    // Single debtor: Show clean 40x40 squircle avatar (blurred if not acknowledged)
+    if (debtors.length == 1) {
+      final d = debtors.first;
+      final isAcknowledged = items.first.isAcknowledged;
+
+      Widget avatarWidget = (d.avatarUrl != null && d.avatarUrl!.isNotEmpty)
+          ? Image.network(
+              d.avatarUrl!,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => _buildSingleInitial(d.displayName, 40),
+            )
+          : _buildSingleInitial(d.displayName, 40);
+
+      return Container(
+        width: 40,
+        height: 40,
+        decoration: ShapeDecoration(
+          color: const Color(0xFFFF5000).withValues(alpha: 0.15),
+          shape: const SmoothRectangleBorder(
+            borderRadius: SmoothBorderRadius.all(
+              SmoothRadius(cornerRadius: 13, cornerSmoothing: 0.6),
+            ),
+          ),
+        ),
+        child: ClipSmoothRect(
+          radius: const SmoothBorderRadius.all(
+            SmoothRadius(cornerRadius: 13, cornerSmoothing: 0.6),
+          ),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              avatarWidget,
+              if (!isAcknowledged) ...[
+                Positioned.fill(
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 3.5, sigmaY: 3.5),
+                    child: Container(
+                      color: Colors.black.withValues(alpha: 0.25),
+                      alignment: Alignment.center,
+                      child: const Icon(
+                        Icons.hourglass_top_rounded,
+                        color: Colors.white,
+                        size: 18,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      );
+    }
+
+    // Multiple debtors (e.g. 2, 3+): Overlapping stacked avatars
+    final visibleDebtors = debtors.take(3).toList();
+    final remainingCount = debtors.length - visibleDebtors.length;
+    final totalWidth = 28.0 + (visibleDebtors.length - 1 + (remainingCount > 0 ? 1 : 0)) * 14.0;
+
+    return SizedBox(
+      width: totalWidth.clamp(40.0, 68.0),
+      height: 40,
+      child: Stack(
+        alignment: Alignment.centerLeft,
+        children: [
+          for (int i = 0; i < visibleDebtors.length; i++) ...[
+            Positioned(
+              left: i * 14.0,
+              child: Builder(
+                builder: (context) {
+                  final isItemAck = i < items.length ? items[i].isAcknowledged : true;
+                  Widget childAvatar = (visibleDebtors[i].avatarUrl != null && visibleDebtors[i].avatarUrl!.isNotEmpty)
+                      ? Image.network(
+                          visibleDebtors[i].avatarUrl!,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => _buildSingleInitial(visibleDebtors[i].displayName, 28),
+                        )
+                      : _buildSingleInitial(visibleDebtors[i].displayName, 28);
+
+                  return Container(
+                    width: 28,
+                    height: 28,
+                    decoration: ShapeDecoration(
+                      color: const Color(0xFFFF5000).withValues(alpha: 0.15),
+                      shape: SmoothRectangleBorder(
+                        side: BorderSide(
+                          color: isDark ? AppColors.surfaceTile1 : AppColors.canvas,
+                          width: 1.5,
+                        ),
+                        borderRadius: const SmoothBorderRadius.all(
+                          SmoothRadius(cornerRadius: 9, cornerSmoothing: 0.6),
+                        ),
+                      ),
+                    ),
+                    child: ClipSmoothRect(
+                      radius: const SmoothBorderRadius.all(
+                        SmoothRadius(cornerRadius: 9, cornerSmoothing: 0.6),
+                      ),
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          childAvatar,
+                          if (!isItemAck)
+                            Positioned.fill(
+                              child: BackdropFilter(
+                                filter: ImageFilter.blur(sigmaX: 2.5, sigmaY: 2.5),
+                                child: Container(
+                                  color: Colors.black.withValues(alpha: 0.25),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+          if (remainingCount > 0)
+            Positioned(
+              left: visibleDebtors.length * 14.0,
+              child: Container(
+                width: 28,
+                height: 28,
+                decoration: ShapeDecoration(
+                  color: isDark ? AppColors.surfaceTile3 : AppColors.hairline,
+                  shape: SmoothRectangleBorder(
+                    side: BorderSide(
+                      color: isDark ? AppColors.surfaceTile1 : AppColors.canvas,
+                      width: 1.5,
+                    ),
+                    borderRadius: const SmoothBorderRadius.all(
+                      SmoothRadius(cornerRadius: 9, cornerSmoothing: 0.6),
+                    ),
+                  ),
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  '+$remainingCount',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? AppColors.bodyOnDark : AppColors.ink,
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSingleInitial(String name, double size) {
+    final initial = name.isNotEmpty ? name.characters.first.toUpperCase() : 'U';
+    return Center(
+      child: Text(
+        initial,
+        style: TextStyle(
+          fontSize: size * 0.42,
+          fontWeight: FontWeight.bold,
+          color: const Color(0xFFFF5000),
         ),
       ),
     );

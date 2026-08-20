@@ -85,7 +85,7 @@ export class BillService {
       }));
     }
 
-    return await this.repo.createBillWithItems(
+    const createdBill = await this.repo.createBillWithItems(
       ownerId,
       {
         title: dto.title,
@@ -98,6 +98,35 @@ export class BillService {
       },
       finalAllocations
     );
+
+    // Enqueue real LINE notifications for all participants in outbox
+    try {
+      const ownerUser = await this.repo.getUserById(ownerId);
+      const creatorName = ownerUser?.displayName || ownerUser?.fullName || "เพื่อน";
+      const { defaultNotificationOutboxService } = await import("../notifications/notification-outbox.service");
+
+      for (const item of (createdBill.items || [])) {
+        if (item.debtorId && item.debtorId !== ownerId) {
+          await defaultNotificationOutboxService.enqueue({
+            eventType: "BILL_CREATED",
+            recipientUserId: item.debtorId,
+            deduplicationKey: `BILL_CREATED:${createdBill.id}:${item.debtorId}`,
+            payload: {
+              billId: createdBill.id,
+              billTitle: createdBill.title || "บิลค่าใช้จ่าย",
+              participantDebtAmount: Number(item.currentAmount).toFixed(2),
+              totalAmount: Number(createdBill.totalAmount).toFixed(2),
+              currency: createdBill.currency || "THB",
+              creatorName,
+            },
+          });
+        }
+      }
+    } catch (err) {
+      console.error("[BillService] Failed to enqueue BILL_CREATED notification:", err);
+    }
+
+    return createdBill;
   }
 
   async getBill(id: string) {
@@ -148,13 +177,17 @@ export class BillService {
     const billTotalCents = Math.round(Number(bill.totalAmount) * 100);
     const newTargetCents = Math.round(newAmount * 100);
 
-    if (newTargetCents > billTotalCents) {
-      throw new Error("INVALID_AMOUNT: Participant amount cannot exceed bill total amount.");
+    // If edited participant amount is larger than previous bill total, expand bill total to match new target
+    const effectiveBillTotalCents = Math.max(billTotalCents, newTargetCents);
+    if (effectiveBillTotalCents > billTotalCents) {
+      await this.repo.updateBill(billId, userId, {
+        totalAmount: (effectiveBillTotalCents / 100).toFixed(2),
+      });
     }
 
     // Auto-redistribute remaining among other unpaid participants
     const otherParticipants = bill.items.filter((i) => i.id !== item.id);
-    const remainingCents = billTotalCents - newTargetCents;
+    const remainingCents = Math.max(0, effectiveBillTotalCents - newTargetCents);
 
     let updatedAllocations: Array<{ id: string; debtorId: string; amount: string }> = [
       { id: item.id, debtorId: item.debtorId, amount: (newTargetCents / 100).toFixed(2) }

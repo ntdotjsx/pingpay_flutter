@@ -63,7 +63,12 @@ export class BillWriteoffService {
 
       if (!bill) throw new Error("BILL_NOT_FOUND: Bill not found.");
 
-      BillPolicy.canEditBill(userId, bill.ownerId);
+      // Verify that user is either bill owner or a participant in this bill
+      const isOwner = bill.ownerId === userId;
+      const isParticipant = bill.items.some((i) => i.debtorId === userId);
+      if (!isOwner && !isParticipant) {
+        throw new Error("Unauthorized: Only the bill owner or involved debtor can perform debt offset.");
+      }
 
       for (const itemInput of dto.participants) {
         if (itemInput.amount <= 0) {

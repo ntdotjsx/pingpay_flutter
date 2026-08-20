@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/theme.dart';
+import '../../../core/widgets/app_skeleton.dart';
 import '../../payments/services/debt_age_calculator.dart';
 import '../models/bill_models.dart';
 import '../providers/bill_provider.dart';
@@ -54,7 +55,16 @@ class MyBillsScreen extends ConsumerWidget {
         ),
       ),
       body: billsAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => ListView(
+          padding: const EdgeInsets.all(16),
+          children: const [
+            AppSkeleton(width: double.infinity, height: 110, cornerRadius: 22, margin: EdgeInsets.only(bottom: 16)),
+            AppSkeleton(width: double.infinity, height: 44, cornerRadius: 14, margin: EdgeInsets.only(bottom: 16)),
+            DebtCardSkeleton(),
+            DebtCardSkeleton(),
+            DebtCardSkeleton(),
+          ],
+        ),
         error: (err, _) => Center(
           child: Padding(
             padding: const EdgeInsets.all(24.0),

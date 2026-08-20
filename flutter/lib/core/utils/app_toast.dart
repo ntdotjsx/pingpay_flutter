@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 
@@ -79,6 +80,7 @@ class _HotToastWidgetState extends State<_HotToastWidget>
   late Animation<double> _scaleAnimation;
   late Animation<double> _opacityAnimation;
   late Animation<Offset> _slideAnimation;
+  Timer? _dismissTimer;
 
   @override
   void initState() {
@@ -103,7 +105,7 @@ class _HotToastWidgetState extends State<_HotToastWidget>
 
     _controller.forward();
 
-    Future.delayed(widget.duration, () async {
+    _dismissTimer = Timer(widget.duration, () async {
       if (mounted) {
         await _controller.reverse();
         widget.onDismiss();
@@ -113,6 +115,7 @@ class _HotToastWidgetState extends State<_HotToastWidget>
 
   @override
   void dispose() {
+    _dismissTimer?.cancel();
     _controller.dispose();
     super.dispose();
   }

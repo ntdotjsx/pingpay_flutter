@@ -449,10 +449,21 @@ class _BillItemsBottomSheetState extends State<BillItemsBottomSheet> {
                           child: ElevatedButton(
                             onPressed: () {
                               final name = nameController.text.trim();
-                              final price = double.tryParse(priceController.text.trim()) ?? 0.0;
+                              final price = double.tryParse(priceController.text.trim().replaceAll(',', '')) ?? 0.0;
                               final qty = int.tryParse(qtyController.text.trim()) ?? currentQty;
 
-                              if (name.isEmpty || price <= 0 || qty <= 0) return;
+                              if (name.isEmpty) {
+                                AppToast.warning(ctx, 'กรุณาระบุชื่อรายการ');
+                                return;
+                              }
+                              if (price <= 0) {
+                                AppToast.warning(ctx, 'กรุณาระบุราคาต่อหน่วยให้มากกว่า 0');
+                                return;
+                              }
+                              if (qty <= 0) {
+                                AppToast.warning(ctx, 'กรุณาระบุจำนวนชิ้นให้มากกว่า 0');
+                                return;
+                              }
 
                               final newItem = ReceiptItemModel(
                                 name: name,

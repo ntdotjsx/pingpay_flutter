@@ -28,6 +28,7 @@ dependencies:
   image_picker: ^1.2.3
   thai_promptpay: ^0.3.0
   flutter_hot_toast: ^0.0.3
+  lottie: ^2.7.0
 
 dev_dependencies:
   flutter_test:
@@ -59,3 +60,7 @@ flutter:
           weight: 800
         - asset: assets/fonts/LINESeedSansTH_A_He.ttf
           weight: 900
+
+  assets:
+    - assets/
+    - assets/Olympics_ Table tennis.json

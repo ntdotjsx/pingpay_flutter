@@ -15,6 +15,7 @@ class BillItemParticipantModel {
   final double amountWrittenOff;
   final String status; // unpaid, partially_paid, paid, written_off
   final bool isLocked;
+  final bool isAcknowledged;
   final DateTime? createdAt;
   final DateTime? updatedAt;
   final BillDebtorUserModel? debtor;
@@ -29,6 +30,7 @@ class BillItemParticipantModel {
     this.amountWrittenOff = 0.0,
     required this.status,
     this.isLocked = false,
+    this.isAcknowledged = false,
     this.createdAt,
     this.updatedAt,
     this.debtor,
@@ -53,11 +55,12 @@ class BillItemParticipantModel {
       amountWrittenOff: _asDouble(json['amountWrittenOff']),
       status: json['status'] as String? ?? 'unpaid',
       isLocked: json['isLocked'] as bool? ?? false,
+      isAcknowledged: json['isAcknowledged'] as bool? ?? false,
       createdAt: json['createdAt'] != null
-          ? DateTime.tryParse(json['createdAt'].toString())
+          ? DateTime.tryParse(json['createdAt'].toString())?.toLocal()
           : null,
       updatedAt: json['updatedAt'] != null
-          ? DateTime.tryParse(json['updatedAt'].toString())
+          ? DateTime.tryParse(json['updatedAt'].toString())?.toLocal()
           : null,
       debtor: json['debtor'] != null
           ? BillDebtorUserModel.fromJson(json['debtor'] as Map<String, dynamic>)
@@ -156,10 +159,10 @@ class BillModel {
       itemsBreakdown: json['itemsBreakdown'],
       receiptImageUrl: json['receiptImageUrl'] as String?,
       createdAt: json['createdAt'] != null
-          ? DateTime.tryParse(json['createdAt'].toString())
+          ? DateTime.tryParse(json['createdAt'].toString())?.toLocal()
           : null,
       updatedAt: json['updatedAt'] != null
-          ? DateTime.tryParse(json['updatedAt'].toString())
+          ? DateTime.tryParse(json['updatedAt'].toString())?.toLocal()
           : null,
       items: itemsList
           .map(

@@ -491,25 +491,51 @@ class _FriendReceivableDetailBottomSheetState
 
   Widget _buildAvatar(bool isDark) {
     final debtor = widget.friend.debtor;
-    return CircleAvatar(
-      radius: 22,
-      backgroundColor: AppColors.primary.withValues(alpha: 0.15),
-      backgroundImage:
-          (debtor.avatarUrl != null && debtor.avatarUrl!.trim().isNotEmpty)
-          ? NetworkImage(debtor.avatarUrl!)
-          : null,
-      child: (debtor.avatarUrl == null || debtor.avatarUrl!.trim().isEmpty)
-          ? Text(
-              debtor.displayName.isNotEmpty
-                  ? debtor.displayName[0].toUpperCase()
-                  : '?',
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: AppColors.primary,
+    return Container(
+      width: 44,
+      height: 44,
+      decoration: ShapeDecoration(
+        color: AppColors.primary.withValues(alpha: 0.15),
+        shape: const SmoothRectangleBorder(
+          borderRadius: SmoothBorderRadius.all(
+            SmoothRadius(cornerRadius: 14, cornerSmoothing: 0.6),
+          ),
+        ),
+      ),
+      child: ClipSmoothRect(
+        radius: const SmoothBorderRadius.all(
+          SmoothRadius(cornerRadius: 14, cornerSmoothing: 0.6),
+        ),
+        child: (debtor.avatarUrl != null && debtor.avatarUrl!.trim().isNotEmpty)
+            ? Image.network(
+                debtor.avatarUrl!,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => Center(
+                  child: Text(
+                    debtor.displayName.isNotEmpty
+                        ? debtor.displayName[0].toUpperCase()
+                        : '?',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                ),
+              )
+            : Center(
+                child: Text(
+                  debtor.displayName.isNotEmpty
+                      ? debtor.displayName[0].toUpperCase()
+                      : '?',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.primary,
+                  ),
+                ),
               ),
-            )
-          : null,
+      ),
     );
   }
 }

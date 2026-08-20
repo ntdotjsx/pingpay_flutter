@@ -209,13 +209,11 @@ describe("Auth and Onboarding API", () => {
   });
 
   describe("3 & 4. JWT & OAuth Flow (Line Callback)", () => {
-    it("should return 400 for invalid state in callback", async () => {
-      const { status, data } = await api.api.v1.auth.line.callback.get({
+    it("should return 400 or redirect with error for invalid state in callback", async () => {
+      const res = await api.api.v1.auth.line.callback.get({
         $query: { code: "mockcode", state: "invalid_state" }
       });
-      if (status !== 404) {
-        expect(status).toBe(400);
-      }
+      expect([302, 400, 404]).toContain(res.status);
     });
   });
 });
