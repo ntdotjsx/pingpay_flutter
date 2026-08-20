@@ -45,13 +45,18 @@
 </script>
 
 <div>
-  <h1 class="mb-6 text-2xl font-bold text-gray-900">Dispute Cases</h1>
+  <div class="mb-6 flex items-center justify-between">
+    <div>
+      <h1 class="text-2xl font-bold tracking-tight text-[#000000]">Dispute Cases</h1>
+      <p class="mt-0.5 text-xs text-[#615d59]">Investigate payment conflicts, check SlipOK verification logs, and record determinations.</p>
+    </div>
+  </div>
 
-  <div class="mb-6 rounded-lg bg-white p-4 shadow">
-    <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+  <div class="mb-6 rounded-xl border border-[#e6e6e6] bg-white p-4 shadow-sm">
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
       <div>
-        <label for="filter-dispute-status" class="block text-xs font-medium text-gray-600">Dispute Status</label>
-        <select id="filter-dispute-status" bind:value={filters.status} class="mt-1 block w-full rounded border border-gray-300 px-3 py-1.5 text-sm">
+        <label for="filter-dispute-status" class="block text-[11px] font-medium text-[#615d59]">Dispute Status</label>
+        <select id="filter-dispute-status" bind:value={filters.status} class="mt-1 block w-full rounded-[4px] border border-[#e6e6e6] bg-white px-2.5 py-1.5 text-xs text-[#000000] focus:border-[#0075de] focus:ring-1 focus:ring-[#0075de] focus:outline-none">
           <option value="">All Statuses</option>
           <option value="open">Open</option>
           <option value="under_review">Under Review</option>
@@ -61,55 +66,57 @@
         </select>
       </div>
       <div>
-        <label for="filter-dispute-from" class="block text-xs font-medium text-gray-600">From Date</label>
-        <input id="filter-dispute-from" type="date" bind:value={filters.dateFrom} class="mt-1 block w-full rounded border border-gray-300 px-3 py-1.5 text-sm" />
+        <label for="filter-dispute-from" class="block text-[11px] font-medium text-[#615d59]">From Date</label>
+        <input id="filter-dispute-from" type="date" bind:value={filters.dateFrom} class="mt-1 block w-full rounded-[4px] border border-[#e6e6e6] bg-white px-2.5 py-1.5 text-xs text-[#000000] focus:border-[#0075de] focus:ring-1 focus:ring-[#0075de] focus:outline-none" />
       </div>
       <div>
-        <label for="filter-dispute-to" class="block text-xs font-medium text-gray-600">To Date</label>
-        <input id="filter-dispute-to" type="date" bind:value={filters.dateTo} class="mt-1 block w-full rounded border border-gray-300 px-3 py-1.5 text-sm" />
+        <label for="filter-dispute-to" class="block text-[11px] font-medium text-[#615d59]">To Date</label>
+        <input id="filter-dispute-to" type="date" bind:value={filters.dateTo} class="mt-1 block w-full rounded-[4px] border border-[#e6e6e6] bg-white px-2.5 py-1.5 text-xs text-[#000000] focus:border-[#0075de] focus:ring-1 focus:ring-[#0075de] focus:outline-none" />
       </div>
     </div>
-    <div class="mt-4 flex justify-between items-center">
-      <button onclick={applyFilters} class="rounded bg-blue-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-blue-700">Filter</button>
-      <span class="text-xs text-gray-500">Total: {total} disputes</span>
+    <div class="mt-4 flex items-center justify-between border-t border-[#e6e6e6] pt-3">
+      <button onclick={applyFilters} class="rounded-md bg-[#0075de] px-4 py-1.5 text-xs font-medium text-white hover:bg-[#005bab] transition-colors">Filter</button>
+      <span class="text-xs text-[#615d59] font-mono">Total: {total} disputes</span>
     </div>
   </div>
 
   {#if loading}
-    <p class="text-gray-500">Loading...</p>
+    <div class="rounded-xl border border-[#e6e6e6] bg-white p-8 text-center shadow-sm">
+      <p class="text-xs text-[#615d59]">Loading disputes...</p>
+    </div>
   {:else if error}
-    <div class="rounded-md bg-red-50 p-4 text-red-700">{error}</div>
+    <div class="rounded-md bg-[#fde8e8] border border-[#fde8e8] p-3 text-xs text-[#c53030]">{error}</div>
   {:else}
-    <div class="overflow-x-auto rounded-lg bg-white shadow">
-      <table class="min-w-full divide-y divide-gray-200">
-        <thead class="bg-gray-50">
+    <div class="overflow-x-auto rounded-xl border border-[#e6e6e6] bg-white shadow-sm">
+      <table class="min-w-full divide-y divide-[#e6e6e6]">
+        <thead class="bg-[#f6f5f4]">
           <tr>
-            <th class="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">Status</th>
-            <th class="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">Raised By</th>
-            <th class="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">Bill</th>
-            <th class="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">Debtor</th>
-            <th class="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">Amount</th>
-            <th class="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">Reason</th>
-            <th class="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">Date</th>
-            <th class="px-4 py-3 text-right text-xs font-medium uppercase text-gray-500">Action</th>
+            <th class="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-[#615d59]">Status</th>
+            <th class="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-[#615d59]">Raised By</th>
+            <th class="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-[#615d59]">Bill</th>
+            <th class="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-[#615d59]">Debtor</th>
+            <th class="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-[#615d59]">Amount</th>
+            <th class="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-[#615d59]">Reason</th>
+            <th class="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-[#615d59]">Date</th>
+            <th class="px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wider text-[#615d59]">Action</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-gray-200">
+        <tbody class="divide-y divide-[#e6e6e6] bg-white">
           {#each rows as dispute}
-            <tr class="hover:bg-gray-50">
+            <tr class="hover:bg-[#faf9f8] transition-colors">
               <td class="px-4 py-3"><StatusBadge status={dispute.status} /></td>
-              <td class="px-4 py-3 text-sm font-medium">{dispute.raisedBy?.displayName || dispute.raisedBy?.userCode || '-'}</td>
-              <td class="px-4 py-3 text-sm text-gray-700">{dispute.billItem?.bill?.title || '-'}</td>
-              <td class="px-4 py-3 text-sm text-gray-600">{dispute.billItem?.debtor?.displayName || '-'}</td>
-              <td class="px-4 py-3 text-sm font-bold text-gray-900">{dispute.billItem?.currentAmount} THB</td>
-              <td class="px-4 py-3 text-sm text-gray-600 max-w-xs truncate">{dispute.reason}</td>
-              <td class="px-4 py-3 text-sm text-gray-500">{new Date(dispute.createdAt).toLocaleDateString()}</td>
+              <td class="px-4 py-3 text-xs font-semibold text-[#000000]">{dispute.raisedBy?.displayName || dispute.raisedBy?.userCode || '-'}</td>
+              <td class="px-4 py-3 text-xs text-[#31302e]">{dispute.billItem?.bill?.title || '-'}</td>
+              <td class="px-4 py-3 text-xs text-[#615d59]">{dispute.billItem?.debtor?.displayName || '-'}</td>
+              <td class="px-4 py-3 text-xs font-bold text-[#000000]">{dispute.billItem?.currentAmount} THB</td>
+              <td class="px-4 py-3 text-xs text-[#615d59] max-w-xs truncate">{dispute.reason}</td>
+              <td class="px-4 py-3 text-xs text-[#615d59]">{new Date(dispute.createdAt).toLocaleDateString()}</td>
               <td class="px-4 py-3 text-right">
-                <a href="/disputes/{dispute.id}" class="rounded bg-blue-600 px-3 py-1 text-xs font-semibold text-white hover:bg-blue-700">Review</a>
+                <a href="/disputes/{dispute.id}" class="rounded-md bg-[#0075de] px-3 py-1 text-xs font-medium text-white hover:bg-[#005bab] transition-colors">Review</a>
               </td>
             </tr>
           {:else}
-            <tr><td colspan="8" class="px-4 py-8 text-center text-gray-500">No disputes found</td></tr>
+            <tr><td colspan="8" class="px-4 py-8 text-center text-xs text-[#615d59]">No disputes found</td></tr>
           {/each}
         </tbody>
       </table>
