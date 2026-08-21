@@ -28,7 +28,9 @@
   });
 
   function handleLineOAuthRedirect() {
-    window.location.href = `${AUTH_BASE}/line`;
+    const origin = typeof window !== 'undefined' ? window.location.origin : '';
+    const redirectParam = origin ? `?redirect_to=${encodeURIComponent(origin)}` : '';
+    window.location.href = `${AUTH_BASE}/line${redirectParam}`;
   }
 
   async function handleMockLineLogin() {

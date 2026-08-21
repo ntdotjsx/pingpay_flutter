@@ -9,14 +9,33 @@ import { randomBytes } from "crypto";
 
 export default new Elysia()
   // ── 1. Web OAuth Redirect (Developer Console / Web App) ─────────────
-  .get("/", async ({ redirect }) => {
+  .get("/", async ({ query, redirect }) => {
     const state = randomBytes(32).toString("hex");
     const codeVerifier = randomBytes(32).toString("hex");
+
+    // Support both localhost and production web console URLs
+    const requestedRedirect = (query?.redirect_to || query?.return_to || "").trim();
+    let targetClientUrl = env.WEB_CONSOLE_URL;
+
+    if (requestedRedirect) {
+      try {
+        const parsed = new URL(requestedRedirect);
+        const hostname = parsed.hostname;
+        const isLocalhost = hostname === "localhost" || hostname === "127.0.0.1" || hostname === "0.0.0.0";
+        const isAllowedDomain = isLocalhost || hostname.endsWith("pingpay.app") || hostname.endsWith("fly.dev") || hostname.endsWith("vercel.app");
+
+        if (isAllowedDomain) {
+          targetClientUrl = parsed.origin;
+        }
+      } catch {
+        // Fallback to default WEB_CONSOLE_URL on invalid URL
+      }
+    }
 
     await db.insert(authOauthStates).values({
       state,
       codeVerifier,
-      redirectUri: env.LINE_WEB_CALLBACK_URL,
+      redirectUri: targetClientUrl,
       expiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 mins expiry
     });
 
@@ -32,17 +51,32 @@ export default new Elysia()
     detail: {
       tags: ['Auth LINE'],
       summary: "LINE Web Login Redirect",
-      description: "Redirects web client to LINE OAuth 2.0 login page using LINE_WEB_CHANNEL_ID."
-    }
+      description: "Redirects web client to LINE OAuth 2.0 login page using LINE_WEB_CHANNEL_ID with support for localhost and prod."
+    },
+    query: t.Object({
+      redirect_to: t.Optional(t.String()),
+      return_to: t.Optional(t.String()),
+    })
   })
 
   // ── 2. Web OAuth Callback ──────────────────────────────────────────
   .get("/callback", async ({ query, redirect, set, cookie: { access_token, refresh_token } }) => {
     const { code, state, error, error_description } = query;
 
+    let targetClientUrl = env.WEB_CONSOLE_URL;
+
+    if (state) {
+      const stateRecord = await db.query.authOauthStates.findFirst({
+        where: eq(authOauthStates.state, state)
+      });
+      if (stateRecord?.redirectUri) {
+        targetClientUrl = stateRecord.redirectUri;
+      }
+    }
+
     if (error || !code || !state) {
       const errorMsg = error_description || error || "Invalid callback request";
-      return redirect(`${env.WEB_CONSOLE_URL}/login?error=${encodeURIComponent(errorMsg)}`);
+      return redirect(`${targetClientUrl}/login?error=${encodeURIComponent(errorMsg)}`);
     }
 
     const stateRecord = await db.query.authOauthStates.findFirst({
@@ -50,7 +84,11 @@ export default new Elysia()
     });
 
     if (!stateRecord || stateRecord.expiresAt < new Date()) {
-      return redirect(`${env.WEB_CONSOLE_URL}/login?error=${encodeURIComponent("Login state expired or invalid")}`);
+      return redirect(`${targetClientUrl}/login?error=${encodeURIComponent("Login state expired or invalid")}`);
+    }
+
+    if (stateRecord.redirectUri) {
+      targetClientUrl = stateRecord.redirectUri;
     }
 
     await db.delete(authOauthStates).where(eq(authOauthStates.state, state));
@@ -162,7 +200,7 @@ export default new Elysia()
     });
 
     // Redirect to Developer Console with access token
-    return redirect(`${env.WEB_CONSOLE_URL}/login?token=${accessToken}`);
+    return redirect(`${targetClientUrl}/login?token=${accessToken}`);
   }, {
     detail: {
       tags: ['Auth LINE'],
