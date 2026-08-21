@@ -1,23 +1,33 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import lottie from 'lottie-web';
+  import { browser } from '$app/environment';
   import animationData from '$lib/assets/Olympics_Table.json';
 
   let { text = 'Loading data...', size = 140 }: { text?: string; size?: number } = $props();
   let container = $state<HTMLDivElement | null>(null);
+  let anim: any = null;
 
   onMount(() => {
-    if (!container) return;
-    const anim = lottie.loadAnimation({
-      container,
-      renderer: 'svg',
-      loop: true,
-      autoplay: true,
-      animationData,
-    });
+    if (!container || !browser) return;
+
+    import('lottie-web')
+      .then((lottieModule) => {
+        const lottie = lottieModule.default || lottieModule;
+        if (!container) return;
+        anim = lottie.loadAnimation({
+          container,
+          renderer: 'svg',
+          loop: true,
+          autoplay: true,
+          animationData,
+        });
+      })
+      .catch((err) => {
+        console.error('Failed to load Lottie animation:', err);
+      });
 
     return () => {
-      anim.destroy();
+      anim?.destroy();
     };
   });
 </script>
