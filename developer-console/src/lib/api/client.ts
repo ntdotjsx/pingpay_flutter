@@ -1,4 +1,7 @@
-const API_BASE = 'http://localhost:3000/api/v1/admin';
+export const BASE_URL = import.meta.env.VITE_API_URL || 'https://pingpay-api.fly.dev';
+export const API_BASE = `${BASE_URL}/api/v1/admin`;
+export const AUTH_BASE = `${BASE_URL}/api/v1/auth`;
+
 
 function getToken(): string | null {
 	if (typeof window === 'undefined') return null;
@@ -252,7 +255,6 @@ export async function clearAllAuditLogs() {
 
 // ── Auth & LINE Login ───────────────────────────────────────────
 
-const AUTH_BASE = 'http://localhost:3000/api/v1/auth';
 
 export async function verifyLineToken(data: {
 	idToken?: string;

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { setToken, verifyLineToken } from '$lib/api/client';
+  import { setToken, verifyLineToken, AUTH_BASE } from '$lib/api/client';
   import { goto } from '$app/navigation';
   import { page } from '$app/stores';
   import { onMount } from 'svelte';
@@ -28,7 +28,7 @@
   });
 
   function handleLineOAuthRedirect() {
-    window.location.href = 'http://localhost:3000/api/v1/auth/line';
+    window.location.href = `${AUTH_BASE}/line`;
   }
 
   async function handleMockLineLogin() {
