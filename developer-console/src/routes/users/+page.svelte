@@ -1,21 +1,27 @@
 <script lang="ts">
   import { getUsers, suspendUser, banUser, unsuspendUser } from '$lib/api/client';
   import { onMount } from 'svelte';
+  import { TableHandler } from '@vincjo/datatables';
   import StatusBadge from '$lib/components/StatusBadge.svelte';
-  import Pagination from '$lib/components/Pagination.svelte';
+  import ThSort from '$lib/components/datatable/ThSort.svelte';
+  import SearchInput from '$lib/components/datatable/SearchInput.svelte';
+  import DataTablePagination from '$lib/components/datatable/DataTablePagination.svelte';
+  import ExportCsvButton from '$lib/components/datatable/ExportCsvButton.svelte';
+  import LoadingLottie from '$lib/components/LoadingLottie.svelte';
 
-  let rows = $state<any[]>([]);
+  let rawUsers = $state<any[]>([]);
   let total = $state(0);
   let loading = $state(true);
   let error = $state('');
   let actionMessage = $state('');
 
+  const table = new TableHandler<any>([], { rowsPerPage: 20 });
+
   let filters = $state({
     search: '',
     accountStatus: '',
     role: '',
-    page: 1,
-    limit: 20,
+    limit: 100,
   });
 
   let actionModal = $state<{
@@ -39,8 +45,9 @@
     error = '';
     try {
       const res = await getUsers(filters);
-      rows = res.data.rows;
+      rawUsers = res.data.rows;
       total = res.data.total;
+      table.setRows(rawUsers);
     } catch (e: any) {
       error = e.message;
     } finally {
@@ -51,12 +58,6 @@
   onMount(load);
 
   function applyFilters() {
-    filters.page = 1;
-    load();
-  }
-
-  function changePage(p: number) {
-    filters.page = p;
     load();
   }
 
@@ -90,10 +91,13 @@
 </script>
 
 <div>
-  <div class="mb-6 flex items-center justify-between">
+  <div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
     <div>
       <h1 class="text-2xl font-bold tracking-tight text-[#000000]">User Management</h1>
-      <p class="mt-0.5 text-xs text-[#615d59]">Inspect user credentials, verify roles, and manage suspensions.</p>
+      <p class="mt-0.5 text-xs text-[#615d59]">Inspect user credentials, verify roles, and manage account suspensions with interactive DataTables.</p>
+    </div>
+    <div class="flex items-center gap-2">
+      <ExportCsvButton {table} filename="users-export.csv" />
     </div>
   </div>
 
@@ -104,10 +108,11 @@
     </div>
   {/if}
 
+  <!-- Server-side Filter Panel -->
   <div class="mb-6 rounded-xl border border-[#e6e6e6] bg-white p-4 shadow-sm">
     <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
       <div>
-        <label for="filter-user-search" class="block text-[11px] font-medium text-[#615d59]">Search User</label>
+        <label for="filter-user-search" class="block text-[11px] font-medium text-[#615d59]">Backend Search Query</label>
         <input id="filter-user-search" type="text" bind:value={filters.search} class="mt-1 block w-full rounded-[4px] border border-[#e6e6e6] bg-white px-2.5 py-1.5 text-xs text-[#000000] focus:border-[#0075de] focus:ring-1 focus:ring-[#0075de] focus:outline-none" placeholder="Name, code, phone..." />
       </div>
       <div>
@@ -129,14 +134,20 @@
       </div>
     </div>
     <div class="mt-4 flex items-center justify-between border-t border-[#e6e6e6] pt-3">
-      <button onclick={applyFilters} class="rounded-md bg-[#0075de] px-4 py-1.5 text-xs font-medium text-white hover:bg-[#005bab] transition-colors">Filter</button>
-      <span class="text-xs text-[#615d59] font-mono">Total: {total} users</span>
+      <button onclick={applyFilters} class="rounded-md bg-[#0075de] px-4 py-1.5 text-xs font-medium text-white hover:bg-[#005bab] transition-colors">Apply Filters</button>
+      <span class="text-xs text-[#615d59] font-mono">Backend Total: {total} users</span>
     </div>
   </div>
 
+  <!-- DataTables Bar -->
+  <div class="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+    <SearchInput {table} placeholder="Live search users by name, user code, phone, role..." class="w-full sm:w-80" />
+    <span class="text-xs text-[#615d59] font-mono">Filtered: {table.rowCount.total} users</span>
+  </div>
+
   {#if loading}
-    <div class="rounded-xl border border-[#e6e6e6] bg-white p-8 text-center shadow-sm">
-      <p class="text-xs text-[#615d59]">Loading users...</p>
+    <div class="rounded-xl border border-[#e6e6e6] bg-white shadow-sm">
+      <LoadingLottie text="Loading users..." size={150} />
     </div>
   {:else if error}
     <div class="rounded-md bg-[#fde8e8] border border-[#fde8e8] p-3 text-xs text-[#c53030]">{error}</div>
@@ -145,16 +156,16 @@
       <table class="min-w-full divide-y divide-[#e6e6e6]">
         <thead class="bg-[#f6f5f4]">
           <tr>
-            <th class="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-[#615d59]">User</th>
-            <th class="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-[#615d59]">Code</th>
-            <th class="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-[#615d59]">Role</th>
-            <th class="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-[#615d59]">Status</th>
-            <th class="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-[#615d59]">Joined</th>
+            <ThSort {table} field={(row) => row.displayName || row.fullName || ''}>User</ThSort>
+            <ThSort {table} field="userCode">Code</ThSort>
+            <ThSort {table} field="role">Role</ThSort>
+            <ThSort {table} field="accountStatus">Status</ThSort>
+            <ThSort {table} field="createdAt">Joined</ThSort>
             <th class="px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wider text-[#615d59]">Actions</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-[#e6e6e6] bg-white">
-          {#each rows as user}
+          {#each table.rows as user}
             <tr class="hover:bg-[#faf9f8] transition-colors">
               <td class="px-4 py-3">
                 <div class="flex items-center gap-2.5">
@@ -188,12 +199,12 @@
               </td>
             </tr>
           {:else}
-            <tr><td colspan="6" class="px-4 py-8 text-center text-xs text-[#615d59]">No users found</td></tr>
+            <tr><td colspan="6" class="px-4 py-8 text-center text-xs text-[#615d59]">No matching users found</td></tr>
           {/each}
         </tbody>
       </table>
     </div>
-    <Pagination page={filters.page} {total} limit={filters.limit} onPageChange={changePage} />
+    <DataTablePagination {table} class="mt-2" />
   {/if}
 </div>
 

@@ -64,5 +64,5 @@ flutter:
 
   assets:
     - assets/
-    - assets/Olympics_ Table tennis.json
+    - assets/Olympics_Table.json
     - shorebird.yaml
