@@ -12,7 +12,7 @@ class AppConfig {
   static String get baseUrl {
     switch (currentEnvironment) {
       case Environment.prod:
-        return 'https://api.pingpay.app';
+        return 'https://pingpay-flutter.vercel.app';
       case Environment.staging:
         return 'https://staging-api.pingpay.app';
       case Environment.dev:
