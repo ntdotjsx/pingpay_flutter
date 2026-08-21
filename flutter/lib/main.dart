@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'core/theme/theme.dart';
+import 'core/services/shorebird_service.dart';
 import 'app/router/app_router.dart';
 import 'features/auth/providers/auth_provider.dart';
 import 'features/auth/services/line_auth_service.dart';
@@ -26,6 +27,10 @@ class _PingPayAppState extends ConsumerState<PingPayApp> with WidgetsBindingObse
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    // Seamless background OTA patch check with Shorebird
+    Future.microtask(() {
+      ref.read(shorebirdServiceProvider).checkForUpdatesInBackground();
+    });
   }
 
   @override

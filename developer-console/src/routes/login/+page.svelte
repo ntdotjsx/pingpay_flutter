@@ -3,6 +3,7 @@
   import { goto } from '$app/navigation';
   import { page } from '$app/stores';
   import { onMount } from 'svelte';
+  import Icon from '$lib/components/Icon.svelte';
 
   let token = $state('');
   let error = $state('');
@@ -61,8 +62,8 @@
 <div class="flex min-h-screen items-center justify-center bg-[#f6f5f4] p-4">
   <div class="w-full max-w-md rounded-2xl bg-white p-8 shadow-sm border border-[#e6e6e6]">
     <div class="text-center mb-6">
-      <div class="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-[#0075de] text-xl text-white shadow-sm font-bold">
-        💳
+      <div class="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-[#0075de] text-white shadow-sm">
+        <Icon name="card" class="h-6 w-6" />
       </div>
       <h1 class="text-xl font-bold text-[#000000] tracking-tight">PingPay Developer Console</h1>
       <p class="mt-1 text-xs text-[#615d59]">Administration & developer portal</p>
@@ -101,7 +102,8 @@
         disabled={loading}
         class="flex w-full items-center justify-center gap-2 rounded-md border border-[#e6e6e6] bg-white px-4 py-2.5 text-xs font-semibold text-[#31302e] shadow-sm hover:bg-[#f6f5f4] active:scale-[0.99] disabled:opacity-50 transition-colors"
       >
-        <span>⚡ Mock LINE Developer Login</span>
+        <Icon name="zap" class="h-3.5 w-3.5 text-[#dd5b00]" />
+        <span>Mock LINE Developer Login</span>
       </button>
 
       <!-- Advanced JWT Token Input Toggle -->

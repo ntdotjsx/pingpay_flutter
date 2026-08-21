@@ -2,6 +2,7 @@
   import { getDashboard } from '$lib/api/client';
   import { onMount } from 'svelte';
   import StatCard from '$lib/components/StatCard.svelte';
+  import Icon from '$lib/components/Icon.svelte';
 
   let stats = $state<any>(null);
   let loading = $state(true);
@@ -47,19 +48,25 @@
     <!-- Quick Navigation Panels -->
     <div class="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3">
       <a href="/transactions" class="rounded-xl border border-[#e6e6e6] bg-white p-5 shadow-sm hover:border-[#0075de] hover:shadow transition-all group">
-        <div class="text-2xl mb-2">💰</div>
+        <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-[#e8f3fc] text-[#0075de] mb-3 group-hover:scale-105 transition-transform">
+          <Icon name="transactions" class="h-5 w-5" />
+        </div>
         <h3 class="font-bold text-sm text-[#000000] group-hover:text-[#0075de] transition-colors">Transactions Explorer</h3>
         <p class="mt-1 text-xs text-[#615d59] leading-relaxed">Filter financial movements by user, group, date, and transaction type.</p>
       </a>
 
       <a href="/disputes" class="rounded-xl border border-[#e6e6e6] bg-white p-5 shadow-sm hover:border-[#dd5b00] hover:shadow transition-all group">
-        <div class="text-2xl mb-2">⚖️</div>
+        <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-[#fef2e8] text-[#dd5b00] mb-3 group-hover:scale-105 transition-transform">
+          <Icon name="disputes" class="h-5 w-5" />
+        </div>
         <h3 class="font-bold text-sm text-[#000000] group-hover:text-[#dd5b00] transition-colors">Dispute Management</h3>
         <p class="mt-1 text-xs text-[#615d59] leading-relaxed">Review transfer slips, check SlipOK verification hashes, and make determinations.</p>
       </a>
 
       <a href="/suspicious" class="rounded-xl border border-[#e6e6e6] bg-white p-5 shadow-sm hover:border-[#e03e3e] hover:shadow transition-all group">
-        <div class="text-2xl mb-2">🚨</div>
+        <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-[#fde8e8] text-[#e03e3e] mb-3 group-hover:scale-105 transition-transform">
+          <Icon name="suspicious" class="h-5 w-5" />
+        </div>
         <h3 class="font-bold text-sm text-[#000000] group-hover:text-[#e03e3e] transition-colors">Suspicious Activity Logs</h3>
         <p class="mt-1 text-xs text-[#615d59] leading-relaxed">Investigate duplicate slips, multi-account abuse, and unusual write-offs.</p>
       </a>

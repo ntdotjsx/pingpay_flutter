@@ -29,6 +29,7 @@ dependencies:
   thai_promptpay: ^0.3.0
   flutter_hot_toast: ^0.0.3
   lottie: ^2.7.0
+  shorebird_code_push: ^2.0.7
 
 dev_dependencies:
   flutter_test:
@@ -64,3 +65,4 @@ flutter:
   assets:
     - assets/
     - assets/Olympics_ Table tennis.json
+    - shorebird.yaml

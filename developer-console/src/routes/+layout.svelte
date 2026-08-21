@@ -4,21 +4,22 @@
   import { isAuthenticated, clearToken, getMe } from '$lib/api/client';
   import { goto } from '$app/navigation';
   import { onMount } from 'svelte';
+  import Icon from '$lib/components/Icon.svelte';
 
   let { children } = $props();
   let mounted = $state(false);
   let authenticated = $state(false);
   let currentUser = $state<any>(null);
 
-  const navItems = [
-    { label: 'Dashboard', href: '/', icon: '📊' },
-    { label: 'Transactions', href: '/transactions', icon: '💰' },
-    { label: 'Activity Logs', href: '/activity-logs', icon: '📋' },
-    { label: 'Suspicious', href: '/suspicious', icon: '🚨' },
-    { label: 'Users', href: '/users', icon: '👥' },
-    { label: 'Disputes', href: '/disputes', icon: '⚖️' },
-    { label: 'Audit Log', href: '/audit-logs', icon: '🔍' },
-    { label: 'Maintenance', href: '/maintenance', icon: '🧹' },
+  const navItems: { label: string; href: string; icon: 'dashboard' | 'transactions' | 'activity' | 'suspicious' | 'users' | 'disputes' | 'audit' | 'maintenance' }[] = [
+    { label: 'Dashboard', href: '/', icon: 'dashboard' },
+    { label: 'Transactions', href: '/transactions', icon: 'transactions' },
+    { label: 'Activity Logs', href: '/activity-logs', icon: 'activity' },
+    { label: 'Suspicious', href: '/suspicious', icon: 'suspicious' },
+    { label: 'Users', href: '/users', icon: 'users' },
+    { label: 'Disputes', href: '/disputes', icon: 'disputes' },
+    { label: 'Audit Log', href: '/audit-logs', icon: 'audit' },
+    { label: 'Maintenance', href: '/maintenance', icon: 'maintenance' },
   ];
 
   function checkAuth() {
@@ -77,8 +78,8 @@
     <aside class="flex w-64 flex-col border-r border-[#e6e6e6] bg-[#fbfbfa] text-[#000000]">
       <!-- Header / Brand -->
       <div class="flex h-14 items-center gap-3 border-b border-[#e6e6e6] px-5 bg-white">
-        <div class="flex h-7 w-7 items-center justify-center rounded-[6px] bg-[#0075de] text-sm text-white shadow-sm font-bold">
-          💳
+        <div class="flex h-7 w-7 items-center justify-center rounded-[6px] bg-[#0075de] text-white shadow-sm">
+          <Icon name="card" class="h-4 w-4" />
         </div>
         <div class="min-w-0">
           <h1 class="text-sm font-bold tracking-tight text-[#000000]">PingPay</h1>
@@ -93,7 +94,7 @@
             href={item.href}
             class="flex items-center gap-2.5 rounded-[5px] px-2.5 py-1.5 text-xs font-medium transition-colors {isActive(item.href, $page.url.pathname) ? 'bg-[#e8f3fc] text-[#0075de] font-semibold' : 'text-[#31302e] hover:bg-[#eae8e5]'}"
           >
-            <span class="text-sm">{item.icon}</span>
+            <Icon name={item.icon} class="h-4 w-4 flex-shrink-0" />
             <span>{item.label}</span>
           </a>
         {/each}
@@ -127,7 +128,7 @@
           onclick={logout}
           class="flex w-full items-center gap-2 rounded-[5px] px-2.5 py-1.5 text-left text-xs font-medium text-[#c53030] hover:bg-[#fde8e8] transition-colors"
         >
-          <span>🚪</span>
+          <Icon name="logout" class="h-3.5 w-3.5" />
           <span>Sign Out</span>
         </button>
       </div>
