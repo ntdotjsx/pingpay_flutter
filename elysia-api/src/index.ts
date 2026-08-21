@@ -42,15 +42,22 @@ export const app = new Elysia()
         version: "1.0.0"
       }
     }
-  }))
-  .listen(env.PORT);
+  }));
 
-// Start background notification worker for sending real LINE Messaging API notifications
-import { defaultNotificationWorkerService } from "./modules/notifications/notification-worker.service";
-defaultNotificationWorkerService.start(3000);
+// In standard server environments (Non-Vercel Serverless), listen to port & run background worker
+if (process.env.VERCEL !== "1") {
+  app.listen(env.PORT);
+  
+  // Start background notification worker
+  import("./modules/notifications/notification-worker.service").then(({ defaultNotificationWorkerService }) => {
+    defaultNotificationWorkerService.start(3000);
+  });
 
+  console.log(
+    `🦊 Elysia is running at ${app.server?.hostname}:${app.server?.port}`
+  );
+}
+
+export default app;
 export type App = typeof app;
 
-console.log(
-  `🦊 Elysia is running at ${app.server?.hostname}:${app.server?.port} (Notification worker active)`
-);
