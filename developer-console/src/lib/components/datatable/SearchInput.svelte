@@ -11,7 +11,7 @@
     class?: string;
   } = $props();
 
-  const search = table.createSearch();
+  const search = $derived.by(() => table.createSearch());
 </script>
 
 <div class="relative {className}">
@@ -30,6 +30,7 @@
   {#if search.value}
     <button
       type="button"
+      aria-label="Clear search"
       onclick={() => { search.value = ''; search.set(); }}
       class="absolute inset-y-0 right-0 flex items-center pr-2 text-[#a39e98] hover:text-[#000000]"
     >

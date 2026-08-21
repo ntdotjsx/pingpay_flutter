@@ -14,7 +14,7 @@
     class?: string;
   } = $props();
 
-  const sort = table.createSort(field as any);
+  const sort = $derived.by(() => table.createSort(field as any));
 </script>
 
 <th

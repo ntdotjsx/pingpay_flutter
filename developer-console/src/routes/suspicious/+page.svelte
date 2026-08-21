@@ -1,10 +1,11 @@
 <script lang="ts">
   import { getSuspiciousLogs, flagSuspicious, clearAllSuspiciousLogs, deleteSuspiciousLog } from '$lib/api/client';
   import { onMount } from 'svelte';
+  import { TableHandler, ThSort, SearchInput, DataTablePagination, ExportCsvButton } from '$lib/components/datatable';
   import StatusBadge from '$lib/components/StatusBadge.svelte';
-  import Pagination from '$lib/components/Pagination.svelte';
+  import LoadingLottie from '$lib/components/LoadingLottie.svelte';
 
-  let rows = $state<any[]>([]);
+  let rawLogs = $state<any[]>([]);
   let total = $state(0);
   let loading = $state(true);
   let error = $state('');
@@ -12,13 +13,14 @@
   let showForm = $state(false);
   let selectedLog = $state<any>(null);
 
+  const table = new TableHandler<any>([], { rowsPerPage: 20 });
+
   let filters = $state({
     userId: '',
     type: '',
     dateFrom: '',
     dateTo: '',
-    page: 1,
-    limit: 20,
+    limit: 100,
   });
 
   let newFlag = $state({
@@ -32,8 +34,9 @@
     error = '';
     try {
       const res = await getSuspiciousLogs(filters);
-      rows = res.data.rows;
+      rawLogs = res.data.rows;
       total = res.data.total;
+      table.setRows(rawLogs);
     } catch (e: any) {
       error = e.message;
     } finally {
@@ -44,12 +47,6 @@
   onMount(load);
 
   function applyFilters() {
-    filters.page = 1;
-    load();
-  }
-
-  function changePage(p: number) {
-    filters.page = p;
     load();
   }
 
@@ -100,9 +97,10 @@
   <div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
     <div>
       <h1 class="text-2xl font-bold tracking-tight text-[#000000]">Suspicious Activity Logs</h1>
-      <p class="mt-0.5 text-xs text-[#615d59]">Security audit trail retained permanently for dispute investigations and fraud analysis.</p>
+      <p class="mt-0.5 text-xs text-[#615d59]">Security audit trail retained permanently for dispute investigations and fraud analysis with interactive DataTables.</p>
     </div>
     <div class="flex flex-wrap items-center gap-2">
+      <ExportCsvButton {table} filename="suspicious-logs.csv" />
       <button onclick={() => showForm = !showForm} class="rounded-md bg-[#0075de] px-3.5 py-1.5 text-xs font-medium text-white shadow-sm hover:bg-[#005bab] transition-colors">
         {showForm ? 'Cancel' : '+ Flag Suspicious Activity'}
       </button>
@@ -185,29 +183,34 @@
       </div>
     </div>
     <div class="mt-4 flex items-center justify-between border-t border-[#e6e6e6] pt-3">
-      <button onclick={applyFilters} class="rounded-md bg-[#0075de] px-4 py-1.5 text-xs font-medium text-white hover:bg-[#005bab] transition-colors">Filter</button>
-      <span class="text-xs text-[#615d59] font-mono">Showing {rows.length} of {total} records</span>
+      <button onclick={applyFilters} class="rounded-md bg-[#0075de] px-4 py-1.5 text-xs font-medium text-white hover:bg-[#005bab] transition-colors">Apply Filters</button>
+      <span class="text-xs text-[#615d59] font-mono">Backend Total: {total} records</span>
     </div>
   </div>
 
+  <div class="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+    <SearchInput {table} placeholder="Search threat logs by type, user, description..." class="w-full sm:w-80" />
+    <span class="text-xs text-[#615d59] font-mono">Filtered: {table.rowCount.total} records</span>
+  </div>
+
   {#if loading}
-    <div class="rounded-xl border border-[#e6e6e6] bg-white p-8 text-center shadow-sm">
-      <p class="text-xs text-[#615d59]">Loading suspicious activity logs...</p>
+    <div class="rounded-xl border border-[#e6e6e6] bg-white shadow-sm">
+      <LoadingLottie text="Loading suspicious activity logs..." size={150} />
     </div>
   {:else}
     <div class="overflow-x-auto rounded-xl border border-[#e6e6e6] bg-white shadow-sm">
       <table class="min-w-full divide-y divide-[#e6e6e6]">
         <thead class="bg-[#f6f5f4]">
           <tr>
-            <th class="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-[#615d59]">Threat Type</th>
-            <th class="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-[#615d59]">User</th>
-            <th class="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-[#615d59]">Description</th>
-            <th class="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-[#615d59]">Recorded Date</th>
+            <ThSort {table} field="type">Threat Type</ThSort>
+            <ThSort {table} field={(row) => row.userName || row.userCode || row.userId || ''}>User</ThSort>
+            <ThSort {table} field="description">Description</ThSort>
+            <ThSort {table} field="createdAt">Recorded Date</ThSort>
             <th class="px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wider text-[#615d59]">Actions</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-[#e6e6e6] bg-white">
-          {#each rows as row}
+          {#each table.rows as row}
             <tr class="hover:bg-[#faf9f8] transition-colors">
               <td class="px-4 py-3"><StatusBadge status={row.type} /></td>
               <td class="px-4 py-3 text-xs">
@@ -238,12 +241,12 @@
               </td>
             </tr>
           {:else}
-            <tr><td colspan="5" class="px-4 py-8 text-center text-xs text-[#615d59]">No suspicious activity logs found</td></tr>
+            <tr><td colspan="5" class="px-4 py-8 text-center text-xs text-[#615d59]">No matching suspicious logs found</td></tr>
           {/each}
         </tbody>
       </table>
     </div>
-    <Pagination page={filters.page} {total} limit={filters.limit} onPageChange={changePage} />
+    <DataTablePagination {table} class="mt-2" />
   {/if}
 </div>
 

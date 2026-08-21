@@ -1,23 +1,25 @@
 <script lang="ts">
   import { getActivityLogs, purgeActivityLogs, clearAllActivityLogs, deleteActivityLog } from '$lib/api/client';
   import { onMount } from 'svelte';
-  import Pagination from '$lib/components/Pagination.svelte';
+  import { TableHandler, ThSort, SearchInput, DataTablePagination, ExportCsvButton } from '$lib/components/datatable';
   import Icon from '$lib/components/Icon.svelte';
+  import LoadingLottie from '$lib/components/LoadingLottie.svelte';
 
-  let rows = $state<any[]>([]);
+  let rawLogs = $state<any[]>([]);
   let total = $state(0);
   let loading = $state(true);
   let error = $state('');
   let actionMessage = $state('');
   let selectedLog = $state<any>(null);
 
+  const table = new TableHandler<any>([], { rowsPerPage: 20 });
+
   let filters = $state({
     userId: '',
     action: '',
     dateFrom: '',
     dateTo: '',
-    page: 1,
-    limit: 20,
+    limit: 100,
   });
 
   async function load() {
@@ -25,8 +27,9 @@
     error = '';
     try {
       const res = await getActivityLogs(filters);
-      rows = res.data.rows;
+      rawLogs = res.data.rows;
       total = res.data.total;
+      table.setRows(rawLogs);
     } catch (e: any) {
       error = e.message;
     } finally {
@@ -37,12 +40,6 @@
   onMount(load);
 
   function applyFilters() {
-    filters.page = 1;
-    load();
-  }
-
-  function changePage(p: number) {
-    filters.page = p;
     load();
   }
 
@@ -84,9 +81,10 @@
   <div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
     <div>
       <h1 class="text-2xl font-bold tracking-tight text-[#000000]">Activity Logs</h1>
-      <p class="mt-0.5 text-xs text-[#615d59]">Per-user and system activity tracking with automated 1-month retention policy.</p>
+      <p class="mt-0.5 text-xs text-[#615d59]">Per-user and system activity tracking with automated 1-month retention policy and interactive DataTables.</p>
     </div>
     <div class="flex flex-wrap items-center gap-2">
+      <ExportCsvButton {table} filename="activity-logs.csv" />
       <a href="/suspicious" class="rounded-md border border-[#e6e6e6] bg-white px-3 py-1.5 text-xs font-semibold text-[#0075de] hover:bg-[#e8f3fc] transition-colors">
         Suspicious Logs &rarr;
       </a>
@@ -143,29 +141,34 @@
       </div>
     </div>
     <div class="mt-4 flex items-center justify-between border-t border-[#e6e6e6] pt-3">
-      <button onclick={applyFilters} class="rounded-md bg-[#0075de] px-4 py-1.5 text-xs font-medium text-white hover:bg-[#005bab] transition-colors">Filter</button>
-      <span class="text-xs text-[#615d59] font-mono">Showing {rows.length} of {total} logs</span>
+      <button onclick={applyFilters} class="rounded-md bg-[#0075de] px-4 py-1.5 text-xs font-medium text-white hover:bg-[#005bab] transition-colors">Apply Filters</button>
+      <span class="text-xs text-[#615d59] font-mono">Backend Total: {total} logs</span>
     </div>
   </div>
 
+  <div class="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+    <SearchInput {table} placeholder="Search activity by user, action, metadata..." class="w-full sm:w-80" />
+    <span class="text-xs text-[#615d59] font-mono">Filtered: {table.rowCount.total} logs</span>
+  </div>
+
   {#if loading}
-    <div class="rounded-xl border border-[#e6e6e6] bg-white p-8 text-center shadow-sm">
-      <p class="text-xs text-[#615d59]">Loading activity logs...</p>
+    <div class="rounded-xl border border-[#e6e6e6] bg-white shadow-sm">
+      <LoadingLottie text="Loading activity logs..." size={150} />
     </div>
   {:else}
     <div class="overflow-x-auto rounded-xl border border-[#e6e6e6] bg-white shadow-sm">
       <table class="min-w-full divide-y divide-[#e6e6e6]">
         <thead class="bg-[#f6f5f4]">
           <tr>
-            <th class="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-[#615d59]">User</th>
-            <th class="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-[#615d59]">Action</th>
+            <ThSort {table} field={(row) => row.userName || row.userCode || row.userId || ''}>User</ThSort>
+            <ThSort {table} field="action">Action</ThSort>
             <th class="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-[#615d59]">Metadata</th>
-            <th class="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-[#615d59]">Timestamp</th>
+            <ThSort {table} field="createdAt">Timestamp</ThSort>
             <th class="px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wider text-[#615d59]">Actions</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-[#e6e6e6] bg-white">
-          {#each rows as row}
+          {#each table.rows as row}
             <tr class="hover:bg-[#faf9f8] transition-colors">
               <td class="px-4 py-3 text-xs font-medium text-[#000000]">
                 {row.userName || row.userCode || (row.userId ? row.userId.slice(0, 8) + '...' : 'System')}
@@ -196,12 +199,12 @@
               </td>
             </tr>
           {:else}
-            <tr><td colspan="5" class="px-4 py-8 text-center text-xs text-[#615d59]">No activity logs found</td></tr>
+            <tr><td colspan="5" class="px-4 py-8 text-center text-xs text-[#615d59]">No matching activity logs found</td></tr>
           {/each}
         </tbody>
       </table>
     </div>
-    <Pagination page={filters.page} {total} limit={filters.limit} onPageChange={changePage} />
+    <DataTablePagination {table} class="mt-2" />
   {/if}
 </div>
 

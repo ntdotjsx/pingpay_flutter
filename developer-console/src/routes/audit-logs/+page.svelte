@@ -1,19 +1,21 @@
 <script lang="ts">
   import { getAuditLogs, clearAllAuditLogs } from '$lib/api/client';
   import { onMount } from 'svelte';
+  import { TableHandler, ThSort, SearchInput, DataTablePagination, ExportCsvButton } from '$lib/components/datatable';
   import StatusBadge from '$lib/components/StatusBadge.svelte';
-  import Pagination from '$lib/components/Pagination.svelte';
+  import LoadingLottie from '$lib/components/LoadingLottie.svelte';
 
-  let rows = $state<any[]>([]);
+  let rawLogs = $state<any[]>([]);
   let total = $state(0);
   let loading = $state(true);
   let error = $state('');
   let actionMessage = $state('');
 
+  const table = new TableHandler<any>([], { rowsPerPage: 20 });
+
   let filters = $state({
     adminId: '',
-    page: 1,
-    limit: 20,
+    limit: 100,
   });
 
   async function load() {
@@ -21,8 +23,9 @@
     error = '';
     try {
       const res = await getAuditLogs(filters);
-      rows = res.data.rows;
+      rawLogs = res.data.rows;
       total = res.data.total;
+      table.setRows(rawLogs);
     } catch (e: any) {
       error = e.message;
     } finally {
@@ -33,12 +36,6 @@
   onMount(load);
 
   function applyFilters() {
-    filters.page = 1;
-    load();
-  }
-
-  function changePage(p: number) {
-    filters.page = p;
     load();
   }
 
@@ -58,11 +55,14 @@
   <div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
     <div>
       <h1 class="text-2xl font-bold tracking-tight text-[#000000]">Admin Audit Log</h1>
-      <p class="mt-0.5 text-xs text-[#615d59]">Record of administrative and developer actions performed across PingPay.</p>
+      <p class="mt-0.5 text-xs text-[#615d59]">Record of administrative and developer actions with interactive DataTables sorting and search.</p>
     </div>
-    <button onclick={handleClearAll} class="rounded-md bg-[#c53030] px-3.5 py-1.5 text-xs font-medium text-white shadow-sm hover:bg-[#a82525] transition-colors">
-      Clear All Audit Logs
-    </button>
+    <div class="flex items-center gap-2">
+      <ExportCsvButton {table} filename="admin-audit-logs.csv" />
+      <button onclick={handleClearAll} class="rounded-md bg-[#c53030] px-3.5 py-1.5 text-xs font-medium text-white shadow-sm hover:bg-[#a82525] transition-colors">
+        Clear All Audit Logs
+      </button>
+    </div>
   </div>
 
   {#if actionMessage}
@@ -91,24 +91,29 @@
     </div>
   </div>
 
+  <div class="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+    <SearchInput {table} placeholder="Search logs by action, admin, target user, reason..." class="w-full sm:w-80" />
+    <span class="text-xs text-[#615d59] font-mono">Filtered: {table.rowCount.total} logs</span>
+  </div>
+
   {#if loading}
-    <div class="rounded-xl border border-[#e6e6e6] bg-white p-8 text-center shadow-sm">
-      <p class="text-xs text-[#615d59]">Loading audit logs...</p>
+    <div class="rounded-xl border border-[#e6e6e6] bg-white shadow-sm">
+      <LoadingLottie text="Loading audit logs..." size={150} />
     </div>
   {:else}
     <div class="overflow-x-auto rounded-xl border border-[#e6e6e6] bg-white shadow-sm">
       <table class="min-w-full divide-y divide-[#e6e6e6]">
         <thead class="bg-[#f6f5f4]">
           <tr>
-            <th class="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-[#615d59]">Action</th>
-            <th class="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-[#615d59]">Admin</th>
-            <th class="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-[#615d59]">Target User</th>
-            <th class="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-[#615d59]">Reason</th>
-            <th class="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-[#615d59]">Date</th>
+            <ThSort {table} field="actionType">Action</ThSort>
+            <ThSort {table} field={(row) => row.adminName || row.adminCode || row.adminId || ''}>Admin</ThSort>
+            <ThSort {table} field="targetUserId">Target User</ThSort>
+            <ThSort {table} field="reason">Reason</ThSort>
+            <ThSort {table} field="createdAt">Date</ThSort>
           </tr>
         </thead>
         <tbody class="divide-y divide-[#e6e6e6] bg-white">
-          {#each rows as log}
+          {#each table.rows as log}
             <tr class="hover:bg-[#faf9f8] transition-colors">
               <td class="px-4 py-3"><StatusBadge status={log.actionType} /></td>
               <td class="px-4 py-3 text-xs font-semibold text-[#000000]">{log.adminName || log.adminCode || (log.adminId ? log.adminId.slice(0, 8) : '-')}</td>
@@ -117,11 +122,11 @@
               <td class="px-4 py-3 text-xs text-[#615d59]">{new Date(log.createdAt).toLocaleString()}</td>
             </tr>
           {:else}
-            <tr><td colspan="5" class="px-4 py-8 text-center text-xs text-[#615d59]">No audit logs found</td></tr>
+            <tr><td colspan="5" class="px-4 py-8 text-center text-xs text-[#615d59]">No matching audit logs found</td></tr>
           {/each}
         </tbody>
       </table>
     </div>
-    <Pagination page={filters.page} {total} limit={filters.limit} onPageChange={changePage} />
+    <DataTablePagination {table} class="mt-2" />
   {/if}
 </div>

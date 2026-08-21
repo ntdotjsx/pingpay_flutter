@@ -1,7 +1,7 @@
 <script lang="ts">
   import { getTransactions } from '$lib/api/client';
   import { onMount } from 'svelte';
-  import { TableHandler } from '@vincjo/datatables';
+  import { TableHandler } from '$lib/components/datatable';
   import StatusBadge from '$lib/components/StatusBadge.svelte';
   import ThSort from '$lib/components/datatable/ThSort.svelte';
   import SearchInput from '$lib/components/datatable/SearchInput.svelte';

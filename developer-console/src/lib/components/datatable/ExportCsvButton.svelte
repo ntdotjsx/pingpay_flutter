@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { TableHandler } from '@vincjo/datatables';
+  import type { TableHandler } from './TableHandler.svelte';
 
   let {
     table,
