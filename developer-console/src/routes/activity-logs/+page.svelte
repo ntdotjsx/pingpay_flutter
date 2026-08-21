@@ -2,7 +2,7 @@
   import { getActivityLogs, purgeActivityLogs, clearAllActivityLogs, deleteActivityLog } from '$lib/api/client';
   import { onMount } from 'svelte';
   import Pagination from '$lib/components/Pagination.svelte';
-  import { Info } from '@lucide/svelte';
+  import Icon from '$lib/components/Icon.svelte';
 
   let rows = $state<any[]>([]);
   let total = $state(0);
@@ -102,7 +102,7 @@
   <!-- Retention Policy Notice -->
   <div class="mb-6 rounded-xl border border-[#e6e6e6] bg-white p-4 shadow-sm">
     <div class="flex items-center gap-2.5">
-      <Info class="h-4 w-4 text-[#0075de] flex-shrink-0" />
+      <Icon name="info" class="h-4 w-4 text-[#0075de] flex-shrink-0" />
       <div class="text-xs text-[#615d59]">
         <span class="font-semibold text-[#000000]">Retention Policy:</span> Regular activity logs auto-purge after 1 month. Flagged & suspicious logs are kept indefinitely.
       </div>

@@ -7,7 +7,7 @@
     getDashboard,
   } from '$lib/api/client';
   import { onMount } from 'svelte';
-  import { Activity, ShieldAlert, FileSearch, Zap, Brush, Trash2 } from '@lucide/svelte';
+  import Icon from '$lib/components/Icon.svelte';
 
   let stats = $state<any>(null);
   let loading = $state(true);
@@ -33,8 +33,6 @@
     let confirmText = '';
     if (action === 'purge_old') {
       confirmText = 'Purge regular activity logs older than 1 month? Suspicious logs will NOT be affected.';
-    } else if (action === 'clear_activity') {
-      confirmText = 'WARNING: Clear ALL regular activity logs? This will delete all user activity history.';
     } else if (action === 'clear_activity') {
       confirmText = 'WARNING: Clear ALL regular activity logs? This will delete all user activity history.';
     } else if (action === 'clear_suspicious') {
@@ -103,7 +101,7 @@
     <div class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-sm">
       <div class="flex items-center gap-3 mb-3">
         <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-[#e8f3fc] text-[#0075de]">
-          <Activity class="h-5 w-5" />
+          <Icon name="activity" class="h-5 w-5" />
         </div>
         <div>
           <h2 class="text-sm font-bold text-[#000000]">Activity Logs Cleanup</h2>
@@ -119,7 +117,7 @@
           disabled={actionLoading}
           class="flex items-center justify-center gap-2 rounded-md border border-[#e6e6e6] bg-white px-4 py-2 text-xs font-medium text-[#dd5b00] shadow-sm hover:bg-[#fef2e8] active:scale-[0.99] disabled:opacity-50 transition-colors"
         >
-          <Brush class="h-3.5 w-3.5" />
+          <Icon name="brush" class="h-3.5 w-3.5" />
           <span>Purge Old Logs (&gt;1 Month)</span>
         </button>
         <button
@@ -127,7 +125,7 @@
           disabled={actionLoading}
           class="flex items-center justify-center gap-2 rounded-md bg-[#fde8e8] px-4 py-2 text-xs font-medium text-[#c53030] hover:bg-[#fbd5d5] active:scale-[0.99] disabled:opacity-50 transition-colors"
         >
-          <Trash2 class="h-3.5 w-3.5" />
+          <Icon name="trash" class="h-3.5 w-3.5" />
           <span>Clear ALL Regular Activity Logs</span>
         </button>
       </div>
@@ -137,7 +135,7 @@
     <div class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-sm">
       <div class="flex items-center gap-3 mb-3">
         <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-[#fde8e8] text-[#c53030]">
-          <ShieldAlert class="h-5 w-5" />
+          <Icon name="suspicious" class="h-5 w-5" />
         </div>
         <div>
           <h2 class="text-sm font-bold text-[#000000]">Suspicious Threat Logs</h2>
@@ -159,7 +157,7 @@
           disabled={actionLoading}
           class="flex items-center justify-center gap-2 rounded-md bg-[#c53030] px-4 py-2 text-xs font-medium text-white shadow-sm hover:bg-[#a82525] active:scale-[0.99] disabled:opacity-50 transition-colors"
         >
-          <Trash2 class="h-3.5 w-3.5" />
+          <Icon name="trash" class="h-3.5 w-3.5" />
           <span>Clear ALL Suspicious Logs</span>
         </button>
       </div>
@@ -169,7 +167,7 @@
     <div class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-sm">
       <div class="flex items-center gap-3 mb-3">
         <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-[#f5eefc] text-[#6e2fb5]">
-          <FileSearch class="h-5 w-5" />
+          <Icon name="audit" class="h-5 w-5" />
         </div>
         <div>
           <h2 class="text-sm font-bold text-[#000000]">Admin Audit Trail</h2>
@@ -191,7 +189,7 @@
           disabled={actionLoading}
           class="flex items-center justify-center gap-2 rounded-md bg-[#c53030] px-4 py-2 text-xs font-medium text-white shadow-sm hover:bg-[#a82525] active:scale-[0.99] disabled:opacity-50 transition-colors"
         >
-          <Trash2 class="h-3.5 w-3.5" />
+          <Icon name="trash" class="h-3.5 w-3.5" />
           <span>Clear ALL Admin Audit Logs</span>
         </button>
       </div>
@@ -202,7 +200,7 @@
       <div>
         <div class="flex items-center gap-3 mb-3">
           <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-[#e8f8eb] text-[#138029]">
-            <Zap class="h-5 w-5" />
+            <Icon name="zap" class="h-5 w-5" />
           </div>
           <div>
             <h2 class="text-sm font-bold text-[#000000]">Quick Shortcuts</h2>
