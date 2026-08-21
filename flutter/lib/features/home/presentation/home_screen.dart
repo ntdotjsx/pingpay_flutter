@@ -14,6 +14,7 @@ import '../../rewards/providers/reward_providers.dart';
 import '../providers/pull_sensitivity_provider.dart';
 import 'widgets/line_calendar_widget.dart';
 import 'widgets/daily_timeline_section.dart';
+import 'widgets/global_search_sheet.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -736,38 +737,41 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               // Search Bar + Coins + Notification Row
               Row(
                 children: [
-                  // Search Input Squircle Pill
+                  // Search Input Squircle Pill (Clickable)
                   Expanded(
-                    child: Container(
-                      height: 42,
-                      decoration: ShapeDecoration(
-                        color: Colors.white.withValues(alpha: 0.18),
-                        shape: const SmoothRectangleBorder(
-                          borderRadius: SmoothBorderRadius.all(
-                            SmoothRadius(
-                              cornerRadius: 21,
-                              cornerSmoothing: 1.0,
+                    child: GestureDetector(
+                      onTap: () => GlobalSearchSheet.show(context),
+                      child: Container(
+                        height: 42,
+                        decoration: ShapeDecoration(
+                          color: Colors.white.withValues(alpha: 0.18),
+                          shape: const SmoothRectangleBorder(
+                            borderRadius: SmoothBorderRadius.all(
+                              SmoothRadius(
+                                cornerRadius: 21,
+                                cornerSmoothing: 1.0,
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                      padding: const EdgeInsets.symmetric(horizontal: 14),
-                      child: const Row(
-                        children: [
-                          Icon(
-                            Icons.search_rounded,
-                            size: 20,
-                            color: Colors.white,
-                          ),
-                          SizedBox(width: 8),
-                          Text(
-                            'ค้นหาเพื่อน หรือ รายการบิล',
-                            style: TextStyle(
-                              color: Colors.white70,
-                              fontSize: 14,
+                        padding: const EdgeInsets.symmetric(horizontal: 14),
+                        child: const Row(
+                          children: [
+                            Icon(
+                              Icons.search_rounded,
+                              size: 20,
+                              color: Colors.white,
                             ),
-                          ),
-                        ],
+                            SizedBox(width: 8),
+                            Text(
+                              'ค้นหาเพื่อน หรือ รายการบิล',
+                              style: TextStyle(
+                                color: Colors.white70,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
