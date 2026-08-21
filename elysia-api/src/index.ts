@@ -44,20 +44,20 @@ export const app = new Elysia()
     }
   }));
 
-// In standard server environments (Non-Vercel Serverless), listen to port & run background worker
-if (process.env.VERCEL !== "1") {
-  app.listen(env.PORT);
-  
-  // Start background notification worker
-  import("./modules/notifications/notification-worker.service").then(({ defaultNotificationWorkerService }) => {
-    defaultNotificationWorkerService.start(3000);
-  });
+// Start listening and run background notification worker
+app.listen({
+  port: env.PORT,
+  hostname: "0.0.0.0",
+});
 
-  console.log(
-    `🦊 Elysia is running at ${app.server?.hostname}:${app.server?.port}`
-  );
-}
+import("./modules/notifications/notification-worker.service").then(({ defaultNotificationWorkerService }) => {
+  defaultNotificationWorkerService.start(3000);
+});
 
-export default app;
+console.log(
+  `🦊 Elysia is running at http://0.0.0.0:${env.PORT}`
+);
+
 export type App = typeof app;
+
 

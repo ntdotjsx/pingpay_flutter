@@ -25,7 +25,7 @@ dependencies:
   figma_squircle: ^0.6.3
   qr_flutter: ^4.1.0
   barcode_widget: ^2.0.4
-  image_picker: ^1.2.3
+  image_picker: ^1.1.2
   thai_promptpay: ^0.3.0
   flutter_hot_toast: ^0.0.3
   lottie: ^2.7.0
