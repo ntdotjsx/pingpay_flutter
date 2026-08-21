@@ -47,10 +47,6 @@ flutter:
   # the material Icons class.
   uses-material-design: true
 
-  # Disable Swift Package Manager to use CocoaPods exclusively (fixes LineSDK iOS 15.0 compatibility)
-  experimental:
-    swift-package-manager: false
-
   fonts:
     - family: LINESeedSansTH
       fonts:

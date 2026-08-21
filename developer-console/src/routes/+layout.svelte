@@ -5,6 +5,7 @@
   import { goto } from '$app/navigation';
   import { onMount } from 'svelte';
   import Icon from '$lib/components/Icon.svelte';
+  import LoadingLottie from '$lib/components/LoadingLottie.svelte';
 
   let { children } = $props();
   let mounted = $state(false);
@@ -64,11 +65,11 @@
 
 {#if !mounted}
   <div class="flex h-screen items-center justify-center bg-[#f6f5f4]">
-    <p class="text-xs font-medium text-[#615d59]">Loading console...</p>
+    <LoadingLottie text="Loading PingPay Console..." size={180} />
   </div>
 {:else if !authenticated && $page.url.pathname !== '/login'}
   <div class="flex h-screen items-center justify-center bg-[#f6f5f4]">
-    <p class="text-xs font-medium text-[#615d59]">Redirecting to login...</p>
+    <LoadingLottie text="Redirecting to login..." size={180} />
   </div>
 {:else if $page.url.pathname === '/login'}
   {@render children()}
