@@ -1252,18 +1252,57 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               SizedBox(
                 width: double.infinity,
                 height: 48,
-                child: ElevatedButton(
-                  onPressed: () {
-                    Navigator.pop(ctx);
-                    AppToast.success(context, 'บันทึกที่อยู่จัดส่งเรียบร้อยแล้ว');
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFFF5000),
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                  ),
-                  child: const Text('บันทึกข้อมูล', style: TextStyle(fontWeight: FontWeight.bold)),
-                ),
+                child: () {
+                  bool isSaving = false;
+                  return StatefulBuilder(
+                    builder: (ctx, setBtnState) {
+                      return ElevatedButton(
+                        onPressed: isSaving ? null : () async {
+                          final name = nameCtrl.text.trim();
+                          final phone = phoneCtrl.text.trim();
+                          final addr = addrCtrl.text.trim();
+
+                          if (addr.isEmpty) {
+                            AppToast.error(context, 'กรุณากรอกที่อยู่จัดส่ง');
+                            return;
+                          }
+
+                          setBtnState(() => isSaving = true);
+                          try {
+                            await ref.read(authStateProvider.notifier).updateShippingAddress(
+                              recipientName: name.isNotEmpty ? name : (user?.displayName ?? 'ผู้รับ'),
+                              phone: phone.isNotEmpty ? phone : (user?.phoneNumber ?? ''),
+                              address: addr,
+                            );
+                            if (ctx.mounted) {
+                              Navigator.pop(ctx);
+                            }
+                            if (context.mounted) {
+                              AppToast.success(context, 'บันทึกที่อยู่จัดส่งของรางวัลเรียบร้อยแล้ว');
+                            }
+                          } catch (e) {
+                            setBtnState(() => isSaving = false);
+                            if (context.mounted) {
+                              AppToast.error(context, 'บันทึกไม่สำเร็จ: $e');
+                            }
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFFF5000),
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        ),
+                        child: isSaving
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                              )
+                            : const Text('บันทึกข้อมูล', style: TextStyle(fontWeight: FontWeight.bold)),
+                      );
+                    },
+                  );
+                }(),
               ),
             ],
           ),

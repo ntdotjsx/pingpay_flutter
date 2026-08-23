@@ -92,6 +92,13 @@ mock.module("../src/db/index.ts", () => {
                 status: "pending",
                 removedAt: null
               })
+            },
+            users: {
+              findFirst: mock().mockResolvedValue({
+                id: "test-user-id",
+                displayName: "Test User",
+                userCode: "USR-MYCODE",
+              })
             }
           },
           insert: mock().mockReturnValue({

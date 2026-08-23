@@ -109,24 +109,24 @@ class RealtimeController {
   }
 
   void _refreshFriends(RealtimeEvent event) {
-    _ref.invalidate(friendsListProvider);
-    _ref.invalidate(incomingFriendRequestsProvider);
-    _ref.invalidate(outgoingFriendRequestsProvider);
+    _ref.refresh(friendsListProvider);
+    _ref.refresh(incomingFriendRequestsProvider);
+    _ref.refresh(outgoingFriendRequestsProvider);
 
     final friendshipId = event.data['friendshipId']?.toString();
     if (friendshipId != null && friendshipId.isNotEmpty) {
-      _ref.invalidate(friendDetailProvider(friendshipId));
-      _ref.invalidate(removalCheckProvider(friendshipId));
+      _ref.refresh(friendDetailProvider(friendshipId));
+      _ref.refresh(removalCheckProvider(friendshipId));
     }
   }
 
   void _refreshBillState(RealtimeEvent event) {
     final billId = event.resourceId ?? event.data['billId']?.toString();
-    _ref.invalidate(myBillsProvider);
+    _ref.refresh(myBillsProvider);
 
     if (billId != null && billId.isNotEmpty) {
-      _ref.invalidate(billDetailProvider(billId));
-      _ref.invalidate(billPaymentHistoryProvider(billId));
+      _ref.refresh(billDetailProvider(billId));
+      _ref.refresh(billPaymentHistoryProvider(billId));
     }
 
     _refreshPaymentSummaries();
@@ -137,13 +137,14 @@ class RealtimeController {
     _ref
         .read(userReceivablesProvider.notifier)
         .loadReceivables(showLoading: false);
+    _ref.read(authStateProvider.notifier).refreshUser();
   }
 
   void _recoverMissedState() {
-    _ref.invalidate(friendsListProvider);
-    _ref.invalidate(incomingFriendRequestsProvider);
-    _ref.invalidate(outgoingFriendRequestsProvider);
-    _ref.invalidate(myBillsProvider);
+    _ref.refresh(friendsListProvider);
+    _ref.refresh(incomingFriendRequestsProvider);
+    _ref.refresh(outgoingFriendRequestsProvider);
+    _ref.refresh(myBillsProvider);
     _refreshPaymentSummaries();
   }
 }

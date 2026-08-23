@@ -58,8 +58,15 @@ class RealtimeService {
 
     try {
       await _cleanupSocket();
+      final uri = Uri.parse(_url);
+      final wsUri = uri.replace(
+        queryParameters: {
+          ...uri.queryParameters,
+          'token': token,
+        },
+      );
       final socket = await WebSocket.connect(
-        _url,
+        wsUri.toString(),
         headers: {'Authorization': 'Bearer $token'},
       );
       _socket = socket;
@@ -67,6 +74,10 @@ class RealtimeService {
       _reconnectAttempt = 0;
       _setStatus(RealtimeConnectionStatus.connected);
       _startHeartbeat();
+
+      if (kDebugMode) {
+        debugPrint('[Realtime] WebSocket connected successfully to $wsUri');
+      }
 
       _socketSubscription = socket.listen(
         _handleMessage,

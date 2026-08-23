@@ -79,6 +79,60 @@ export default new Elysia()
     }),
     detail: { tags: ["Auth PIN"], summary: "Setup 6-digit PIN" }
   })
+  .post("/change", async ({ userId, body, set }) => {
+    const { currentPin, newPin } = body;
+
+    const creds = await db.query.userCredentials.findFirst({
+      where: eq(userCredentials.userId, userId)
+    });
+
+    if (creds && creds.pinHash) {
+      if (!currentPin) {
+        set.status = 400;
+        return { error: "CURRENT_PIN_REQUIRED", message: "กรุณาระบุรหัส PIN ปัจจุบัน" };
+      }
+
+      const isValid = await argon2.verify(creds.pinHash, currentPin.trim());
+      if (!isValid) {
+        set.status = 400;
+        return { error: "INVALID_CURRENT_PIN", message: "รหัส PIN ปัจจุบันไม่ถูกต้อง" };
+      }
+    }
+
+    const cleanNewPin = newPin.trim();
+    const pinHash = await argon2.hash(cleanNewPin);
+
+    await db.insert(userCredentials)
+      .values({
+        userId,
+        pinHash,
+        failedAttempts: 0,
+        lockedUntil: null,
+      })
+      .onConflictDoUpdate({
+        target: userCredentials.userId,
+        set: {
+          pinHash,
+          failedAttempts: 0,
+          lockedUntil: null,
+          updatedAt: new Date(),
+        }
+      });
+
+    await db.insert(securityEvents).values({
+      userId,
+      event: "pin_changed",
+      metadata: { changedAt: new Date() }
+    }).catch(() => {});
+
+    return { success: true, message: "เปลี่ยนรหัส PIN สำเร็จเรียบร้อยแล้ว" };
+  }, {
+    body: t.Object({
+      currentPin: t.Optional(t.String({ minLength: 6, maxLength: 6, pattern: "^[0-9]+$" })),
+      newPin: t.String({ minLength: 6, maxLength: 6, pattern: "^[0-9]+$" })
+    }),
+    detail: { tags: ["Auth PIN"], summary: "Change 6-digit PIN" }
+  })
   .post("/verify", async ({ userId, body, set }) => {
     const { pin } = body;
 

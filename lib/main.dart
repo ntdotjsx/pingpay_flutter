@@ -61,6 +61,7 @@ class _PingPayAppState extends ConsumerState<PingPayApp> with WidgetsBindingObse
 
   @override
   Widget build(BuildContext context) {
+    ref.watch(realtimeControllerProvider);
     final router = ref.watch(routerProvider);
     final themeMode = ref.watch(themeModeProvider);
 

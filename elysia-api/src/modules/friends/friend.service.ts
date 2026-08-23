@@ -89,36 +89,60 @@ export class FriendService {
     if (relState === "INCOMING_REQUEST") throw new Error("INCOMING_FRIEND_REQUEST_EXISTS");
     if (relState === "BLOCKED") throw new Error("USER_UNAVAILABLE");
 
-    // Double check reverse direction safely with transactions or simple insert since unique index is present,
-    // but the unique index is directional (requesterId, addresseeId).
-    // We will do an explicit check and insert using a transaction.
+    // We will do an explicit check and insert/update using a transaction.
     const request = await db.transaction(async (tx) => {
-      // Check again inside tx
+      // Check for any existing record between these two users (including previous cancelled/rejected/removed)
       const existing = await tx
         .select()
         .from(friendships)
         .where(
-          and(
-            isNull(friendships.removedAt),
-            or(
-              and(eq(friendships.requesterId, currentUserId), eq(friendships.addresseeId, target.id)),
-              and(eq(friendships.requesterId, target.id), eq(friendships.addresseeId, currentUserId))
-            )
+          or(
+            and(eq(friendships.requesterId, currentUserId), eq(friendships.addresseeId, target.id)),
+            and(eq(friendships.requesterId, target.id), eq(friendships.addresseeId, currentUserId))
           )
         );
 
-      if (existing.length > 0) {
-        throw new Error("RELATIONSHIP_EXISTS");
+      const activeRecord = existing.find(
+        (r) => r.removedAt === null && (r.status === "accepted" || r.status === "pending" || r.status === "blocked")
+      );
+
+      if (activeRecord) {
+        if (activeRecord.status === "accepted") throw new Error("ALREADY_FRIENDS");
+        if (activeRecord.status === "pending") {
+          if (activeRecord.requesterId === currentUserId) throw new Error("FRIEND_REQUEST_ALREADY_SENT");
+          throw new Error("INCOMING_FRIEND_REQUEST_EXISTS");
+        }
+        if (activeRecord.status === "blocked") throw new Error("USER_UNAVAILABLE");
       }
 
-      const [newRequest] = await tx
-        .insert(friendships)
-        .values({
-          requesterId: currentUserId,
-          addresseeId: target.id,
-          status: "pending",
-        })
-        .returning();
+      let newRequest: any;
+
+      if (existing.length > 0) {
+        // Reuse and update the existing friendship record back to pending
+        const [updated] = await tx
+          .update(friendships)
+          .set({
+            requesterId: currentUserId,
+            addresseeId: target.id,
+            status: "pending",
+            createdAt: new Date(),
+            respondedAt: null,
+            removedAt: null,
+          })
+          .where(eq(friendships.id, existing[0].id))
+          .returning();
+        newRequest = updated;
+      } else {
+        const [inserted] = await tx
+          .insert(friendships)
+          .values({
+            requesterId: currentUserId,
+            addresseeId: target.id,
+            status: "pending",
+          })
+          .returning();
+        newRequest = inserted;
+      }
 
       // Enqueue friend request notification for addressee
       const requester = await tx.query.users.findFirst({
@@ -129,7 +153,7 @@ export class FriendService {
         await defaultNotificationOutboxService.enqueueInTx(tx, {
           eventType: "FRIEND_REQUEST_RECEIVED",
           recipientUserId: target.id,
-          deduplicationKey: `FRIEND_REQUEST_RECEIVED:${newRequest.id}:${target.id}`,
+          deduplicationKey: `FRIEND_REQUEST_RECEIVED:${newRequest.id}:${target.id}:${Date.now()}`,
           payload: {
             requestId: newRequest.id,
             requesterId: currentUserId,
@@ -243,10 +267,10 @@ export class FriendService {
 
       // Log activity
       await tx.insert(editLogs).values({
-        entityType: "friend",
-        entityId: updated.id,
-        editorId: currentUserId,
         action: "friend_added",
+        performedById: currentUserId,
+        affectedUserId: request.requesterId,
+        note: `friendshipId:${updated.id}`,
       });
 
       // Enqueue friend request accepted notification for requester
@@ -509,10 +533,10 @@ export class FriendService {
         .returning();
 
       await tx.insert(editLogs).values({
-        entityType: "friend",
-        entityId: updated.id,
-        editorId: currentUserId,
         action: "friend_removed",
+        performedById: currentUserId,
+        affectedUserId: friendId,
+        note: `friendshipId:${updated.id}`,
       });
 
       return updated;

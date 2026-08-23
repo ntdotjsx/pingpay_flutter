@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 import '../../../core/theme/theme.dart';
 import '../../../core/widgets/pingpay_loading.dart';
 import '../../../core/utils/app_toast.dart';
@@ -45,13 +46,20 @@ class _CreateBillScreenState extends ConsumerState<CreateBillScreen>
   final _descriptionController = TextEditingController();
   final ImagePicker _picker = ImagePicker();
 
-  // Scanner animation
+  // Scanner animation & camera
   late AnimationController _scannerAnimController;
+  late MobileScannerController _cameraController;
   bool _isTorchOn = false;
 
   @override
   void initState() {
     super.initState();
+    _cameraController = MobileScannerController(
+      facing: CameraFacing.back,
+      torchEnabled: false,
+      autoStart: true,
+    );
+
     _scannerAnimController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 2000),
@@ -89,6 +97,7 @@ class _CreateBillScreenState extends ConsumerState<CreateBillScreen>
 
   @override
   void dispose() {
+    _cameraController.dispose();
     _scannerAnimController.dispose();
     _amountController.removeListener(_onAmountChanged);
     _titleController.removeListener(_onTitleChanged);
@@ -380,11 +389,47 @@ class _CreateBillScreenState extends ConsumerState<CreateBillScreen>
   }
 
   // ==========================================
-  // VIEW 1: CAMERA OCR SCANNER VIEW
+  // VIEW 1: CAMERA OCR SCANNER VIEW (LIVE CAMERA)
   // ==========================================
   Widget _buildCameraOcrScannerView() {
+    final size = MediaQuery.of(context).size;
+    final scanAreaSize = size.width * 0.76;
+
     return Stack(
       children: [
+        // Live Camera Viewfinder
+        Positioned.fill(
+          child: MobileScanner(
+            controller: _cameraController,
+            fit: BoxFit.cover,
+            errorBuilder: (ctx, error) {
+              return Container(
+                color: Colors.black,
+                alignment: Alignment.center,
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.videocam_off_rounded, color: Colors.white54, size: 48),
+                    const SizedBox(height: 12),
+                    const Text(
+                      'ไม่สามารถเปิดกล้องได้',
+                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'กรุณาตรวจสอบสิทธิ์การเข้าถึงกล้อง หรือกดปุ่มเลือกรูปจากอัลบั้มด้านล่าง',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 12),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
+
+        // Dark Vignette Overlay
         Positioned.fill(
           child: Container(
             decoration: BoxDecoration(
@@ -399,6 +444,59 @@ class _CreateBillScreenState extends ConsumerState<CreateBillScreen>
             ),
           ),
         ),
+
+        // Scanner Frame & Animated Laser Line
+        Center(
+          child: Container(
+            width: scanAreaSize,
+            height: scanAreaSize * 1.25,
+            decoration: ShapeDecoration(
+              shape: SmoothRectangleBorder(
+                side: const BorderSide(color: Colors.white70, width: 2),
+                borderRadius: const SmoothBorderRadius.all(
+                  SmoothRadius(cornerRadius: 24, cornerSmoothing: 0.8),
+                ),
+              ),
+            ),
+            child: Stack(
+              children: [
+                // Laser Scanner Animation
+                AnimatedBuilder(
+                  animation: _scannerAnimController,
+                  builder: (ctx, _) {
+                    return Positioned(
+                      top: (scanAreaSize * 1.25 - 4) * _scannerAnimController.value,
+                      left: 12,
+                      right: 12,
+                      child: Container(
+                        height: 3,
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [
+                              Colors.transparent,
+                              Color(0xFFFF5000),
+                              Color(0xFFFF9500),
+                              Color(0xFFFF5000),
+                              Colors.transparent,
+                            ],
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFFFF5000).withValues(alpha: 0.8),
+                              blurRadius: 8,
+                              spreadRadius: 2,
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+        ),
+
         SafeArea(
           child: Column(
             children: [
@@ -435,7 +533,8 @@ class _CreateBillScreenState extends ConsumerState<CreateBillScreen>
                             ? const Color(0xFFFFD700)
                             : Colors.white,
                       ),
-                      onPressed: () {
+                      onPressed: () async {
+                        await _cameraController.toggleTorch();
                         setState(() {
                           _isTorchOn = !_isTorchOn;
                         });
@@ -451,16 +550,16 @@ class _CreateBillScreenState extends ConsumerState<CreateBillScreen>
                   vertical: 6,
                 ),
                 decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.45),
+                  color: Colors.black.withValues(alpha: 0.55),
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(color: Colors.white24),
                 ),
                 child: const Text(
-                  'รองรับใบเสร็จ สลิป และบิลค่าอาหารทุกชนิด',
+                  'วางใบเสร็จให้อยู่ในกรอบ แล้วกดปุ่มถ่ายภาพด้านล่าง',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 12,
-                    fontWeight: FontWeight.w500,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ),
@@ -482,8 +581,9 @@ class _CreateBillScreenState extends ConsumerState<CreateBillScreen>
                           vertical: 10,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.2),
+                          color: Colors.white.withValues(alpha: 0.25),
                           borderRadius: BorderRadius.circular(24),
+                          border: Border.all(color: Colors.white30),
                         ),
                         child: const Row(
                           children: [
@@ -494,7 +594,7 @@ class _CreateBillScreenState extends ConsumerState<CreateBillScreen>
                             ),
                             SizedBox(width: 8),
                             Text(
-                              'เลือกรูปจากอัลบั้ม',
+                              'เลือกจากอัลบั้ม',
                               style: TextStyle(
                                 color: Colors.white,
                                 fontSize: 13,
@@ -508,17 +608,24 @@ class _CreateBillScreenState extends ConsumerState<CreateBillScreen>
                     GestureDetector(
                       onTap: () => _pickImage(ImageSource.camera),
                       child: Container(
-                        width: 64,
-                        height: 64,
+                        width: 68,
+                        height: 68,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           border: Border.all(color: Colors.white, width: 4),
                           color: AppColors.primary,
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.primary.withValues(alpha: 0.4),
+                              blurRadius: 16,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
                         ),
                         child: const Icon(
                           Icons.camera_alt_rounded,
                           color: Colors.white,
-                          size: 30,
+                          size: 32,
                         ),
                       ),
                     ),

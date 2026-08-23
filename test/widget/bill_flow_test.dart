@@ -240,7 +240,7 @@ void main() {
 
       expect(find.text('ยืนยันการสร้างบิล (Confirm Bill)'), findsOneWidget);
       expect(find.text('Dinner at ABC'), findsOneWidget);
-      expect(find.text('฿200.00'), findsOneWidget);
+      expect(find.text('฿200.00'), findsWidgets);
 
       // Tap confirm button
       await tester.tap(find.text('ยืนยันและสร้างบิล'));

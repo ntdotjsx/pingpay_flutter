@@ -2,6 +2,8 @@ import 'package:figma_squircle/figma_squircle.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/app_toast.dart';
+import '../../auth/models/auth_models.dart';
 import '../../auth/providers/auth_provider.dart';
 import 'widgets/custom_pin_keypad.dart';
 
@@ -13,13 +15,41 @@ class PinSetupScreen extends ConsumerStatefulWidget {
 }
 
 class _PinSetupScreenState extends ConsumerState<PinSetupScreen> {
+  String _currentPin = '';
   String _pin = '';
   String _confirmPin = '';
+
+  bool _isChangeMode = false;
+  bool _isVerifyingCurrent = false;
   bool _isConfirming = false;
   String? _errorMessage;
+  bool _isSubmitting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final user = ref.read(authStateProvider).user;
+    if (user?.onboardingState == OnboardingState.completed) {
+      _isChangeMode = true;
+      _isVerifyingCurrent = true;
+    }
+  }
 
   void _onDigitPressed(String digit) {
-    if (!_isConfirming) {
+    if (_isSubmitting) return;
+
+    if (_isVerifyingCurrent) {
+      if (_currentPin.length < 6) {
+        setState(() {
+          _currentPin += digit;
+          _errorMessage = null;
+        });
+
+        if (_currentPin.length == 6) {
+          _verifyCurrentPin();
+        }
+      }
+    } else if (!_isConfirming) {
       if (_pin.length < 6) {
         setState(() {
           _pin += digit;
@@ -52,9 +82,15 @@ class _PinSetupScreenState extends ConsumerState<PinSetupScreen> {
   }
 
   void _onDeletePressed() {
+    if (_isSubmitting) return;
+
     setState(() {
       _errorMessage = null;
-      if (!_isConfirming) {
+      if (_isVerifyingCurrent) {
+        if (_currentPin.isNotEmpty) {
+          _currentPin = _currentPin.substring(0, _currentPin.length - 1);
+        }
+      } else if (!_isConfirming) {
         if (_pin.isNotEmpty) {
           _pin = _pin.substring(0, _pin.length - 1);
         }
@@ -64,6 +100,34 @@ class _PinSetupScreenState extends ConsumerState<PinSetupScreen> {
         }
       }
     });
+  }
+
+  Future<void> _verifyCurrentPin() async {
+    setState(() => _isSubmitting = true);
+    try {
+      final isValid = await ref.read(authRepositoryProvider).verifyPin(_currentPin);
+      if (isValid && mounted) {
+        setState(() {
+          _isVerifyingCurrent = false;
+          _isSubmitting = false;
+          _errorMessage = null;
+        });
+      } else if (mounted) {
+        setState(() {
+          _errorMessage = 'รหัส PIN ปัจจุบันไม่ถูกต้อง';
+          _currentPin = '';
+          _isSubmitting = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _errorMessage = e.toString().replaceAll('Exception:', '').trim();
+          _currentPin = '';
+          _isSubmitting = false;
+        });
+      }
+    }
   }
 
   Future<void> _submitPin() async {
@@ -77,15 +141,32 @@ class _PinSetupScreenState extends ConsumerState<PinSetupScreen> {
       return;
     }
 
+    setState(() => _isSubmitting = true);
     try {
-      await ref.read(authStateProvider.notifier).setupPin(_pin);
+      if (_isChangeMode) {
+        await ref.read(authStateProvider.notifier).changePin(
+          currentPin: _currentPin.isNotEmpty ? _currentPin : null,
+          newPin: _pin,
+        );
+        if (mounted) {
+          AppToast.success(context, 'เปลี่ยนรหัส PIN สำเร็จเรียบร้อยแล้ว');
+          if (Navigator.canPop(context)) {
+            Navigator.pop(context);
+          }
+        }
+      } else {
+        await ref.read(authStateProvider.notifier).setupPin(_pin);
+      }
     } catch (e) {
-      setState(() {
-        _errorMessage = e.toString().replaceAll('Exception:', '').trim();
-        _isConfirming = false;
-        _pin = '';
-        _confirmPin = '';
-      });
+      if (mounted) {
+        setState(() {
+          _errorMessage = e.toString().replaceAll('Exception:', '').trim();
+          _isConfirming = false;
+          _pin = '';
+          _confirmPin = '';
+          _isSubmitting = false;
+        });
+      }
     }
   }
 
@@ -93,7 +174,30 @@ class _PinSetupScreenState extends ConsumerState<PinSetupScreen> {
   Widget build(BuildContext context) {
     final authState = ref.watch(authStateProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final currentLength = _isConfirming ? _confirmPin.length : _pin.length;
+    final canGoBack = Navigator.canPop(context);
+
+    int currentLength;
+    if (_isVerifyingCurrent) {
+      currentLength = _currentPin.length;
+    } else if (_isConfirming) {
+      currentLength = _confirmPin.length;
+    } else {
+      currentLength = _pin.length;
+    }
+
+    String screenTitle;
+    String screenSubtitle;
+
+    if (_isVerifyingCurrent) {
+      screenTitle = 'กรอกรหัส PIN เดิม 6 หลัก';
+      screenSubtitle = 'เพื่อยืนยันตัวตนก่อนตั้งค่ารหัส PIN ใหม่';
+    } else if (_isConfirming) {
+      screenTitle = 'ยืนยันรหัส PIN 6 หลักอีกครั้ง';
+      screenSubtitle = 'กรอกรหัส PIN ใหม่เดิมเพื่อยืนยันความถูกต้อง';
+    } else {
+      screenTitle = _isChangeMode ? 'สร้างรหัส PIN 6 หลักใหม่' : 'สร้างรหัส PIN 6 หลักของคุณ';
+      screenSubtitle = 'รหัส PIN นี้จะใช้ในการยืนยันตัวตนและการทำธุรกรรมทางการเงิน';
+    }
 
     return Scaffold(
       backgroundColor: isDark ? AppColors.surfaceBlack : AppColors.canvas,
@@ -118,11 +222,16 @@ class _PinSetupScreenState extends ConsumerState<PinSetupScreen> {
                         });
                       },
                     )
+                  else if (canGoBack)
+                    IconButton(
+                      icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
+                      onPressed: () => Navigator.pop(context),
+                    )
                   else
                     const SizedBox(width: 48),
-                  const Text(
-                    'ตั้งรหัสความปลอดภัย',
-                    style: TextStyle(
+                  Text(
+                    _isChangeMode ? 'เปลี่ยนรหัส PIN' : 'ตั้งรหัสความปลอดภัย',
+                    style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                     ),
@@ -167,9 +276,7 @@ class _PinSetupScreenState extends ConsumerState<PinSetupScreen> {
 
             // Title & Subtitle
             Text(
-              _isConfirming
-                  ? 'ยืนยันรหัส PIN 6 หลักอีกครั้ง'
-                  : 'สร้างรหัส PIN 6 หลักของคุณ',
+              screenTitle,
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
@@ -181,9 +288,7 @@ class _PinSetupScreenState extends ConsumerState<PinSetupScreen> {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 32),
               child: Text(
-                _isConfirming
-                    ? 'กรอกรหัส PIN เดิมเพื่อยืนยันความถูกต้อง'
-                    : 'รหัส PIN นี้จะใช้ในการยืนยันตัวตนและการทำธุรกรรมทางการเงิน',
+                screenSubtitle,
                 style: TextStyle(
                   fontSize: 13,
                   color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
@@ -207,7 +312,7 @@ class _PinSetupScreenState extends ConsumerState<PinSetupScreen> {
             SizedBox(
               height: 32,
               child: Center(
-                child: authState.isLoading
+                child: (authState.isLoading || _isSubmitting)
                     ? const SizedBox(
                         width: 20,
                         height: 20,

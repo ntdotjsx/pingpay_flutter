@@ -146,13 +146,43 @@ class AuthRepository {
     }
   }
 
+  Future<void> changePin({
+    String? currentPin,
+    required String newPin,
+  }) async {
+    try {
+      await _client.post(
+        '/api/v1/auth/pin/change',
+        data: {
+          if (currentPin != null && currentPin.isNotEmpty) 'currentPin': currentPin,
+          'newPin': newPin,
+        },
+      );
+    } catch (e) {
+      if (e is AppException) {
+        throw Exception(e.message);
+      }
+      if (e is DioException) {
+        final errorMsg = (e.response?.data is Map ? e.response?.data['message'] ?? e.response?.data['error'] : null)?.toString();
+        if (errorMsg != null && errorMsg.isNotEmpty) {
+          throw Exception(errorMsg);
+        }
+      }
+      rethrow;
+    }
+  }
+
   Future<void> updateProfile({
     String? displayName,
     String? fullName,
     String? address,
     String? phoneNumber,
     String? promptPayId,
+    String? promptPayIdType,
     String? bankAccountNumber,
+    String? shippingRecipientName,
+    String? shippingPhone,
+    String? shippingAddress,
   }) async {
     await _client.post(
       '/api/v1/profile',
@@ -162,7 +192,11 @@ class AuthRepository {
         if (address != null) 'address': address,
         if (phoneNumber != null) 'phoneNumber': phoneNumber,
         if (promptPayId != null) 'promptPayId': promptPayId,
+        if (promptPayIdType != null) 'promptPayIdType': promptPayIdType,
         if (bankAccountNumber != null) 'bankAccountNumber': bankAccountNumber,
+        if (shippingRecipientName != null) 'shippingRecipientName': shippingRecipientName,
+        if (shippingPhone != null) 'shippingPhone': shippingPhone,
+        if (shippingAddress != null) 'shippingAddress': shippingAddress,
       },
     );
   }

@@ -53,9 +53,9 @@ class NotificationService {
           AndroidInitializationSettings('@mipmap/ic_launcher');
       const DarwinInitializationSettings initializationSettingsDarwin =
           DarwinInitializationSettings(
-        requestAlertPermission: false,
-        requestBadgePermission: false,
-        requestSoundPermission: false,
+        requestAlertPermission: true,
+        requestBadgePermission: true,
+        requestSoundPermission: true,
       );
       const InitializationSettings initializationSettings = InitializationSettings(
         android: initializationSettingsAndroid,
@@ -77,6 +77,17 @@ class NotificationService {
         if (androidImplementation != null) {
           await androidImplementation.createNotificationChannel(highImportanceChannel);
           await androidImplementation.requestNotificationsPermission();
+        }
+      } else if (Platform.isIOS) {
+        final iosImplementation = flutterLocalNotificationsPlugin
+            .resolvePlatformSpecificImplementation<
+                IOSFlutterLocalNotificationsPlugin>();
+        if (iosImplementation != null) {
+          await iosImplementation.requestPermissions(
+            alert: true,
+            badge: true,
+            sound: true,
+          );
         }
       }
 
@@ -173,12 +184,12 @@ class NotificationService {
     await messaging.setAutoInitEnabled(true);
 
     if (!kIsWeb && Platform.isIOS) {
-      final apnsToken = await _waitForApnsToken(messaging);
-      if (apnsToken == null) {
-        debugPrint('FCM skipped: APNs token is not available yet.');
-        return null;
+      final apnsToken = await _waitForApnsToken(messaging, attempts: 6);
+      if (apnsToken != null) {
+        debugPrint('APNs token is available for FCM registration.');
+      } else {
+        debugPrint('APNs token not returned immediately. Attempting direct FCM token retrieval.');
       }
-      debugPrint('APNs token is available for FCM registration.');
     }
 
     try {

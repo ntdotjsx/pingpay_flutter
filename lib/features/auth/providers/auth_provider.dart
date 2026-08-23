@@ -185,6 +185,47 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
+  Future<void> changePin({String? currentPin, required String newPin}) async {
+    state = state.copyWith(isLoading: true);
+    try {
+      await _repo.changePin(currentPin: currentPin, newPin: newPin);
+      final updatedUser = await _repo.getCurrentUser();
+      state = state.copyWith(user: updatedUser, isLoading: false);
+    } catch (e) {
+      state = state.copyWith(isLoading: false, errorMessage: e.toString());
+      rethrow;
+    }
+  }
+
+  Future<void> updateShippingAddress({
+    required String recipientName,
+    required String phone,
+    required String address,
+  }) async {
+    state = state.copyWith(isLoading: true);
+    try {
+      await _repo.updateProfile(
+        shippingRecipientName: recipientName,
+        shippingPhone: phone,
+        shippingAddress: address,
+      );
+      final updatedUser = await _repo.getCurrentUser();
+      state = state.copyWith(user: updatedUser, isLoading: false);
+    } catch (e) {
+      state = state.copyWith(isLoading: false, errorMessage: e.toString());
+      rethrow;
+    }
+  }
+
+  Future<void> refreshUser() async {
+    try {
+      final updatedUser = await _repo.getCurrentUser();
+      state = state.copyWith(user: updatedUser);
+    } catch (e) {
+      debugPrint('Failed to refresh user profile: $e');
+    }
+  }
+
   Future<void> completeProfile(
     String fullName, {
     String? displayName,

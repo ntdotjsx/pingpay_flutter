@@ -31,7 +31,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 200));
 
     expect(find.text('ยินดีต้อนรับสู่ PingPay'), findsOneWidget);
-    expect(find.text('ปัดขึ้นเพื่อเริ่มต้นใช้งาน (Swipe Up)'), findsOneWidget);
+    expect(find.text('AI สแกนบิล'), findsOneWidget);
   });
 }
 
@@ -59,6 +59,19 @@ class AuthNotifierMock extends StateNotifier<AuthState>
 
   @override
   Future<void> setupPin(String pin) async {}
+
+  @override
+  Future<void> changePin({String? currentPin, required String newPin}) async {}
+
+  @override
+  Future<void> updateShippingAddress({
+    required String recipientName,
+    required String phone,
+    required String address,
+  }) async {}
+
+  @override
+  Future<void> refreshUser() async {}
 
   @override
   void lockApp() {}
