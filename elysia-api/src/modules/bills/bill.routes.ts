@@ -67,12 +67,12 @@ export const billRoutes = new Elysia()
       description: "Retrieves complete list of bills created by the authenticated user."
     }
   })
-  .get("/:id", async ({ params: { id }, set }) => {
+  .get("/:id", async ({ params: { id }, user, set }) => {
     try {
-      const bill = await billService.getBill(id);
+      const bill = await billService.getBill(id, user.id);
       return { success: true, data: bill };
     } catch (e: any) {
-      set.status = 404;
+      set.status = e.message.includes("UNAUTHORIZED") ? 403 : 404;
       return { success: false, error: e.message };
     }
   }, {

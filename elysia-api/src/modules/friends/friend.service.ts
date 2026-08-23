@@ -4,6 +4,7 @@ import { eq, or, and, desc, isNull, ne } from "drizzle-orm";
 import type { RelationshipState } from "./friend.types";
 import { DebtRelationshipService } from "../debt/debt-relationship.service";
 import { defaultNotificationOutboxService } from "../notifications/notification-outbox.service";
+import { realtimeService } from "../../realtime/realtime.service";
 
 export class FriendService {
   /**
@@ -91,7 +92,7 @@ export class FriendService {
     // Double check reverse direction safely with transactions or simple insert since unique index is present,
     // but the unique index is directional (requesterId, addresseeId).
     // We will do an explicit check and insert using a transaction.
-    return await db.transaction(async (tx) => {
+    const request = await db.transaction(async (tx) => {
       // Check again inside tx
       const existing = await tx
         .select()
@@ -140,6 +141,19 @@ export class FriendService {
 
       return newRequest;
     });
+
+    realtimeService.sendToUser(target.id, realtimeService.makeEvent(
+      "friend.request.created",
+      {
+        requestId: request.id,
+        senderId: currentUserId,
+        receiverId: target.id,
+      },
+      { resourceId: request.id }
+    ));
+    console.log(`[Realtime] Friend request event sent requestId=${request.id} receiverId=${target.id}`);
+
+    return request;
   }
 
   static async getIncomingRequests(currentUserId: string, limit: number) {
@@ -207,7 +221,7 @@ export class FriendService {
   }
 
   static async acceptRequest(requestId: string, currentUserId: string) {
-    return await db.transaction(async (tx) => {
+    const friendship = await db.transaction(async (tx) => {
       const request = await tx.query.friendships.findFirst({
         where: eq(friendships.id, requestId),
       });
@@ -256,6 +270,24 @@ export class FriendService {
 
       return updated;
     });
+
+    realtimeService.sendToUsers(
+      [friendship.requesterId, friendship.addresseeId],
+      realtimeService.makeEvent(
+        "friend.request.accepted",
+        {
+          requestId,
+          friendshipId: friendship.id,
+          requesterId: friendship.requesterId,
+          addresseeId: friendship.addresseeId,
+          acceptedBy: currentUserId,
+        },
+        { resourceId: friendship.id }
+      )
+    );
+    console.log(`[Realtime] Friend accepted event sent friendshipId=${friendship.id}`);
+
+    return friendship;
   }
 
   static async rejectRequest(requestId: string, currentUserId: string) {
@@ -277,6 +309,21 @@ export class FriendService {
       })
       .where(eq(friendships.id, requestId))
       .returning();
+
+    realtimeService.sendToUsers(
+      [request.requesterId, request.addresseeId],
+      realtimeService.makeEvent(
+        "friend.request.rejected",
+        {
+          requestId: updated.id,
+          requesterId: request.requesterId,
+          addresseeId: request.addresseeId,
+          rejectedBy: currentUserId,
+        },
+        { resourceId: updated.id }
+      )
+    );
+    console.log(`[Realtime] Friend rejected event sent requestId=${updated.id}`);
 
     return updated;
   }
@@ -300,6 +347,21 @@ export class FriendService {
       })
       .where(eq(friendships.id, requestId))
       .returning();
+
+    realtimeService.sendToUsers(
+      [request.requesterId, request.addresseeId],
+      realtimeService.makeEvent(
+        "friend.request.cancelled",
+        {
+          requestId: updated.id,
+          requesterId: request.requesterId,
+          addresseeId: request.addresseeId,
+          cancelledBy: currentUserId,
+        },
+        { resourceId: updated.id }
+      )
+    );
+    console.log(`[Realtime] Friend cancelled event sent requestId=${updated.id}`);
 
     return updated;
   }
@@ -417,7 +479,7 @@ export class FriendService {
   }
 
   static async removeFriend(friendshipId: string, currentUserId: string, confirmOutstandingDebt: boolean) {
-    return await db.transaction(async (tx) => {
+    const removed = await db.transaction(async (tx) => {
       const friendship = await tx.query.friendships.findFirst({
         where: eq(friendships.id, friendshipId),
       });
@@ -455,5 +517,22 @@ export class FriendService {
 
       return updated;
     });
+
+    realtimeService.sendToUsers(
+      [removed.requesterId, removed.addresseeId],
+      realtimeService.makeEvent(
+        "friend.removed",
+        {
+          friendshipId: removed.id,
+          requesterId: removed.requesterId,
+          addresseeId: removed.addresseeId,
+          removedBy: currentUserId,
+        },
+        { resourceId: removed.id }
+      )
+    );
+    console.log(`[Realtime] Friend removed event sent friendshipId=${removed.id}`);
+
+    return removed;
   }
 }

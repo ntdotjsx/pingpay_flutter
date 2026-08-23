@@ -1,6 +1,6 @@
 import { db } from "../../db";
 import { bills, billItems, financialTransactions, editLogs, users } from "../../db/schema";
-import { eq, and, ne } from "drizzle-orm";
+import { eq, and, ne, or, inArray } from "drizzle-orm";
 import {
   NotificationOutboxService,
   defaultNotificationOutboxService,
@@ -114,8 +114,16 @@ export class BillRepository {
   }
 
   async getBillsForUser(userId: string) {
+    const participantBillIds = this.db
+      .select({ id: billItems.billId })
+      .from(billItems)
+      .where(eq(billItems.debtorId, userId));
+
     const ownerBills = await this.db.query.bills.findMany({
-      where: and(eq(bills.ownerId, userId), ne(bills.status, "cancelled")),
+      where: and(
+        ne(bills.status, "cancelled"),
+        or(eq(bills.ownerId, userId), inArray(bills.id, participantBillIds))
+      ),
       with: {
         items: {
           with: { debtor: true, payments: true },

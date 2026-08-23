@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 import { BillPolicy } from "./bill.policy";
 import { BillStatusService } from "./bill-status.service";
 import { defaultNotificationService, NotificationService } from "./bill-notification.service";
+import { realtimeService } from "../../realtime/realtime.service";
 
 export interface AdjustmentRequestDTO {
   participantId: string; // bill_items.id
@@ -201,6 +202,21 @@ export class BillAdjustmentService {
         console.error("Failed to send LINE notification for adjustment:", err);
       }
     }
+
+    await realtimeService.sendToBill(
+      billId,
+      realtimeService.makeEvent(
+        "bill.payment.updated",
+        {
+          billId,
+          updatedBy: userId,
+          participantId: dto.participantId,
+          newAmount: dto.newAmount,
+          reason: dto.reason,
+        },
+        { resourceId: billId }
+      )
+    );
 
     return { success: true, data: result };
   }

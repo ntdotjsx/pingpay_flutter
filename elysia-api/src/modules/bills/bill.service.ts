@@ -8,6 +8,7 @@ import { BillWriteoffService, WriteOffRequestDTO } from "./bill-writeoff.service
 import { BillAdjustmentService, AdjustmentRequestDTO } from "./bill-adjustment.service";
 import { defaultOCRService, OCRService } from "./ocr.service";
 import { defaultNotificationOutboxService } from "../notifications/notification-outbox.service";
+import { realtimeService } from "../../realtime/realtime.service";
 
 export interface CreateBillDTO {
   title?: string;
@@ -100,24 +101,41 @@ export class BillService {
       finalAllocations
     );
 
+    const fullCreatedBill = await this.repo.getBillById(createdBill.id);
+    if (!fullCreatedBill) throw new Error("BILL_NOT_FOUND: Created bill not found.");
+    const billMemberIds = await realtimeService.getBillMemberUserIds(fullCreatedBill.id);
+    realtimeService.sendToUsers(
+      billMemberIds,
+      realtimeService.makeEvent(
+        "bill.created",
+        {
+          billId: fullCreatedBill.id,
+          createdBy: ownerId,
+          memberIds: billMemberIds,
+          bill: fullCreatedBill,
+        },
+        { resourceId: fullCreatedBill.id }
+      )
+    );
+
     // Enqueue real LINE notifications for all participants in outbox
     try {
       const ownerUser = await this.repo.getUserById(ownerId);
       const creatorName = ownerUser?.displayName || ownerUser?.fullName || "เพื่อน";
       const { defaultNotificationOutboxService } = await import("../notifications/notification-outbox.service");
 
-      for (const item of (createdBill.items || [])) {
+      for (const item of (fullCreatedBill.items || [])) {
         if (item.debtorId && item.debtorId !== ownerId) {
           await defaultNotificationOutboxService.enqueue({
             eventType: "BILL_CREATED",
             recipientUserId: item.debtorId,
-            deduplicationKey: `BILL_CREATED:${createdBill.id}:${item.debtorId}`,
+            deduplicationKey: `BILL_CREATED:${fullCreatedBill.id}:${item.debtorId}`,
             payload: {
-              billId: createdBill.id,
-              billTitle: createdBill.title || "บิลค่าใช้จ่าย",
+              billId: fullCreatedBill.id,
+              billTitle: fullCreatedBill.title || "บิลค่าใช้จ่าย",
               participantDebtAmount: Number(item.currentAmount).toFixed(2),
-              totalAmount: Number(createdBill.totalAmount).toFixed(2),
-              currency: createdBill.currency || "THB",
+              totalAmount: Number(fullCreatedBill.totalAmount).toFixed(2),
+              currency: fullCreatedBill.currency || "THB",
               creatorName,
             },
           });
@@ -127,12 +145,19 @@ export class BillService {
       console.error("[BillService] Failed to enqueue BILL_CREATED notification:", err);
     }
 
-    return createdBill;
+    return fullCreatedBill;
   }
 
-  async getBill(id: string) {
+  async getBill(id: string, userId?: string) {
     const bill = await this.repo.getBillById(id);
     if (!bill) throw new Error("BILL_NOT_FOUND: Bill not found.");
+    if (userId) {
+      const isOwner = bill.ownerId === userId;
+      const isParticipant = bill.items.some((item) => item.debtorId === userId);
+      if (!isOwner && !isParticipant) {
+        throw new Error("UNAUTHORIZED: You do not have permission to view this bill.");
+      }
+    }
     return bill;
   }
 
@@ -150,12 +175,28 @@ export class BillService {
       throw new Error("PAID_DEBT_LOCKED: Cannot edit total amount of a bill that is partially or fully paid.");
     }
 
-    return await this.repo.updateBill(id, userId, {
+    const updated = await this.repo.updateBill(id, userId, {
       title: dto.title,
       description: dto.description,
       totalAmount: dto.totalAmount !== undefined ? dto.totalAmount.toFixed(2) : undefined,
       itemsBreakdown: dto.itemsBreakdown,
     });
+
+    const fullBill = await this.repo.getBillById(id);
+    await realtimeService.sendToBill(
+      id,
+      realtimeService.makeEvent(
+        "bill.updated",
+        {
+          billId: id,
+          updatedBy: userId,
+          bill: fullBill ?? updated,
+        },
+        { resourceId: id }
+      )
+    );
+
+    return fullBill ?? updated;
   }
 
   async editBillItem(userId: string, billId: string, participantId: string, newAmount: number) {
@@ -248,7 +289,21 @@ export class BillService {
       }
     }
 
-    return await this.repo.getBillById(billId);
+    const updatedBill = await this.repo.getBillById(billId);
+    await realtimeService.sendToBill(
+      billId,
+      realtimeService.makeEvent(
+        "bill.updated",
+        {
+          billId,
+          updatedBy: userId,
+          bill: updatedBill,
+        },
+        { resourceId: billId }
+      )
+    );
+
+    return updatedBill;
   }
 
   async processOCRReceipt(file: File | Blob) {
@@ -270,6 +325,19 @@ export class BillService {
     BillPolicy.canEditBill(userId, bill.ownerId);
 
     const cancelled = await this.repo.cancelBill(billId, userId, reason);
+
+    await realtimeService.sendToBill(
+      billId,
+      realtimeService.makeEvent(
+        "bill.deleted",
+        {
+          billId,
+          deletedBy: userId,
+          reason,
+        },
+        { resourceId: billId }
+      )
+    );
 
     try {
       const canceller = await this.repo.getUserById(userId);

@@ -32,6 +32,12 @@ class AppConfig {
     }
   }
 
+  static String get realtimeUrl {
+    final uri = Uri.parse(baseUrl);
+    final wsScheme = uri.scheme == 'https' ? 'wss' : 'ws';
+    return uri.replace(scheme: wsScheme, path: '/realtime').toString();
+  }
+
   static const String appName = 'PingPay';
   static const Duration connectTimeout = Duration(seconds: 45);
   static const Duration receiveTimeout = Duration(seconds: 60);

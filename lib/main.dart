@@ -5,6 +5,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'core/theme/theme.dart';
 import 'core/services/shorebird_service.dart';
 import 'core/services/notification_service.dart';
+import 'core/realtime/realtime_providers.dart';
 import 'app/router/app_router.dart';
 import 'features/auth/providers/auth_provider.dart';
 
@@ -38,6 +39,7 @@ class _PingPayAppState extends ConsumerState<PingPayApp> with WidgetsBindingObse
     Future.microtask(() {
       ref.read(shorebirdServiceProvider).checkForUpdatesInBackground();
       ref.read(notificationServiceProvider).initialize();
+      ref.read(realtimeControllerProvider);
     });
   }
 
@@ -52,6 +54,8 @@ class _PingPayAppState extends ConsumerState<PingPayApp> with WidgetsBindingObse
     // When user leaves the app, swipes to home, or locks screen
     if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive || state == AppLifecycleState.hidden) {
       ref.read(authStateProvider.notifier).lockApp();
+    } else if (state == AppLifecycleState.resumed) {
+      ref.read(realtimeControllerProvider).onAppResumed();
     }
   }
 
@@ -70,4 +74,3 @@ class _PingPayAppState extends ConsumerState<PingPayApp> with WidgetsBindingObse
     );
   }
 }
-

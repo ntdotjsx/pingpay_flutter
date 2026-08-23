@@ -2,6 +2,7 @@ import 'package:figma_squircle/figma_squircle.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/animations/animation_constants.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../payments/providers/payment_providers.dart';
 
@@ -16,7 +17,12 @@ class MainShellScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    // ถ้า outstandingDebtsCountProvider เป็น Provider<int> ธรรมดา
+    // ให้เปลี่ยนบรรทัดนี้กลับเป็น:
+    // final debtsCount = ref.watch(outstandingDebtsCountProvider);
     final debtsCount = ref.watch(outstandingDebtsCountProvider);
+
     final currentIndex = navigationShell.currentIndex;
 
     return Scaffold(
@@ -112,38 +118,47 @@ class MainShellScreen extends ConsumerWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Stack(
-            clipBehavior: Clip.none,
-            children: [
-              Icon(icon, size: 24, color: color),
-              if (badgeCount > 0)
-                Positioned(
-                  top: -4,
-                  right: -8,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 4,
-                      vertical: 1,
-                    ),
-                    decoration: const ShapeDecoration(
-                      color: AppColors.error,
-                      shape: SmoothRectangleBorder(
-                        borderRadius: SmoothBorderRadius.all(
-                          SmoothRadius(cornerRadius: 6, cornerSmoothing: 1.0),
+          AnimatedScale(
+            scale: isSelected ? 1.1 : 1.0,
+            duration: AppAnimation.normal,
+            curve: AppAnimation.standard,
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                AnimatedContainer(
+                  duration: AppAnimation.normal,
+                  curve: AppAnimation.standard,
+                  child: Icon(icon, size: 24, color: color),
+                ),
+                if (badgeCount > 0)
+                  Positioned(
+                    top: -4,
+                    right: -8,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 4,
+                        vertical: 1,
+                      ),
+                      decoration: const ShapeDecoration(
+                        color: AppColors.error,
+                        shape: SmoothRectangleBorder(
+                          borderRadius: SmoothBorderRadius.all(
+                            SmoothRadius(cornerRadius: 6, cornerSmoothing: 1.0),
+                          ),
+                        ),
+                      ),
+                      child: Text(
+                        badgeCount > 99 ? '99+' : '$badgeCount',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 9,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
                     ),
-                    child: Text(
-                      badgeCount > 99 ? '99+' : '$badgeCount',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 9,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
                   ),
-                ),
-            ],
+              ],
+            ),
           ),
           const SizedBox(height: 2),
           Text(

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../../core/animations/app_page_transitions.dart';
 import '../../core/widgets/pingpay_loading.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -35,22 +36,24 @@ final routerProvider = Provider<GoRouter>((ref) {
     routes: [
       GoRoute(
         path: '/splash',
-        builder: (context, state) =>
-            const Scaffold(body: PingPayLoadingWidget()),
+        pageBuilder: (context, state) => AppPageTransition.fade(
+          key: state.pageKey,
+          child: const Scaffold(body: PingPayLoadingWidget()),
+        ),
       ),
-      GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
-      GoRoute(path: '/pdpa', builder: (context, state) => const PdpaScreen()),
+      GoRoute(path: '/login', pageBuilder: (context, state) => AppPageTransition.fade(key: state.pageKey, child: const LoginScreen())),
+      GoRoute(path: '/pdpa', pageBuilder: (context, state) => AppPageTransition.fade(key: state.pageKey, child: const PdpaScreen())),
       GoRoute(
         path: '/pin/setup',
-        builder: (context, state) => const PinSetupScreen(),
+        pageBuilder: (context, state) => AppPageTransition.fade(key: state.pageKey, child: const PinSetupScreen()),
       ),
       GoRoute(
         path: '/pin/lock',
-        builder: (context, state) => const PinLockScreen(),
+        pageBuilder: (context, state) => AppPageTransition.fade(key: state.pageKey, child: const PinLockScreen()),
       ),
       GoRoute(
         path: '/profile/setup',
-        builder: (context, state) => const UsernameSetupScreen(),
+        pageBuilder: (context, state) => AppPageTransition.fade(key: state.pageKey, child: const UsernameSetupScreen()),
       ),
       // Persistent Shell Navigation for 5 Main Tabs (Always shows BottomNavigationBar)
       StatefulShellRoute.indexedStack(
@@ -114,32 +117,32 @@ final routerProvider = Provider<GoRouter>((ref) {
       // Other Direct Routes (Modals, Details, Setup)
       GoRoute(
         path: '/bills/create',
-        builder: (context, state) => const CreateBillScreen(),
+        pageBuilder: (context, state) => AppPageTransition.modal(key: state.pageKey, child: const CreateBillScreen()),
       ),
       GoRoute(
         path: '/bills/:id',
-        builder: (context, state) {
+        pageBuilder: (context, state) {
           final id = state.pathParameters['id'] ?? '';
-          return BillDetailScreen(billId: id);
+          return AppPageTransition.slide(key: state.pageKey, child: BillDetailScreen(billId: id));
         },
       ),
       GoRoute(
         path: '/friends',
-        builder: (context, state) => const FriendsScreen(),
+        pageBuilder: (context, state) => AppPageTransition.slide(key: state.pageKey, child: const FriendsScreen()),
       ),
       GoRoute(
         path: '/friends/add',
-        builder: (context, state) => const AddFriendScreen(),
+        pageBuilder: (context, state) => AppPageTransition.slide(key: state.pageKey, child: const AddFriendScreen()),
       ),
       GoRoute(
         path: '/friends/scan',
-        builder: (context, state) => const QrScanFriendScreen(),
+        pageBuilder: (context, state) => AppPageTransition.modal(key: state.pageKey, child: const QrScanFriendScreen()),
       ),
       GoRoute(
         path: '/friends/:id',
-        builder: (context, state) {
+        pageBuilder: (context, state) {
           final id = state.pathParameters['id'] ?? '';
-          return FriendDetailScreen(friendshipId: id);
+          return AppPageTransition.slide(key: state.pageKey, child: FriendDetailScreen(friendshipId: id));
         },
       ),
     ],

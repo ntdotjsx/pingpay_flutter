@@ -24,6 +24,7 @@ import {
   NotificationOutboxService,
   defaultNotificationOutboxService,
 } from "../notifications/notification-outbox.service";
+import { realtimeService } from "../../realtime/realtime.service";
 
 export interface CreatePaymentDTO {
   participantId: string; // bill_items.id
@@ -278,6 +279,36 @@ export class PaymentService {
 
     if (dto.idempotencyKey) {
       this.processedIdempotencyKeys.set(dto.idempotencyKey, result);
+    }
+
+    realtimeService.sendToUsers(
+      [bill.ownerId, payerId],
+      realtimeService.makeEvent(
+        "bill.transaction.created",
+        {
+          billId: bill.id,
+          paymentId: newPayment.id,
+          participantId: item.id,
+          payerId,
+          ownerId: bill.ownerId,
+          status: newPayment.status,
+        },
+        { resourceId: bill.id }
+      )
+    );
+    if (initialStatus === "pending_owner_confirmation") {
+      realtimeService.sendToUser(
+        bill.ownerId,
+        realtimeService.makeEvent(
+          "notification.created",
+          {
+            billId: bill.id,
+            paymentId: newPayment.id,
+            type: "PAYMENT_PENDING_CONFIRMATION",
+          },
+          { resourceId: newPayment.id }
+        )
+      );
     }
 
     return result;
@@ -567,6 +598,36 @@ export class PaymentService {
       }
     }
 
+    if (notificationToSend) {
+      const n = notificationToSend;
+      realtimeService.sendToUsers(
+        [userId, n.debtorId],
+        realtimeService.makeEvent(
+          "bill.payment.updated",
+          {
+            billId: n.billId,
+            paymentId,
+            confirmedBy: userId,
+            debtorId: n.debtorId,
+            remainingDebt: n.remainingDebt,
+          },
+          { resourceId: n.billId }
+        )
+      );
+      realtimeService.sendToUser(
+        n.debtorId,
+        realtimeService.makeEvent(
+          "notification.created",
+          {
+            billId: n.billId,
+            paymentId,
+            type: "PAYMENT_CONFIRMED",
+          },
+          { resourceId: paymentId }
+        )
+      );
+    }
+
     const responseData = {
       success: true,
       data: confirmedResult,
@@ -682,6 +743,36 @@ export class PaymentService {
       } catch (err) {
         console.error("Failed to send LINE notification for payment rejection:", err);
       }
+    }
+
+    if (notificationToSend) {
+      const n = notificationToSend;
+      realtimeService.sendToUsers(
+        [userId, n.debtorId],
+        realtimeService.makeEvent(
+          "bill.payment.updated",
+          {
+            billId: n.billId,
+            paymentId,
+            rejectedBy: userId,
+            debtorId: n.debtorId,
+            reason: n.reason,
+          },
+          { resourceId: n.billId }
+        )
+      );
+      realtimeService.sendToUser(
+        n.debtorId,
+        realtimeService.makeEvent(
+          "notification.created",
+          {
+            billId: n.billId,
+            paymentId,
+            type: "PAYMENT_REJECTED",
+          },
+          { resourceId: paymentId }
+        )
+      );
     }
 
     const responseData = {
@@ -1013,7 +1104,20 @@ export class PaymentService {
       },
     });
 
+    realtimeService.sendToUsers(
+      [debtorId, item.bill.ownerId],
+      realtimeService.makeEvent(
+        "bill.payment.updated",
+        {
+          billId: item.billId,
+          billItemId: item.id,
+          debtorId,
+          acknowledged: true,
+        },
+        { resourceId: item.billId }
+      )
+    );
+
     return updated;
   }
 }
-

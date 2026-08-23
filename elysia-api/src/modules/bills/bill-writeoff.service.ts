@@ -20,6 +20,7 @@ import {
   NotificationOutboxService,
   defaultNotificationOutboxService,
 } from "../notifications/notification-outbox.service";
+import { realtimeService } from "../../realtime/realtime.service";
 
 export class BillWriteoffService {
   private processedIdempotencyKeys = new Set<string>();
@@ -215,6 +216,20 @@ export class BillWriteoffService {
         console.error("Failed to send LINE notification for write-off:", err);
       }
     }
+
+    await realtimeService.sendToBill(
+      billId,
+      realtimeService.makeEvent(
+        "bill.payment.updated",
+        {
+          billId,
+          updatedBy: userId,
+          participantIds: dto.participants.map((participant) => participant.participantId),
+          reason: dto.reason,
+        },
+        { resourceId: billId }
+      )
+    );
 
     return { success: true, data: result };
   }
