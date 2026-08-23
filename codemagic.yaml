@@ -1,6 +1,6 @@
 workflows:
-  pingpay-debug:
-    name: PingPay Debug Build
+  pingpay-release:
+    name: PingPay Release Build
     max_build_duration: 30
     instance_type: mac_mini_m2
     environment:
@@ -57,14 +57,14 @@ workflows:
           cd ..
 
       # STEP 7: Build Android APK
-      - name: Build Android Debug APK
+      - name: Build Android Release APK
         script: |
-          flutter build apk --debug --no-tree-shake-icons
+          flutter build apk --release --no-tree-shake-icons
 
       # STEP 8: Build iOS
-      - name: Build iOS Debug
+      - name: Build iOS Release
         script: |
-          flutter build ios --debug --no-codesign
+          flutter build ios --release --no-codesign
 
       # STEP 9: Package iOS .app into .ipa
       - name: Package IPA
@@ -72,9 +72,9 @@ workflows:
           cd build/ios/iphoneos
           mkdir -p Payload
           cp -r Runner.app Payload/
-          zip -r app-debug.ipa Payload
+          zip -r app-release.ipa Payload
           rm -rf Payload
-          echo "IPA created: build/ios/iphoneos/app-debug.ipa"
+          echo "IPA created: build/ios/iphoneos/app-release.ipa"
 
     artifacts:
       - build/**/outputs/**/*.apk
