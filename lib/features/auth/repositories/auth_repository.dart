@@ -99,6 +99,18 @@ class AuthRepository {
     );
   }
 
+  Future<void> registerDeviceToken(String token) async {
+    try {
+      await _client.post(
+        '/api/v1/notifications/device-token',
+        data: {
+          'token': token,
+          'platform': Platform.isIOS ? 'ios' : 'android',
+        },
+      );
+    } catch (_) {}
+  }
+
   Future<Map<String, dynamic>> testFcmNotification() async {
     final response = await _client.post('/api/v1/profile/test-fcm-notification');
     return response.data as Map<String, dynamic>;

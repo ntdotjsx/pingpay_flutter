@@ -1,5 +1,7 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/network/dio_client.dart';
+import '../../../core/services/notification_service.dart';
 import '../models/auth_models.dart';
 import '../repositories/auth_repository.dart';
 
@@ -94,6 +96,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         isLocked: shouldLock,
         isLoading: false,
       );
+      _syncFcmToken();
     } catch (e) {
       state = state.copyWith(
         status: AuthStatus.unauthenticated,
@@ -101,6 +104,18 @@ class AuthNotifier extends StateNotifier<AuthState> {
         isLocked: false,
         errorMessage: e.toString(),
       );
+    }
+  }
+
+  Future<void> _syncFcmToken() async {
+    final token = NotificationService.currentFcmToken;
+    if (token != null) {
+      try {
+        await _repo.registerDeviceToken(token);
+        debugPrint('FCM Token synced to backend successfully.');
+      } catch (e) {
+        debugPrint('Failed to sync FCM token to backend: $e');
+      }
     }
   }
 
@@ -125,6 +140,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         user: user,
         isLoading: false,
       );
+      _syncFcmToken();
     } catch (e) {
       state = state.copyWith(
         status: AuthStatus.unauthenticated,
