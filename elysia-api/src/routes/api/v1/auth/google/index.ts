@@ -1,6 +1,6 @@
 import { Elysia, t } from "elysia";
 import { db } from "../../../../../db";
-import { authIdentities, users, deviceTokens } from "../../../../../db/schema";
+import { authIdentities, users, deviceTokens, authSessions } from "../../../../../db/schema";
 import { env } from "../../../../../config/env";
 import { eq, and } from "drizzle-orm";
 import jwt from "jsonwebtoken";
@@ -151,8 +151,38 @@ export default new Elysia()
       }
     }
 
-    const jwtAccessToken = jwt.sign({ userId }, env.JWT_ACCESS_SECRET, { expiresIn: "15m" });
-    const jwtRefreshToken = jwt.sign({ userId }, env.JWT_REFRESH_SECRET, { expiresIn: "7d" });
+    // ── Single Device Login Policy: Invalidate previous sessions for this user ──
+    await db.delete(authSessions).where(eq(authSessions.userId, userId));
+
+    const deviceDescription = [
+      (body as any)?.deviceBrand,
+      (body as any)?.deviceModel,
+      (body as any)?.deviceName,
+      platform,
+    ].filter(Boolean).join(" - ") || "Mobile Device";
+
+    const [newSession] = await db.insert(authSessions).values({
+      userId,
+      refreshTokenHash: "pending",
+      deviceInfo: deviceDescription,
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    }).returning();
+
+    const jwtAccessToken = jwt.sign(
+      { userId, sessionId: newSession.id },
+      env.JWT_ACCESS_SECRET,
+      { expiresIn: "15m" }
+    );
+    const jwtRefreshToken = jwt.sign(
+      { userId, sessionId: newSession.id },
+      env.JWT_REFRESH_SECRET,
+      { expiresIn: "7d" }
+    );
+
+    const refreshTokenHash = crypto.createHash("sha256").update(jwtRefreshToken).digest("hex");
+    await db.update(authSessions)
+      .set({ refreshTokenHash })
+      .where(eq(authSessions.id, newSession.id));
 
     access_token.set({
       value: jwtAccessToken,

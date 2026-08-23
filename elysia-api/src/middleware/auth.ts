@@ -2,8 +2,8 @@ import { Elysia } from "elysia";
 import jwt from "jsonwebtoken";
 import { env } from "../config/env";
 import { db } from "../db";
-import { users, consentRecords, userCredentials } from "../db/schema";
-import { eq } from "drizzle-orm";
+import { users, consentRecords, userCredentials, authSessions } from "../db/schema";
+import { eq, and } from "drizzle-orm";
 
 export const authGuard = (app: Elysia) =>
   app.derive(async ({ cookie: { access_token }, headers }) => {
@@ -15,16 +15,32 @@ export const authGuard = (app: Elysia) =>
     }
 
     if (!token) {
-      return { userId: null, authError: "Unauthorized: Missing access token" };
+      return { userId: null, sessionId: null, authError: "Unauthorized: Missing access token" };
     }
     try {
       const decoded = jwt.verify(
         token,
         env.JWT_ACCESS_SECRET
-      ) as { userId: string };
-      return { userId: decoded.userId, authError: null };
+      ) as { userId: string; sessionId?: string };
+
+      if (decoded.sessionId) {
+        // Enforce Single Active Device Session Policy
+        const session = await db.query.authSessions.findFirst({
+          where: and(eq(authSessions.id, decoded.sessionId), eq(authSessions.userId, decoded.userId)),
+        });
+
+        if (!session) {
+          return {
+            userId: null,
+            sessionId: null,
+            authError: "SESSION_TERMINATED: บัญชีนี้มีการเข้าสู่ระบบจากอุปกรณ์อื่น ระบบได้นำคุณออกจากระบบนี้เพื่อความปลอดภัย",
+          };
+        }
+      }
+
+      return { userId: decoded.userId, sessionId: decoded.sessionId ?? null, authError: null };
     } catch {
-      return { userId: null, authError: "Unauthorized: Invalid access token" };
+      return { userId: null, sessionId: null, authError: "Unauthorized: Invalid access token" };
     }
   })
   .onBeforeHandle(({ authError, set }) => {

@@ -11,6 +11,7 @@
   let mounted = $state(false);
   let authenticated = $state(false);
   let currentUser = $state<any>(null);
+  let mobileMenuOpen = $state(false);
 
   const navItems: { label: string; href: string; icon: 'dashboard' | 'transactions' | 'activity' | 'suspicious' | 'users' | 'disputes' | 'rewards' | 'notifications' | 'security' | 'audit' | 'maintenance' }[] = [
     { label: 'Dashboard', href: '/', icon: 'dashboard' },
@@ -45,6 +46,7 @@
 
   $effect(() => {
     if (mounted && $page.url.pathname) {
+      mobileMenuOpen = false;
       checkAuth();
     }
   });
@@ -53,6 +55,7 @@
     clearToken();
     currentUser = null;
     authenticated = false;
+    mobileMenuOpen = false;
     goto('/login');
   }
 
@@ -77,18 +80,70 @@
 {:else if $page.url.pathname === '/login'}
   {@render children()}
 {:else}
-  <div class="flex h-screen bg-[#f6f5f4]">
-    <!-- Notion Document Sidebar -->
-    <aside class="flex w-64 flex-col border-r border-[#e6e6e6] bg-[#fbfbfa] text-[#000000]">
+  <div class="flex h-screen flex-col lg:flex-row bg-[#f6f5f4] overflow-hidden">
+    <!-- Mobile Top Navigation Bar -->
+    <header class="flex h-14 w-full items-center justify-between border-b border-[#e6e6e6] bg-white px-4 lg:hidden shrink-0 z-30">
+      <div class="flex items-center gap-3">
+        <button
+          onclick={() => mobileMenuOpen = !mobileMenuOpen}
+          aria-label="Toggle navigation menu"
+          class="flex h-9 w-9 items-center justify-center rounded-md border border-[#e6e6e6] text-[#31302e] hover:bg-[#f6f5f4] transition-colors"
+        >
+          <Icon name={mobileMenuOpen ? 'close' : 'menu'} class="h-5 w-5" />
+        </button>
+        <div class="flex items-center gap-2">
+          <div class="flex h-7 w-7 items-center justify-center rounded-[6px] bg-[#0075de] text-white shadow-sm">
+            <Icon name="card" class="h-4 w-4" />
+          </div>
+          <span class="text-sm font-bold tracking-tight text-[#000000]">PingPay Console</span>
+        </div>
+      </div>
+
+      {#if currentUser}
+        <div class="flex items-center gap-2">
+          {#if currentUser.avatarUrl}
+            <img src={currentUser.avatarUrl} alt="" class="h-7 w-7 rounded-full object-cover border border-[#e6e6e6]" />
+          {:else}
+            <div class="flex h-7 w-7 items-center justify-center rounded-full bg-[#0075de] text-xs font-bold text-white">
+              {(currentUser.displayName || 'A')[0]}
+            </div>
+          {/if}
+        </div>
+      {/if}
+    </header>
+
+    <!-- Mobile Drawer Backdrop -->
+    {#if mobileMenuOpen}
+      <button
+        onclick={() => mobileMenuOpen = false}
+        aria-label="Close navigation menu"
+        class="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm lg:hidden transition-opacity"
+      ></button>
+    {/if}
+
+    <!-- Mobile Drawer / Sidebar -->
+    <aside
+      class="fixed inset-y-0 left-0 z-50 flex w-72 flex-col border-r border-[#e6e6e6] bg-[#fbfbfa] text-[#000000] shadow-xl transition-transform duration-200 lg:static lg:w-64 lg:shadow-none lg:translate-x-0 shrink-0 {mobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}"
+    >
       <!-- Header / Brand -->
-      <div class="flex h-14 items-center gap-3 border-b border-[#e6e6e6] px-5 bg-white">
-        <div class="flex h-7 w-7 items-center justify-center rounded-[6px] bg-[#0075de] text-white shadow-sm">
-          <Icon name="card" class="h-4 w-4" />
+      <div class="flex h-14 items-center justify-between border-b border-[#e6e6e6] px-5 bg-white shrink-0">
+        <div class="flex items-center gap-3">
+          <div class="flex h-7 w-7 items-center justify-center rounded-[6px] bg-[#0075de] text-white shadow-sm">
+            <Icon name="card" class="h-4 w-4" />
+          </div>
+          <div class="min-w-0">
+            <h1 class="text-sm font-bold tracking-tight text-[#000000]">PingPay</h1>
+            <span class="block text-[10px] font-semibold text-[#0075de] uppercase tracking-wider">Console</span>
+          </div>
         </div>
-        <div class="min-w-0">
-          <h1 class="text-sm font-bold tracking-tight text-[#000000]">PingPay</h1>
-          <span class="block text-[10px] font-semibold text-[#0075de] uppercase tracking-wider">Console</span>
-        </div>
+
+        <button
+          onclick={() => mobileMenuOpen = false}
+          aria-label="Close navigation drawer"
+          class="flex h-7 w-7 items-center justify-center rounded text-[#615d59] hover:bg-[#f6f5f4] lg:hidden"
+        >
+          <Icon name="close" class="h-4 w-4" />
+        </button>
       </div>
 
       <!-- Navigation Links -->
@@ -96,7 +151,8 @@
         {#each navItems as item}
           <a
             href={item.href}
-            class="flex items-center gap-2.5 rounded-[5px] px-2.5 py-1.5 text-xs font-medium transition-colors {isActive(item.href, $page.url.pathname) ? 'bg-[#e8f3fc] text-[#0075de] font-semibold' : 'text-[#31302e] hover:bg-[#eae8e5]'}"
+            onclick={() => mobileMenuOpen = false}
+            class="flex items-center gap-2.5 rounded-[5px] px-2.5 py-2 text-xs font-medium transition-colors {isActive(item.href, $page.url.pathname) ? 'bg-[#e8f3fc] text-[#0075de] font-semibold' : 'text-[#31302e] hover:bg-[#eae8e5]'}"
           >
             <Icon name={item.icon} class="h-4 w-4 flex-shrink-0" />
             <span>{item.label}</span>
@@ -106,7 +162,7 @@
 
       <!-- Current User Section -->
       {#if currentUser}
-        <div class="border-t border-[#e6e6e6] bg-white p-3">
+        <div class="border-t border-[#e6e6e6] bg-white p-3 shrink-0">
           <div class="flex items-center gap-2.5">
             {#if currentUser.avatarUrl}
               <img src={currentUser.avatarUrl} alt="" class="h-8 w-8 rounded-full object-cover border border-[#e6e6e6]" />
@@ -127,7 +183,7 @@
       {/if}
 
       <!-- Sign Out -->
-      <div class="border-t border-[#e6e6e6] p-2 bg-[#fbfbfa]">
+      <div class="border-t border-[#e6e6e6] p-2 bg-[#fbfbfa] shrink-0">
         <button
           onclick={logout}
           class="flex w-full items-center gap-2 rounded-[5px] px-2.5 py-1.5 text-left text-xs font-medium text-[#c53030] hover:bg-[#fde8e8] transition-colors"
@@ -139,7 +195,7 @@
     </aside>
 
     <!-- Main Content Area -->
-    <main class="flex-1 overflow-auto p-8">
+    <main class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
       {@render children()}
     </main>
   </div>

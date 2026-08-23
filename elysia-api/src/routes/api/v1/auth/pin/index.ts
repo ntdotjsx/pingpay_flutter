@@ -1,6 +1,6 @@
 import { Elysia, t } from "elysia";
 import { db } from "../../../../../db";
-import { userCredentials, securityEvents, users, authIdentities, otpVerifications } from "../../../../../db/schema";
+import { userCredentials, securityEvents, users, authIdentities, otpVerifications, authSessions } from "../../../../../db/schema";
 import { eq, and } from "drizzle-orm";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
@@ -19,7 +19,18 @@ const requireAuth = (app: Elysia) =>
       return { userId: null, authError: "Unauthorized" };
     }
     try {
-      const decoded = jwt.verify(token, env.JWT_ACCESS_SECRET) as { userId: string };
+      const decoded = jwt.verify(token, env.JWT_ACCESS_SECRET) as { userId: string; sessionId?: string };
+      if (decoded.sessionId) {
+        const session = await db.query.authSessions.findFirst({
+          where: and(eq(authSessions.id, decoded.sessionId), eq(authSessions.userId, decoded.userId)),
+        });
+        if (!session) {
+          return {
+            userId: null,
+            authError: "SESSION_TERMINATED: บัญชีนี้มีการเข้าสู่ระบบจากอุปกรณ์อื่น ระบบได้นำคุณออกจากระบบนี้เพื่อความปลอดภัย",
+          };
+        }
+      }
       return { userId: decoded.userId, authError: null };
     } catch {
       return { userId: null, authError: "Unauthorized" };

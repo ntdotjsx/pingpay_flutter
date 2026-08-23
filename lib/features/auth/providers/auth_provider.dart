@@ -55,8 +55,13 @@ class AuthNotifier extends StateNotifier<AuthState> {
     checkSession();
   }
 
-  void forceUnauthenticated() {
-    state = const AuthState(status: AuthStatus.unauthenticated, user: null, isLocked: false);
+  void forceUnauthenticated([String? reason]) {
+    state = AuthState(
+      status: AuthStatus.unauthenticated,
+      user: null,
+      isLocked: false,
+      errorMessage: reason,
+    );
   }
 
   void lockApp() {
@@ -216,8 +221,8 @@ final authStateProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) {
   
   // Connect onUnauthorized callback from DioClient to trigger logout
   final dioClient = ref.watch(dioClientProvider);
-  dioClient.onUnauthorized = () {
-    notifier.forceUnauthenticated();
+  dioClient.onUnauthorized = (reason) {
+    notifier.forceUnauthenticated(reason);
   };
 
   return notifier;

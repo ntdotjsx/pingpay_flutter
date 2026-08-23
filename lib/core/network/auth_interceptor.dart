@@ -4,7 +4,7 @@ import '../storage/secure_storage.dart';
 class AuthInterceptor extends Interceptor {
   final SecureStorageService _storage;
   final Dio _dio;
-  final void Function()? onUnauthorized;
+  final void Function(String? reason)? onUnauthorized;
 
   AuthInterceptor(this._storage, this._dio, {this.onUnauthorized});
 
@@ -29,6 +29,14 @@ class AuthInterceptor extends Interceptor {
     final statusCode = err.response?.statusCode;
     final resData = err.response?.data;
     final errorMsg = (resData is Map ? (resData['error'] ?? resData['message']) : null)?.toString() ?? '';
+
+    final isSessionTerminated = errorMsg.contains('SESSION_TERMINATED') || errorMsg.contains('อุปกรณ์อื่น');
+
+    if (isSessionTerminated) {
+      await _storage.clearAll();
+      onUnauthorized?.call('บัญชีนี้มีการเข้าสู่ระบบจากอุปกรณ์อื่น ระบบได้นำคุณออกจากระบบนี้เพื่อความปลอดภัย');
+      return handler.next(err);
+    }
 
     final isUnauthorized = statusCode == 401 ||
         errorMsg.toLowerCase().contains('unauthorized') ||
@@ -71,11 +79,11 @@ class AuthInterceptor extends Interceptor {
           }
         } catch (_) {
           await _storage.clearAll();
-          onUnauthorized?.call();
+          onUnauthorized?.call(null);
         }
       } else {
         await _storage.clearAll();
-        onUnauthorized?.call();
+        onUnauthorized?.call(null);
       }
     }
     return handler.next(err);

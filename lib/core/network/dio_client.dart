@@ -7,7 +7,7 @@ import 'auth_interceptor.dart';
 class DioClient {
   late final Dio dio;
   final SecureStorageService secureStorage;
-  void Function()? onUnauthorized;
+  void Function(String? reason)? onUnauthorized;
   late final AuthInterceptor authInterceptor;
 
   DioClient({
@@ -30,7 +30,7 @@ class DioClient {
     authInterceptor = AuthInterceptor(
       secureStorage,
       dio,
-      onUnauthorized: () => onUnauthorized?.call(),
+      onUnauthorized: (reason) => onUnauthorized?.call(reason),
     );
     dio.interceptors.add(authInterceptor);
   }

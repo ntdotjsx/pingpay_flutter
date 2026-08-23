@@ -48,7 +48,17 @@ export default new Elysia()
     };
   }, { detail: { tags: ["Auth"], summary: "Get current user session info" } })
   .post("/logout", async ({ cookie: { access_token, refresh_token }, set }) => {
-    // In a real app we'd find the session and revoke it here.
+    let token = access_token.value;
+    if (token) {
+      try {
+        const decoded = jwt.verify(token, env.JWT_ACCESS_SECRET) as { userId: string; sessionId?: string };
+        if (decoded.sessionId) {
+          await db.delete(authSessions).where(eq(authSessions.id, decoded.sessionId));
+        } else if (decoded.userId) {
+          await db.delete(authSessions).where(eq(authSessions.userId, decoded.userId));
+        }
+      } catch (_) {}
+    }
     
     // Clear cookies
     access_token.remove();

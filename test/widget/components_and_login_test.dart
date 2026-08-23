@@ -68,7 +68,7 @@ class AuthNotifierMock extends StateNotifier<AuthState>
   AuthNotifierMock(super.state);
 
   @override
-  void forceUnauthenticated() {}
+  void forceUnauthenticated([String? reason]) {}
 
   @override
   Future<void> checkSession() async {}

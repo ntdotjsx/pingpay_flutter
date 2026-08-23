@@ -25,7 +25,8 @@
       | 'check'
       | 'close'
       | 'plus'
-      | 'edit';
+      | 'edit'
+      | 'menu';
     class?: string;
     strokeWidth?: number;
   } = $props();
@@ -118,5 +119,9 @@
   {:else if name === 'edit'}
     <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
     <path d="m15 5 4 4" />
+  {:else if name === 'menu'}
+    <line x1="4" x2="20" y1="12" y2="12" />
+    <line x1="4" x2="20" y1="6" y2="6" />
+    <line x1="4" x2="20" y1="18" y2="18" />
   {/if}
 </svg>

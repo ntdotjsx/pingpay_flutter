@@ -19,10 +19,19 @@ export const app = new Elysia()
     if (code === 'NOT_FOUND') return;
     
     const message = error instanceof Error ? error.message : String(error);
-    
-    if (message.toLowerCase().includes("unauthorized") || message.includes("Invalid access token") || message.includes("Missing access token") || message.includes("jwt expired")) {
+
+    if (
+      message.includes("SESSION_TERMINATED") ||
+      message.toLowerCase().includes("unauthorized") ||
+      message.includes("Invalid access token") ||
+      message.includes("Missing access token") ||
+      message.includes("jwt expired")
+    ) {
       set.status = 401;
-      return { error: message, message };
+      return {
+        error: message.includes("SESSION_TERMINATED") ? "SESSION_TERMINATED" : message,
+        message,
+      };
     }
     if (message.includes("Forbidden") || message.includes("Developer role required")) {
       set.status = 403;
