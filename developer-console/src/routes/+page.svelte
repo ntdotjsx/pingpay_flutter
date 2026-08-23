@@ -77,6 +77,9 @@
       <StatCard label="Banned Users" value={stats.bannedUsers} color="red" />
       <StatCard label="Open Disputes" value={stats.openDisputes} color="yellow" />
       <StatCard label="Total Transactions" value={stats.totalTransactions} color="blue" />
+      <StatCard label="Pending Redemptions" value={stats.pendingRedemptions ?? 0} color="green" />
+      <StatCard label="Queued Notifications" value={stats.pendingNotifications ?? 0} color="blue" />
+      <StatCard label="Security Events" value={stats.securityEventsCount ?? 0} color="yellow" />
       <StatCard label="Suspicious Threat Logs" value={stats.suspiciousLogs} color="red" />
     </div>
 
@@ -117,37 +120,37 @@
 
       <!-- Quick Navigation Panels -->
       <div class="lg:col-span-2 grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <a href="/transactions" class="rounded-xl border border-[#e6e6e6] bg-white p-5 shadow-sm hover:border-[#0075de] hover:shadow transition-all group flex flex-col justify-between">
+        <a href="/rewards" class="rounded-xl border border-[#e6e6e6] bg-white p-5 shadow-sm hover:border-[#1aae39] hover:shadow transition-all group flex flex-col justify-between">
+          <div>
+            <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-[#e8f8eb] text-[#1aae39] mb-3 group-hover:scale-105 transition-transform">
+              <Icon name="rewards" class="h-5 w-5" />
+            </div>
+            <h3 class="font-bold text-sm text-[#000000] group-hover:text-[#1aae39] transition-colors">Rewards Store</h3>
+            <p class="mt-1 text-xs text-[#615d59] leading-relaxed">Manage gifts catalog, points costs, stock, and fulfill shipment tracking.</p>
+          </div>
+          <span class="mt-4 text-xs font-semibold text-[#1aae39] group-hover:underline">Manage Rewards &rarr;</span>
+        </a>
+
+        <a href="/notifications" class="rounded-xl border border-[#e6e6e6] bg-white p-5 shadow-sm hover:border-[#0075de] hover:shadow transition-all group flex flex-col justify-between">
           <div>
             <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-[#e8f3fc] text-[#0075de] mb-3 group-hover:scale-105 transition-transform">
-              <Icon name="transactions" class="h-5 w-5" />
+              <Icon name="notifications" class="h-5 w-5" />
             </div>
-            <h3 class="font-bold text-sm text-[#000000] group-hover:text-[#0075de] transition-colors">Transactions Explorer</h3>
-            <p class="mt-1 text-xs text-[#615d59] leading-relaxed">Search financial movements with DataTables sorting & export.</p>
+            <h3 class="font-bold text-sm text-[#000000] group-hover:text-[#0075de] transition-colors">FCM Notifications</h3>
+            <p class="mt-1 text-xs text-[#615d59] leading-relaxed">Inspect push message delivery status, payload history, and trigger retries.</p>
           </div>
-          <span class="mt-4 text-xs font-semibold text-[#0075de] group-hover:underline">Open Table &rarr;</span>
+          <span class="mt-4 text-xs font-semibold text-[#0075de] group-hover:underline">View Outbox &rarr;</span>
         </a>
 
-        <a href="/disputes" class="rounded-xl border border-[#e6e6e6] bg-white p-5 shadow-sm hover:border-[#dd5b00] hover:shadow transition-all group flex flex-col justify-between">
+        <a href="/security" class="rounded-xl border border-[#e6e6e6] bg-white p-5 shadow-sm hover:border-[#dd5b00] hover:shadow transition-all group flex flex-col justify-between">
           <div>
             <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-[#fef2e8] text-[#dd5b00] mb-3 group-hover:scale-105 transition-transform">
-              <Icon name="disputes" class="h-5 w-5" />
+              <Icon name="security" class="h-5 w-5" />
             </div>
-            <h3 class="font-bold text-sm text-[#000000] group-hover:text-[#dd5b00] transition-colors">Dispute Management</h3>
-            <p class="mt-1 text-xs text-[#615d59] leading-relaxed">Review transfer slips, SlipOK hashes, and record determinations.</p>
+            <h3 class="font-bold text-sm text-[#000000] group-hover:text-[#dd5b00] transition-colors">Security Events</h3>
+            <p class="mt-1 text-xs text-[#615d59] leading-relaxed">Track PIN brute-force attempts, lockout events, and IP access patterns.</p>
           </div>
-          <span class="mt-4 text-xs font-semibold text-[#dd5b00] group-hover:underline">Manage Disputes &rarr;</span>
-        </a>
-
-        <a href="/suspicious" class="rounded-xl border border-[#e6e6e6] bg-white p-5 shadow-sm hover:border-[#e03e3e] hover:shadow transition-all group flex flex-col justify-between">
-          <div>
-            <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-[#fde8e8] text-[#e03e3e] mb-3 group-hover:scale-105 transition-transform">
-              <Icon name="suspicious" class="h-5 w-5" />
-            </div>
-            <h3 class="font-bold text-sm text-[#000000] group-hover:text-[#e03e3e] transition-colors">Suspicious Activity Logs</h3>
-            <p class="mt-1 text-xs text-[#615d59] leading-relaxed">Investigate duplicate slips, multi-account abuse, and unusual write-offs.</p>
-          </div>
-          <span class="mt-4 text-xs font-semibold text-[#e03e3e] group-hover:underline">Security Logs &rarr;</span>
+          <span class="mt-4 text-xs font-semibold text-[#dd5b00] group-hover:underline">Security Events &rarr;</span>
         </a>
       </div>
     </div>

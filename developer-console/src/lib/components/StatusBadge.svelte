@@ -30,6 +30,19 @@
     write_off: 'bg-[#f0efed] text-[#45423f]',
     resolved_written_off: 'bg-[#f0efed] text-[#45423f]',
     refund: 'bg-[#faeee3] text-[#793400]',
+    // Rewards redemptions
+    pending_delivery: 'bg-[#fef2e8] text-[#b34900]',
+    shipped: 'bg-[#e8f3fc] text-[#005bab]',
+    delivered: 'bg-[#e8f8eb] text-[#138029]',
+    // Notifications outbox
+    PENDING: 'bg-[#fef2e8] text-[#b34900]',
+    PROCESSING: 'bg-[#e8f3fc] text-[#005bab]',
+    SENT: 'bg-[#e8f8eb] text-[#138029]',
+    FAILED: 'bg-[#fde8e8] text-[#c53030]',
+    SKIPPED: 'bg-[#f0efed] text-[#45423f]',
+    // Security events
+    pin_brute_force: 'bg-[#fde8e8] text-[#c53030]',
+    suspicious_login: 'bg-[#faeee3] text-[#793400]',
   };
 
   let sizeClass = $derived(size === 'md' ? 'px-3 py-1 text-xs font-semibold' : 'px-2.5 py-0.5 text-[11px] font-medium');

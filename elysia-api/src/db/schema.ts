@@ -145,7 +145,8 @@ export const users = pgTable(
   {
     id: uuid("id").primaryKey().defaultRandom(),
     userCode: varchar("user_code", { length: 32 }).notNull().unique(), // Public friend code (e.g. USR-XXXXXX)
-    displayName: varchar("display_name", { length: 128 }), // from LINE, pre-profile
+    email: varchar("email", { length: 255 }),
+    displayName: varchar("display_name", { length: 128 }), // from Google, pre-profile
     fullName: varchar("full_name", { length: 128 }),
     address: text("address"),
     phoneNumber: varchar("phone_number", { length: 32 }),
@@ -911,6 +912,36 @@ export const deviceTokens = pgTable(
 export const deviceTokensRelations = relations(deviceTokens, ({ one }) => ({
   user: one(users, {
     fields: [deviceTokens.userId],
+    references: [users.id],
+  }),
+}));
+
+export const otpVerifications = pgTable(
+  "otp_verifications",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    email: varchar("email", { length: 255 }).notNull(),
+    otpHash: text("otp_hash").notNull(),
+    purpose: varchar("purpose", { length: 32 }).notNull().default("pin_reset"),
+    attempts: integer("attempts").notNull().default(0),
+    maxAttempts: integer("max_attempts").notNull().default(5),
+    expiresAt: timestamp("expires_at").notNull(),
+    verifiedAt: timestamp("verified_at"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => ({
+    userIdx: index("otp_verifications_user_idx").on(table.userId),
+    emailIdx: index("otp_verifications_email_idx").on(table.email),
+  })
+);
+
+export const otpVerificationsRelations = relations(otpVerifications, ({ one }) => ({
+  user: one(users, {
+    fields: [otpVerifications.userId],
     references: [users.id],
   }),
 }));

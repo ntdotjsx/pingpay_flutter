@@ -105,7 +105,20 @@
     <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
       <!-- Profile Card -->
       <div class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-sm">
-        <h2 class="mb-4 text-sm font-bold text-[#000000]">Profile Details</h2>
+        <div class="flex items-center gap-3 mb-4">
+          {#if user.avatarUrl}
+            <img src={user.avatarUrl} alt="" class="h-10 w-10 rounded-full object-cover border border-[#e6e6e6]" />
+          {:else}
+            <div class="flex h-10 w-10 items-center justify-center rounded-full bg-[#0075de] text-sm font-bold text-white">
+              {(user.displayName || user.fullName || 'U')[0]}
+            </div>
+          {/if}
+          <div>
+            <h2 class="text-sm font-bold text-[#000000]">Profile Details</h2>
+            <p class="text-[11px] text-[#615d59]">{user.profileCompletedAt ? 'Completed Profile' : 'Onboarding Pending'}</p>
+          </div>
+        </div>
+
         <dl class="space-y-3">
           <div class="flex justify-between border-b border-[#f6f5f4] pb-2">
             <dt class="text-xs text-[#615d59]">User Code</dt>
@@ -157,10 +170,6 @@
             <dd class="text-xs text-[#000000]">{user.promptPayIdType || '-'}</dd>
           </div>
           <div class="flex justify-between border-b border-[#f6f5f4] pb-2">
-            <dt class="text-xs text-[#615d59]">Bank Name</dt>
-            <dd class="text-xs text-[#000000]">{user.bankName || '-'}</dd>
-          </div>
-          <div class="flex justify-between border-b border-[#f6f5f4] pb-2">
             <dt class="text-xs text-[#615d59]">Bank Account Number</dt>
             <dd class="text-xs font-mono text-[#000000]">{user.bankAccountNumber || '-'}</dd>
           </div>
@@ -169,6 +178,28 @@
             <dd class="text-xs text-[#000000]">{user.promptPayVerifiedAt ? new Date(user.promptPayVerifiedAt).toLocaleDateString() : 'Not verified'}</dd>
           </div>
         </dl>
+
+        <div class="mt-6 border-t border-[#e6e6e6] pt-4">
+          <h2 class="mb-3 text-sm font-bold text-[#000000]">Rewards & Shipping Info</h2>
+          <dl class="space-y-2.5">
+            <div class="flex justify-between border-b border-[#f6f5f4] pb-2">
+              <dt class="text-xs text-[#615d59]">Reward Points</dt>
+              <dd class="text-xs font-bold text-[#0075de]">{user.rewardPoints ?? 0} pts</dd>
+            </div>
+            <div class="flex justify-between border-b border-[#f6f5f4] pb-2">
+              <dt class="text-xs text-[#615d59]">Shipping Recipient</dt>
+              <dd class="text-xs text-[#000000]">{user.shippingRecipientName || '-'}</dd>
+            </div>
+            <div class="flex justify-between border-b border-[#f6f5f4] pb-2">
+              <dt class="text-xs text-[#615d59]">Shipping Phone</dt>
+              <dd class="text-xs text-[#000000]">{user.shippingPhone || '-'}</dd>
+            </div>
+            <div class="flex justify-between pt-1">
+              <dt class="text-xs text-[#615d59]">Shipping Address</dt>
+              <dd class="text-xs text-[#000000] max-w-[200px] text-right truncate">{user.shippingAddress || '-'}</dd>
+            </div>
+          </dl>
+        </div>
 
         <div class="mt-6 border-t border-[#e6e6e6] pt-4">
           <h3 class="text-[11px] font-semibold uppercase tracking-wider text-[#615d59] mb-2.5">Audit Quick Links</h3>
@@ -181,6 +212,9 @@
             </a>
             <a href="/suspicious?userId={user.id}" class="rounded-md border border-[#e6e6e6] bg-white px-3 py-1.5 text-xs font-medium text-[#c53030] hover:bg-[#fde8e8] transition-colors">
               Suspicious Logs &rarr;
+            </a>
+            <a href="/security?userId={user.id}" class="rounded-md border border-[#e6e6e6] bg-white px-3 py-1.5 text-xs font-medium text-[#dd5b00] hover:bg-[#fef2e8] transition-colors">
+              Security Events &rarr;
             </a>
           </div>
         </div>

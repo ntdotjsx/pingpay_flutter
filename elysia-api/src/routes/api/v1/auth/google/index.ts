@@ -80,6 +80,7 @@ export default new Elysia()
       const userCode = `USR-${crypto.randomBytes(3).toString("hex").toUpperCase()}`;
       const [newUser] = await db.insert(users).values({
         userCode,
+        email: email || undefined,
         displayName: displayName,
         avatarUrl: avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${googleUserId}`,
         role: mockGoogleId?.includes("admin") || mockGoogleId?.includes("dev") ? "developer" : "user",
@@ -99,10 +100,11 @@ export default new Elysia()
         where: eq(users.id, userId),
       });
 
-      // Update avatar or display name if changed
-      if (userRecord && (avatarUrl || displayName)) {
+      // Update avatar, display name, or email if changed
+      if (userRecord && (avatarUrl || displayName || email)) {
         await db.update(users)
           .set({
+            email: email || userRecord.email,
             avatarUrl: avatarUrl || userRecord.avatarUrl,
             updatedAt: new Date(),
           })

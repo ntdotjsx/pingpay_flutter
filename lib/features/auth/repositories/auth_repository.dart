@@ -80,6 +80,63 @@ class AuthRepository {
     }
   }
 
+  Future<Map<String, dynamic>> requestPinResetOtp() async {
+    try {
+      final response = await _client.post('/api/v1/auth/pin/forgot/request-otp');
+      return response.data as Map<String, dynamic>;
+    } catch (e) {
+      if (e is DioException) {
+        final errorMsg = (e.response?.data is Map ? e.response?.data['message'] ?? e.response?.data['error'] : null)?.toString();
+        if (errorMsg != null && errorMsg.isNotEmpty) {
+          throw Exception(errorMsg);
+        }
+      }
+      rethrow;
+    }
+  }
+
+  Future<Map<String, dynamic>> verifyPinResetOtp(String otp) async {
+    try {
+      final response = await _client.post(
+        '/api/v1/auth/pin/forgot/verify-otp',
+        data: {'otp': otp},
+      );
+      return response.data as Map<String, dynamic>;
+    } catch (e) {
+      if (e is DioException) {
+        final errorMsg = (e.response?.data is Map ? e.response?.data['message'] ?? e.response?.data['error'] : null)?.toString();
+        if (errorMsg != null && errorMsg.isNotEmpty) {
+          throw Exception(errorMsg);
+        }
+      }
+      rethrow;
+    }
+  }
+
+  Future<Map<String, dynamic>> resetPinWithToken({
+    required String resetToken,
+    required String newPin,
+  }) async {
+    try {
+      final response = await _client.post(
+        '/api/v1/auth/pin/forgot/reset',
+        data: {
+          'resetToken': resetToken,
+          'newPin': newPin,
+        },
+      );
+      return response.data as Map<String, dynamic>;
+    } catch (e) {
+      if (e is DioException) {
+        final errorMsg = (e.response?.data is Map ? e.response?.data['message'] ?? e.response?.data['error'] : null)?.toString();
+        if (errorMsg != null && errorMsg.isNotEmpty) {
+          throw Exception(errorMsg);
+        }
+      }
+      rethrow;
+    }
+  }
+
   Future<void> updateProfile({
     String? displayName,
     String? fullName,

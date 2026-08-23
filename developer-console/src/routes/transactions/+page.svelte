@@ -18,7 +18,6 @@
 
   let filters = $state({
     userId: '',
-    groupId: '',
     type: '',
     dateFrom: '',
     dateTo: '',
@@ -60,14 +59,10 @@
 
   <!-- API Filters Panel -->
   <div class="mb-6 rounded-xl border border-[#e6e6e6] bg-white p-4 shadow-sm">
-    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
       <div>
         <label for="filter-user-id" class="block text-[11px] font-medium text-[#615d59]">User ID</label>
         <input id="filter-user-id" type="text" bind:value={filters.userId} class="mt-1 block w-full rounded-[4px] border border-[#e6e6e6] bg-white px-2.5 py-1.5 text-xs text-[#000000] focus:border-[#0075de] focus:ring-1 focus:ring-[#0075de] focus:outline-none" placeholder="User UUID" />
-      </div>
-      <div>
-        <label for="filter-group-id" class="block text-[11px] font-medium text-[#615d59]">Group ID</label>
-        <input id="filter-group-id" type="text" bind:value={filters.groupId} class="mt-1 block w-full rounded-[4px] border border-[#e6e6e6] bg-white px-2.5 py-1.5 text-xs text-[#000000] focus:border-[#0075de] focus:ring-1 focus:ring-[#0075de] focus:outline-none" placeholder="Group UUID" />
       </div>
       <div>
         <label for="filter-type" class="block text-[11px] font-medium text-[#615d59]">Transaction Type</label>

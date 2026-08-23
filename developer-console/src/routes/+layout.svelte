@@ -12,9 +12,12 @@
   let authenticated = $state(false);
   let currentUser = $state<any>(null);
 
-  const navItems: { label: string; href: string; icon: 'dashboard' | 'transactions' | 'activity' | 'suspicious' | 'users' | 'disputes' | 'audit' | 'maintenance' }[] = [
+  const navItems: { label: string; href: string; icon: 'dashboard' | 'transactions' | 'activity' | 'suspicious' | 'users' | 'disputes' | 'rewards' | 'notifications' | 'security' | 'audit' | 'maintenance' }[] = [
     { label: 'Dashboard', href: '/', icon: 'dashboard' },
     { label: 'Transactions', href: '/transactions', icon: 'transactions' },
+    { label: 'Rewards Store', href: '/rewards', icon: 'rewards' },
+    { label: 'Notifications', href: '/notifications', icon: 'notifications' },
+    { label: 'Security Events', href: '/security', icon: 'security' },
     { label: 'Activity Logs', href: '/activity-logs', icon: 'activity' },
     { label: 'Suspicious', href: '/suspicious', icon: 'suspicious' },
     { label: 'Users', href: '/users', icon: 'users' },

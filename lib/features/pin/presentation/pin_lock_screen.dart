@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../auth/providers/auth_provider.dart';
 import 'widgets/custom_pin_keypad.dart';
+import 'widgets/forgot_pin_bottom_sheet.dart';
 
 class PinLockScreen extends ConsumerStatefulWidget {
   const PinLockScreen({super.key});
@@ -275,20 +276,47 @@ class _PinLockScreenState extends ConsumerState<PinLockScreen>
 
               const Spacer(flex: 1),
 
-              // Logout Option
-              TextButton.icon(
-                onPressed: () async {
-                  await ref.read(authStateProvider.notifier).logout();
-                },
-                icon: const Icon(Icons.logout_rounded, size: 16, color: AppColors.inkMuted48),
-                label: const Text(
-                  'เข้าสู่ระบบด้วยบัญชีอื่น (Logout)',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: AppColors.inkMuted48,
-                    fontWeight: FontWeight.w600,
+              // Forgot PIN & Logout Options
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  TextButton(
+                    onPressed: () {
+                      ForgotPinBottomSheet.show(context);
+                    },
+                    child: const Text(
+                      'ลืมรหัส PIN?',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Color(0xFFFF5000),
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
-                ),
+                  Container(
+                    width: 4,
+                    height: 4,
+                    margin: const EdgeInsets.symmetric(horizontal: 8),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: isDark ? Colors.white38 : AppColors.inkMuted48,
+                    ),
+                  ),
+                  TextButton.icon(
+                    onPressed: () async {
+                      await ref.read(authStateProvider.notifier).logout();
+                    },
+                    icon: const Icon(Icons.logout_rounded, size: 14, color: AppColors.inkMuted48),
+                    label: const Text(
+                      'ออกจากระบบ (Logout)',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: AppColors.inkMuted48,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
               ),
 
               const SizedBox(height: 12),

@@ -1,8 +1,9 @@
 import { Elysia, t } from "elysia";
 import { db } from "../../../../../db";
-import { userCredentials, securityEvents } from "../../../../../db/schema";
-import { eq } from "drizzle-orm";
+import { userCredentials, securityEvents, users, authIdentities, otpVerifications } from "../../../../../db/schema";
+import { eq, and } from "drizzle-orm";
 import jwt from "jsonwebtoken";
+import crypto from "crypto";
 import { env } from "../../../../../config/env";
 import * as argon2 from "argon2";
 
@@ -130,4 +131,234 @@ export default new Elysia()
       pin: t.String({ minLength: 6, maxLength: 6, pattern: "^[0-9]+$" })
     }),
     detail: { tags: ["Auth PIN"], summary: "Verify 6-digit PIN" }
+  })
+  // ── Forgot PIN Flow via Email OTP ──────────────────────────────────────
+  .post("/forgot/request-otp", async ({ userId, set }) => {
+    try {
+      const user = await db.query.users.findFirst({
+        where: eq(users.id, userId)
+      });
+
+      if (!user) {
+        set.status = 404;
+        return { error: "USER_NOT_FOUND", message: "ไม่พบข้อมูลผู้ใช้งาน" };
+      }
+
+      // Check user email from profile or Google identity
+      let targetEmail = user.email;
+      if (!targetEmail) {
+        // Check Google identity providerUserId or metadata
+        const googleIdentity = await db.query.authIdentities.findFirst({
+          where: and(eq(authIdentities.userId, userId), eq(authIdentities.provider, "google"))
+        });
+        if (googleIdentity?.providerUserId && googleIdentity.providerUserId.includes("@")) {
+          targetEmail = googleIdentity.providerUserId;
+        }
+      }
+
+      if (!targetEmail) {
+        set.status = 400;
+        return {
+          error: "NO_EMAIL_CONFIGURED",
+          message: "บัญชีของคุณยังไม่มี Email สำหรับรับรหัส OTP กรุณาเข้าสู่ระบบใหม่ด้วย Google"
+        };
+      }
+
+      // Check rate limit (cooldown 60s)
+      const recentOtp = await db.query.otpVerifications.findFirst({
+        where: and(
+          eq(otpVerifications.userId, userId),
+          eq(otpVerifications.purpose, "pin_reset")
+        ),
+        orderBy: (table, { desc }) => [desc(table.createdAt)]
+      });
+
+      const now = new Date();
+      if (recentOtp && (now.getTime() - new Date(recentOtp.createdAt).getTime()) < 60 * 1000) {
+        const remainingSeconds = Math.ceil((60 * 1000 - (now.getTime() - new Date(recentOtp.createdAt).getTime())) / 1000);
+        set.status = 429;
+        return {
+          error: "RATE_LIMITED",
+          message: `กรุณารอ ${remainingSeconds} วินาที ก่อนขอรหัส OTP ใหม่อีกครั้ง`,
+          cooldownSeconds: remainingSeconds
+        };
+      }
+
+      // Generate 6-digit numeric OTP
+      const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+      const otpHash = crypto.createHash("sha256").update(otpCode).digest("hex");
+      const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
+
+      await db.insert(otpVerifications).values({
+        userId,
+        email: targetEmail,
+        otpHash,
+        purpose: "pin_reset",
+        attempts: 0,
+        maxAttempts: 5,
+        expiresAt,
+      });
+
+      // Send OTP via Email Service
+      const { defaultEmailService } = await import("../../../../../modules/email/email.service");
+      await defaultEmailService.sendOtpEmail({
+        toEmail: targetEmail,
+        otp: otpCode,
+        userName: user.displayName || user.fullName || "ผู้ใช้งาน",
+        expiresInMinutes: 5,
+      });
+
+      // Mask email for privacy (e.g. thanapon@gmail.com -> th****@gmail.com)
+      const emailParts = targetEmail.split("@");
+      const namePart = emailParts[0];
+      const domainPart = emailParts[1] || "";
+      const maskedName = namePart.length > 2 
+        ? `${namePart.substring(0, 2)}${"*".repeat(Math.max(3, namePart.length - 2))}`
+        : `${namePart}***`;
+      const maskedEmail = `${maskedName}@${domainPart}`;
+
+      return {
+        success: true,
+        message: "ส่งรหัส OTP ไปยังอีเมลของคุณเรียบร้อยแล้ว",
+        maskedEmail,
+        expiresInSeconds: 300,
+        cooldownSeconds: 60,
+      };
+    } catch (err: any) {
+      set.status = 500;
+      return { error: "INTERNAL_ERROR", message: err.message };
+    }
+  }, {
+    detail: { tags: ["Auth PIN"], summary: "Request Email OTP for PIN Reset" }
+  })
+  .post("/forgot/verify-otp", async ({ userId, body, set }) => {
+    const { otp } = body;
+    const cleanOtp = otp.trim();
+
+    const activeOtp = await db.query.otpVerifications.findFirst({
+      where: and(
+        eq(otpVerifications.userId, userId),
+        eq(otpVerifications.purpose, "pin_reset")
+      ),
+      orderBy: (table, { desc }) => [desc(table.createdAt)]
+    });
+
+    if (!activeOtp || (activeOtp.expiresAt && new Date(activeOtp.expiresAt) < new Date())) {
+      set.status = 400;
+      return {
+        error: "OTP_EXPIRED_OR_INVALID",
+        message: "รหัส OTP หมดอายุหรือไม่ถูกต้อง กรุณากดขอรหัสใหม่"
+      };
+    }
+
+    if (activeOtp.verifiedAt) {
+      set.status = 400;
+      return {
+        error: "OTP_ALREADY_USED",
+        message: "รหัส OTP นี้ถูกใช้งานไปแล้ว กรุณากดขอรหัสใหม่"
+      };
+    }
+
+    if (activeOtp.attempts >= activeOtp.maxAttempts) {
+      set.status = 429;
+      return {
+        error: "OTP_MAX_ATTEMPTS_EXCEEDED",
+        message: "กรอกรหัส OTP ผิดเกินจำนวนครั้งที่กำหนด กรุณากดขอรหัสใหม่"
+      };
+    }
+
+    const inputHash = crypto.createHash("sha256").update(cleanOtp).digest("hex");
+    if (inputHash !== activeOtp.otpHash) {
+      const newAttempts = activeOtp.attempts + 1;
+      await db.update(otpVerifications)
+        .set({ attempts: newAttempts, updatedAt: new Date() })
+        .where(eq(otpVerifications.id, activeOtp.id));
+
+      set.status = 400;
+      return {
+        error: "INVALID_OTP",
+        message: "รหัส OTP ไม่ถูกต้อง",
+        attemptsLeft: Math.max(0, activeOtp.maxAttempts - newAttempts)
+      };
+    }
+
+    // Mark verified
+    await db.update(otpVerifications)
+      .set({ verifiedAt: new Date(), updatedAt: new Date() })
+      .where(eq(otpVerifications.id, activeOtp.id));
+
+    // Generate signed resetToken (valid for 10 minutes)
+    const resetToken = jwt.sign(
+      { userId, purpose: "pin_reset", otpId: activeOtp.id },
+      env.JWT_ACCESS_SECRET,
+      { expiresIn: "10m" }
+    );
+
+    return {
+      success: true,
+      message: "ยืนยันรหัส OTP สำเร็จ",
+      resetToken,
+    };
+  }, {
+    body: t.Object({
+      otp: t.String({ minLength: 6, maxLength: 6, pattern: "^[0-9]+$" })
+    }),
+    detail: { tags: ["Auth PIN"], summary: "Verify Email OTP for PIN Reset" }
+  })
+  .post("/forgot/reset", async ({ body, set }) => {
+    const { resetToken, newPin } = body;
+
+    try {
+      const decoded = jwt.verify(resetToken, env.JWT_ACCESS_SECRET) as {
+        userId: string;
+        purpose: string;
+        otpId: string;
+      };
+
+      if (!decoded || decoded.purpose !== "pin_reset" || !decoded.userId) {
+        set.status = 401;
+        return { error: "INVALID_RESET_TOKEN", message: "ลิงก์หรือโทเค็นสำหรับรีเซ็ต PIN ไม่ถูกต้องหรือหมดอายุ" };
+      }
+
+      const pinHash = await argon2.hash(newPin);
+
+      // Update PIN hash & unlock account
+      await db.insert(userCredentials)
+        .values({
+          userId: decoded.userId,
+          pinHash,
+          failedAttempts: 0,
+          lockedUntil: null,
+        })
+        .onConflictDoUpdate({
+          target: userCredentials.userId,
+          set: {
+            pinHash,
+            failedAttempts: 0,
+            lockedUntil: null,
+            updatedAt: new Date(),
+          }
+        });
+
+      // Log security event
+      await db.insert(securityEvents).values({
+        userId: decoded.userId,
+        event: "pin_reset_via_otp",
+        metadata: { otpId: decoded.otpId, resetAt: new Date() }
+      });
+
+      return {
+        success: true,
+        message: "ตั้งรหัส PIN ใหม่สำเร็จเรียบร้อยแล้ว",
+      };
+    } catch (e: any) {
+      set.status = 401;
+      return { error: "INVALID_RESET_TOKEN", message: "โทเค็นสำหรับรีเซ็ต PIN หมดอายุ กรุณาขอรหัส OTP ใหม่อีกครั้ง" };
+    }
+  }, {
+    body: t.Object({
+      resetToken: t.String(),
+      newPin: t.String({ minLength: 6, maxLength: 6, pattern: "^[0-9]+$" })
+    }),
+    detail: { tags: ["Auth PIN"], summary: "Reset 6-digit PIN with verified token" }
   });
