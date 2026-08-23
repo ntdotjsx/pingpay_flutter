@@ -140,6 +140,11 @@ class BillModel {
 
   double get totalDebtorsAmount =>
       items.fold(0.0, (acc, item) => acc + item.currentAmount);
+  double get myShare {
+    final diff = totalAmount - totalDebtorsAmount;
+    return diff > 0.009 ? diff : 0.0;
+  }
+  bool get hasMyShare => myShare > 0.009;
   double get totalPaidAmount =>
       items.fold(0.0, (acc, item) => acc + item.amountPaid);
   double get totalWrittenOffAmount =>

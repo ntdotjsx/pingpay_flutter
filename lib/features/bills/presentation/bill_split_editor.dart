@@ -143,8 +143,8 @@ class BillSplitEditor extends ConsumerWidget {
                     ),
                     Text(
                       billState.includeOwner
-                          ? 'หักส่วนของตัวเองออกจากบิล'
-                          : 'ไม่หักส่วนตัวเอง (หารเฉพาะเพื่อน)',
+                          ? 'หักส่วนของฉันออกจากบิล (฿${billState.ownerAmountBaht.toStringAsFixed(2)})'
+                          : 'ไม่หักส่วนฉัน (หารเฉพาะเพื่อน ฿0.00)',
                       style: const TextStyle(
                         fontSize: 11,
                         color: AppColors.inkMuted48,
@@ -153,11 +153,15 @@ class BillSplitEditor extends ConsumerWidget {
                   ],
                 ),
               ),
-              const Text(
-                '฿0.00',
+              Text(
+                billState.includeOwner
+                    ? '฿${billState.ownerAmountBaht.toStringAsFixed(2)}'
+                    : '฿0.00',
                 style: TextStyle(
                   fontSize: 13,
-                  color: AppColors.inkMuted48,
+                  color: billState.includeOwner
+                      ? AppColors.primary
+                      : AppColors.inkMuted48,
                   fontWeight: FontWeight.bold,
                 ),
               ),

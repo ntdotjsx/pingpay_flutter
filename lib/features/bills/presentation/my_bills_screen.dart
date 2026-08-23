@@ -677,18 +677,24 @@ class MyBillsScreen extends ConsumerWidget {
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
                             Text(
-                              'ยอดรวมบิล',
+                              bill.totalOutstandingAmount > 0
+                                  ? 'คงค้างรอเก็บ (บิล ฿${bill.totalAmount.toStringAsFixed(0)})'
+                                  : 'ยอดรวมบิล',
                               style: TextStyle(
                                 fontSize: 10,
                                 color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
                               ),
                             ),
                             Text(
-                              '฿${bill.totalAmount.toStringAsFixed(2)}',
-                              style: const TextStyle(
+                              bill.totalOutstandingAmount > 0
+                                  ? '฿${bill.totalOutstandingAmount.toStringAsFixed(2)}'
+                                  : '฿${bill.totalAmount.toStringAsFixed(2)}',
+                              style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.w800,
-                                color: AppColors.primary,
+                                color: bill.totalOutstandingAmount > 0
+                                    ? AppColors.primary
+                                    : AppColors.success,
                                 letterSpacing: -0.2,
                               ),
                             ),

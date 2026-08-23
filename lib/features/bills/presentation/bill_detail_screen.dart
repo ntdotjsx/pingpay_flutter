@@ -239,38 +239,52 @@ class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
                       ),
                       const SizedBox(height: 16),
 
-                      // 4-Column Accounting Grid with Soft Background Tile
+                      // Multi-Metric Accounting Grid
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                         decoration: BoxDecoration(
                           color: isDark ? AppColors.surfaceTile2 : AppColors.canvasParchment,
                           borderRadius: BorderRadius.circular(16),
                         ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        child: Column(
                           children: [
-                            _buildAccountingColumn(
-                              'ยอดรวมทั้งหมด',
-                              '฿${bill.totalDebtorsAmount.toStringAsFixed(2)}',
-                              isDark ? AppColors.bodyOnDark : AppColors.ink,
-                            ),
-                            Container(width: 1, height: 28, color: isDark ? Colors.white10 : AppColors.dividerSoft),
-                            _buildAccountingColumn(
-                              'ชำระแล้ว',
-                              '฿${bill.totalPaidAmount.toStringAsFixed(2)}',
-                              AppColors.success,
-                            ),
-                            Container(width: 1, height: 28, color: isDark ? Colors.white10 : AppColors.dividerSoft),
-                            _buildAccountingColumn(
-                              'ยกหนี้ให้',
-                              '฿${bill.totalWrittenOffAmount.toStringAsFixed(2)}',
-                              isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
-                            ),
-                            Container(width: 1, height: 28, color: isDark ? Colors.white10 : AppColors.dividerSoft),
-                            _buildAccountingColumn(
-                              'คงค้าง',
-                              '฿${bill.totalOutstandingAmount.toStringAsFixed(2)}',
-                              AppColors.primary,
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                _buildAccountingColumn(
+                                  'จ่ายสำรอง (บิล)',
+                                  '฿${bill.totalAmount.toStringAsFixed(2)}',
+                                  isDark ? AppColors.bodyOnDark : AppColors.ink,
+                                ),
+                                if (bill.hasMyShare) ...[
+                                  Container(width: 1, height: 28, color: isDark ? Colors.white10 : AppColors.dividerSoft),
+                                  _buildAccountingColumn(
+                                    'ส่วนของฉัน',
+                                    '฿${bill.myShare.toStringAsFixed(2)}',
+                                    AppColors.primary,
+                                  ),
+                                ],
+                                Container(width: 1, height: 28, color: isDark ? Colors.white10 : AppColors.dividerSoft),
+                                _buildAccountingColumn(
+                                  'ชำระแล้ว',
+                                  '฿${bill.totalPaidAmount.toStringAsFixed(2)}',
+                                  AppColors.success,
+                                ),
+                                if (bill.totalWrittenOffAmount > 0) ...[
+                                  Container(width: 1, height: 28, color: isDark ? Colors.white10 : AppColors.dividerSoft),
+                                  _buildAccountingColumn(
+                                    'ยกหนี้ให้',
+                                    '฿${bill.totalWrittenOffAmount.toStringAsFixed(2)}',
+                                    isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
+                                  ),
+                                ],
+                                Container(width: 1, height: 28, color: isDark ? Colors.white10 : AppColors.dividerSoft),
+                                _buildAccountingColumn(
+                                  'คงค้างที่ต้องเก็บ',
+                                  '฿${bill.totalOutstandingAmount.toStringAsFixed(2)}',
+                                  const Color(0xFFFF5000),
+                                ),
+                              ],
                             ),
                           ],
                         ),

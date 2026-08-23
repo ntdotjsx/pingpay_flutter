@@ -11,7 +11,6 @@ import '../../../core/utils/app_toast.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../friends/models/friend_models.dart';
 import '../../friends/providers/friends_provider.dart';
-import '../../payments/models/payment_models.dart';
 import '../../payments/presentation/widgets/debt_card.dart';
 import '../../payments/presentation/widgets/payment_detail_bottom_sheet.dart';
 import '../../payments/presentation/widgets/payment_summary_card.dart';

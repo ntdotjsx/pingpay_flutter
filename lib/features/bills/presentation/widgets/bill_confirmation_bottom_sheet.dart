@@ -109,6 +109,62 @@ class BillConfirmationBottomSheet extends StatelessWidget {
                   const Divider(height: 1),
                   const SizedBox(height: 10),
 
+                  // Accounting breakdown
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'ยอดที่ฉันจ่ายสำรอง (Bill Total)',
+                        style: TextStyle(fontSize: 12, color: AppColors.inkMuted80),
+                      ),
+                      Text(
+                        '฿${state.totalAmount.toStringAsFixed(2)}',
+                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'ส่วนของฉัน (My Share)',
+                        style: TextStyle(fontSize: 12, color: AppColors.inkMuted80),
+                      ),
+                      Text(
+                        state.includeOwner
+                            ? '฿${state.ownerAmountBaht.toStringAsFixed(2)}'
+                            : '฿0.00 (ไม่รวมฉัน)',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: state.includeOwner ? AppColors.primary : AppColors.inkMuted48,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'ยอดที่ต้องเก็บคืนจากเพื่อนทั้งหมด',
+                        style: TextStyle(fontSize: 12, color: AppColors.inkMuted80),
+                      ),
+                      Text(
+                        '฿${state.participants.fold(0.0, (acc, p) => acc + p.amountBaht).toStringAsFixed(2)}',
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.success,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  const Divider(height: 1),
+                  const SizedBox(height: 10),
+
                   Text(
                     'รายชื่อเพื่อนที่หาร (${state.participants.length} คน):',
                     style: const TextStyle(

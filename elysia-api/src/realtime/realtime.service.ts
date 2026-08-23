@@ -67,13 +67,18 @@ export class RealtimeService {
   }
 
   async getBillMemberUserIds(billId: string) {
-    const bill = await db.query.bills.findFirst({
-      where: eq(bills.id, billId),
-      with: { items: true },
-    });
+    if (!db?.query?.bills?.findFirst) return [];
+    try {
+      const bill = await db.query.bills.findFirst({
+        where: eq(bills.id, billId),
+        with: { items: true },
+      });
 
-    if (!bill) return [];
-    return [...new Set([bill.ownerId, ...bill.items.map((item) => item.debtorId)])];
+      if (!bill) return [];
+      return [...new Set([bill.ownerId, ...bill.items.map((item: any) => item.debtorId)])];
+    } catch {
+      return [];
+    }
   }
 
   async getBillsForUser(userId: string) {

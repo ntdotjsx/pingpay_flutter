@@ -51,6 +51,18 @@ describe("Unit: Bill Allocation Service", () => {
     expect(BillAllocationService.validateExactAllocation(518, [518], 259)).toBe(false);
   });
 
+  it("should handle User Case 1: Total = 498, 2 participants (Owner share = 249, 1 Debtor = 249)", () => {
+    const result = BillAllocationService.allocateEvenly(498, 1, 249);
+    expect(result).toEqual([249]);
+    expect(BillAllocationService.validateExactAllocation(498, [249], 249)).toBe(true);
+  });
+
+  it("should handle User Case 2: Total = 498, 3 participants (Owner share = 166, 2 Debtors = 166 each)", () => {
+    const result = BillAllocationService.allocateEvenly(498, 2, 166);
+    expect(result).toEqual([166, 166]);
+    expect(BillAllocationService.validateExactAllocation(498, [166, 166], 166)).toBe(true);
+  });
+
   it("should return empty array if participants count <= 0", () => {
     expect(BillAllocationService.allocateEvenly(1000, 0)).toEqual([]);
   });

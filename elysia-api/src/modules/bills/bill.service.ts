@@ -127,7 +127,9 @@ export class BillService {
 
     // Enqueue real LINE notifications for all participants in outbox
     try {
-      const ownerUser = await this.repo.getUserById(ownerId);
+      const ownerUser = fullCreatedBill.owner || await db.query.users?.findFirst?.({
+        where: (u: any, { eq }: any) => eq(u.id, ownerId),
+      });
       const creatorName = ownerUser?.displayName || ownerUser?.fullName || "เพื่อน";
       const { defaultNotificationOutboxService } = await import("../notifications/notification-outbox.service");
 
@@ -224,19 +226,30 @@ export class BillService {
     }
 
     const billTotalCents = Math.round(Number(bill.totalAmount) * 100);
+    const existingDebtorPoolCents = bill.items.reduce(
+      (sum, it) => sum + Math.round(Number(it.currentAmount) * 100),
+      0
+    );
+    const ownerCents = Math.max(0, billTotalCents - existingDebtorPoolCents);
     const newTargetCents = Math.round(newAmount * 100);
 
-    // If edited participant amount is larger than previous bill total, expand bill total to match new target
-    const effectiveBillTotalCents = Math.max(billTotalCents, newTargetCents);
-    if (effectiveBillTotalCents > billTotalCents) {
+    const otherParticipants = bill.items.filter((i) => i.id !== item.id);
+    let targetDebtorPoolCents = existingDebtorPoolCents;
+
+    if (otherParticipants.length === 0) {
+      targetDebtorPoolCents = newTargetCents;
+    } else {
+      targetDebtorPoolCents = Math.max(existingDebtorPoolCents, newTargetCents);
+    }
+
+    const effectiveBillTotalCents = ownerCents + targetDebtorPoolCents;
+    if (effectiveBillTotalCents !== billTotalCents) {
       await this.repo.updateBill(billId, userId, {
         totalAmount: (effectiveBillTotalCents / 100).toFixed(2),
       });
     }
 
-    // Auto-redistribute remaining among other unpaid participants
-    const otherParticipants = bill.items.filter((i) => i.id !== item.id);
-    const remainingCents = Math.max(0, effectiveBillTotalCents - newTargetCents);
+    const remainingCents = Math.max(0, targetDebtorPoolCents - newTargetCents);
 
     let updatedAllocations: Array<{ id: string; debtorId: string; amount: string }> = [
       { id: item.id, debtorId: item.debtorId, amount: (newTargetCents / 100).toFixed(2) }
