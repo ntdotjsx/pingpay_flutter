@@ -3,6 +3,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 
 class GoogleAuthService {
   static final GoogleSignIn _googleSignIn = GoogleSignIn(
+    serverClientId: '628880255448-qvtgouniidlkanp37l0nfh2pts26fth5.apps.googleusercontent.com',
     scopes: [
       'email',
       'profile',

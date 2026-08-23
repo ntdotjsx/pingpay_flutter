@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "628880255448",
+    "project_id": "pingpay-27b08",
+    "storage_bucket": "pingpay-27b08.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:628880255448:android:3e11185bbad5d84a88aaad",
+        "android_client_info": {
+          "package_name": "com.example.my_app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "628880255448-qvtgouniidlkanp37l0nfh2pts26fth5.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCDeKiaapA8XcHjZNTfUJOQQAoMnHoEi6g"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "628880255448-qvtgouniidlkanp37l0nfh2pts26fth5.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
