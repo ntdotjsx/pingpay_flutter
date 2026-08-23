@@ -1,6 +1,6 @@
 import { db } from "../../db";
 import { bills, billItems, financialTransactions, editLogs, users } from "../../db/schema";
-import { eq, inArray, and } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { BillPolicy } from "./bill.policy";
 import { BillStatusService } from "./bill-status.service";
 import { defaultNotificationService, NotificationService } from "./bill-notification.service";
@@ -64,12 +64,7 @@ export class BillWriteoffService {
 
       if (!bill) throw new Error("BILL_NOT_FOUND: Bill not found.");
 
-      // Verify that user is either bill owner or a participant in this bill
-      const isOwner = bill.ownerId === userId;
-      const isParticipant = bill.items.some((i) => i.debtorId === userId);
-      if (!isOwner && !isParticipant) {
-        throw new Error("Unauthorized: Only the bill owner or involved debtor can perform debt offset.");
-      }
+      BillPolicy.canWriteOffDebt(userId, bill.ownerId);
 
       for (const itemInput of dto.participants) {
         if (itemInput.amount <= 0) {

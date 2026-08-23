@@ -7,11 +7,10 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme/theme.dart';
 import '../../../core/utils/app_toast.dart';
 import '../../../core/widgets/app_skeleton.dart';
-import '../../payments/models/payment_models.dart';
 import '../../payments/providers/payment_providers.dart';
-import 'widgets/debt_offset_dialog.dart';
 import 'widgets/destructive_confirmation_sheet.dart';
 import '../models/bill_models.dart';
+import '../../auth/providers/auth_provider.dart';
 import '../providers/bill_provider.dart';
 import '../repositories/bill_repository.dart';
 
@@ -45,7 +44,9 @@ class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
         actions: [
           billAsync.maybeWhen(
             data: (bill) {
+              final currentUserId = ref.read(authStateProvider).user?.id;
               if (bill.status == 'cancelled') return const SizedBox.shrink();
+              if (currentUserId != bill.ownerId) return const SizedBox.shrink();
               return IconButton(
                 icon: const Icon(Icons.delete_outline_rounded, color: AppColors.error),
                 tooltip: 'ยกเลิกบิล',
@@ -250,7 +251,7 @@ class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
                           children: [
                             _buildAccountingColumn(
                               'ยอดรวมทั้งหมด',
-                              '฿${bill.totalAmount.toStringAsFixed(2)}',
+                              '฿${bill.totalDebtorsAmount.toStringAsFixed(2)}',
                               isDark ? AppColors.bodyOnDark : AppColors.ink,
                             ),
                             Container(width: 1, height: 28, color: isDark ? Colors.white10 : AppColors.dividerSoft),
@@ -646,7 +647,7 @@ class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
                                 ],
                               ),
                             )
-                          else
+                          else if (ref.read(authStateProvider).user?.id == bill.ownerId)
                             Row(
                               children: [
                                 Expanded(
@@ -897,50 +898,6 @@ class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
 
               Navigator.pop(ctx);
 
-              // ── Check if debtor has mutual debts with bill owner ──
-              final userDebts = ref.read(userDebtsProvider).allDebts;
-              final matchingDebt = userDebts.firstWhere(
-                (d) => (d.creditor.id == item.debtorId || (item.debtor?.userCode != null && d.creditor.userCode == item.debtor!.userCode)) && d.outstandingAmount > 0,
-                orElse: () => DebtItemModel(
-                  id: '',
-                  billId: '',
-                  debtorId: '',
-                  billTitle: '',
-                  originalAmount: 0,
-                  currentAmount: 0,
-                  outstandingAmount: 0,
-                  status: '',
-                  debtStartDate: DateTime.now(),
-                  creditor: const CreditorUserModel(id: '', userCode: '', displayName: ''),
-                ),
-              );
-
-              bool shouldOffset = false;
-              DebtOffsetMatch? offsetMatch;
-
-              if (matchingDebt.id.isNotEmpty && matchingDebt.outstandingAmount > 0) {
-                final offsetAmt = newAmt < matchingDebt.outstandingAmount ? newAmt : matchingDebt.outstandingAmount;
-                final remainingShare = (newAmt - offsetAmt).clamp(0.0, double.infinity);
-                final remainingDebt = (matchingDebt.outstandingAmount - offsetAmt).clamp(0.0, double.infinity);
-
-                offsetMatch = DebtOffsetMatch(
-                  participantId: item.debtorId,
-                  participantName: item.debtor?.displayName ?? 'เพื่อน',
-                  currentBillShare: newAmt,
-                  existingDebt: matchingDebt,
-                  offsetAmount: offsetAmt,
-                  remainingShareAfterOffset: remainingShare,
-                  remainingDebtAfterOffset: remainingDebt,
-                );
-
-                final offsetChoice = await DebtOffsetConfirmationDialog.show(
-                  context,
-                  matches: [offsetMatch],
-                );
-                if (offsetChoice == null) return; // User closed
-                shouldOffset = offsetChoice;
-              }
-
               try {
                 final repo = ref.read(billRepositoryProvider);
                 await repo.editParticipantAmount(
@@ -948,36 +905,6 @@ class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
                   participantId: item.id,
                   newAmount: newAmt,
                 );
-
-                if (shouldOffset && offsetMatch != null) {
-                  try {
-                    // 1. Write off existing debt owed to friend
-                    await repo.writeOffDebt(
-                      billId: offsetMatch.existingDebt.billId,
-                      participants: [
-                        {
-                          'participantId': offsetMatch.existingDebt.id,
-                          'amount': offsetMatch.offsetAmount,
-                        }
-                      ],
-                      reason: 'หักล้างหนี้อัตโนมัติจากการแก้ไขยอดบิล',
-                    );
-
-                    // 2. Write off friend's new share in this bill by offset amount
-                    await repo.writeOffDebt(
-                      billId: widget.billId,
-                      participants: [
-                        {
-                          'participantId': item.id,
-                          'amount': offsetMatch.offsetAmount,
-                        }
-                      ],
-                      reason: 'หักล้างหนี้อัตโนมัติจากหนี้เดิม (${offsetMatch.existingDebt.billTitle})',
-                    );
-                  } catch (e) {
-                    // Graceful handling
-                  }
-                }
 
                 ref.invalidate(billDetailProvider(widget.billId));
                 ref.read(userReceivablesProvider.notifier).loadReceivables(showLoading: false);
@@ -987,9 +914,7 @@ class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
                 if (mounted) {
                   AppToast.success(
                     context,
-                    shouldOffset
-                        ? 'อัปเดตยอดและหักล้างหนี้เดิมเรียบร้อยแล้ว'
-                        : 'อัปเดตยอดและเฉลี่ยหนี้เรียบร้อย',
+                    'อัปเดตยอดและเฉลี่ยหนี้เรียบร้อย',
                   );
                 }
               } catch (e) {

@@ -1,6 +1,5 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
 import '../../../core/network/dio_client.dart';
 import '../../../core/services/notification_service.dart';
 import '../models/auth_models.dart';
@@ -114,15 +113,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   Future<void> _syncFcmToken() async {
-    String? token = NotificationService.currentFcmToken;
-    if (token == null) {
-      try {
-        token = await FirebaseMessaging.instance.getToken();
-        NotificationService.currentFcmToken = token;
-      } catch (e) {
-        debugPrint('Could not retrieve FCM token directly: $e');
-      }
-    }
+    final token =
+        NotificationService.currentFcmToken ??
+        await NotificationService.ensureFcmToken();
 
     if (token != null) {
       try {

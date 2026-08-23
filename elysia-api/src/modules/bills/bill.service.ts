@@ -14,6 +14,7 @@ export interface CreateBillDTO {
   title?: string;
   description?: string;
   totalAmount: number;
+  ownerAmount?: number;
   currency?: string;
   groupId?: string;
   participants: Array<{ userId: string; amount?: number }>;
@@ -60,11 +61,17 @@ export class BillService {
     if (uniqueUserIds.size !== userIds.length) {
       throw new Error("DUPLICATE_PARTICIPANT: A user cannot be added multiple times to the same bill.");
     }
+    if (uniqueUserIds.has(ownerId)) {
+      throw new Error("OWNER_CANNOT_BE_PARTICIPANT: The bill owner share must use ownerAmount, not a debt participant.");
+    }
+
+    const ownerAmount = dto.ownerAmount ?? 0;
+    BillAllocationService.getParticipantPoolCents(dto.totalAmount, ownerAmount);
 
     let finalAllocations: { debtorId: string; amount: string }[] = [];
 
     if (dto.allocationMethod === "evenly" || !dto.allocationMethod) {
-      const amounts = BillAllocationService.allocateEvenly(dto.totalAmount, dto.participants.length);
+      const amounts = BillAllocationService.allocateEvenly(dto.totalAmount, dto.participants.length, ownerAmount);
       finalAllocations = dto.participants.map((p, i) => ({
         debtorId: p.userId,
         amount: amounts[i].toFixed(2),
@@ -77,7 +84,7 @@ export class BillService {
         return p.amount;
       });
 
-      if (!BillAllocationService.validateExactAllocation(dto.totalAmount, amounts)) {
+      if (!BillAllocationService.validateExactAllocation(dto.totalAmount, amounts, ownerAmount)) {
         throw new Error("TOTAL_MISMATCH: Allocated amounts sum does not match total amount.");
       }
 

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/theme.dart';
 import '../../../core/widgets/app_skeleton.dart';
+import '../../auth/providers/auth_provider.dart';
 import '../../friends/providers/friends_provider.dart';
 import '../../payments/services/debt_age_calculator.dart';
 import '../models/bill_models.dart';
@@ -207,7 +208,9 @@ class MyBillsScreen extends ConsumerWidget {
             ),
           ),
         ),
-        data: (bills) {
+        data: (allBills) {
+          final currentUserId = ref.read(authStateProvider).user?.id;
+          final bills = allBills.where((b) => b.ownerId == currentUserId).toList();
           final totalBillAmount = bills.fold(0.0, (acc, b) => acc + b.totalAmount);
           final uniqueDebtorIds = <String>{};
           for (final b in bills) {

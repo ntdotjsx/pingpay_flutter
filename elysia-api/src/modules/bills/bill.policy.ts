@@ -25,4 +25,10 @@ export class BillPolicy {
       throw new Error("Business rule violation: Cannot delete a bill with locked items.");
     }
   }
+
+  static canWriteOffDebt(userId: string, billOwnerId: string) {
+    if (userId !== billOwnerId) {
+      throw new Error("Unauthorized: Only the bill owner can write off debt.");
+    }
+  }
 }

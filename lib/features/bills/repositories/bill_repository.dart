@@ -39,6 +39,7 @@ class BillRepository {
     required String title,
     required double totalAmount,
     required List<Map<String, dynamic>> participants,
+    double ownerAmount = 0,
     String? description,
     String? allocationMethod,
     dynamic itemsBreakdown,
@@ -49,6 +50,7 @@ class BillRepository {
       data: {
         'title': title,
         'totalAmount': totalAmount,
+        'ownerAmount': ownerAmount,
         'participants': participants,
         if (description != null && description.isNotEmpty)
           'description': description,

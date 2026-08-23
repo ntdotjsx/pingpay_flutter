@@ -719,7 +719,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     Consumer(
                       builder: (context, ref, _) {
                         final billsAsync = ref.watch(myBillsProvider);
-                        final bills = billsAsync.valueOrNull ?? [];
+                        final currentUserId = ref.read(authStateProvider).user?.id;
+                        final bills = (billsAsync.valueOrNull ?? [])
+                            .where((b) => b.ownerId == currentUserId)
+                            .toList();
                         final userDebtsState = ref.watch(userDebtsProvider);
                         final debts = userDebtsState.allDebts;
 

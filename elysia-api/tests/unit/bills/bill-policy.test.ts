@@ -22,4 +22,12 @@ describe("Unit: Bill Policy", () => {
   it("should allow editing unpaid and unlocked items by bill owner", () => {
     expect(() => BillPolicy.canEditBillItem("user-1", "user-1", "unpaid", false)).not.toThrow();
   });
+
+  it("should forbid debtors from writing off debt they owe to someone else", () => {
+    expect(() => BillPolicy.canWriteOffDebt("debtor-user", "owner-user")).toThrow("Only the bill owner can write off debt");
+  });
+
+  it("should allow bill owner to write off debt", () => {
+    expect(() => BillPolicy.canWriteOffDebt("owner-user", "owner-user")).not.toThrow();
+  });
 });

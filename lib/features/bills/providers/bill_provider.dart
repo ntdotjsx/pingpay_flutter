@@ -341,7 +341,9 @@ class BillCreationNotifier extends StateNotifier<BillCreationState> {
             ? state.description.trim()
             : null,
         totalAmount: state.totalAmount,
+        ownerAmount: state.includeOwner ? state.ownerAmountBaht : 0,
         participants: participantsPayload,
+        allocationMethod: 'exact',
         itemsBreakdown: itemsBreakdownPayload,
         receiptImageUrl: state.receiptImageBase64,
       );

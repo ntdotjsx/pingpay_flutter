@@ -41,6 +41,16 @@ describe("Unit: Bill Allocation Service", () => {
     expect(BillAllocationService.validateExactAllocation(100.50, [50.25, 50.24])).toBe(false);
   });
 
+  it("should exclude owner amount from participant debt when splitting evenly", () => {
+    const result = BillAllocationService.allocateEvenly(518, 1, 259);
+    expect(result).toEqual([259]);
+  });
+
+  it("should validate exact participant debt plus owner share against total", () => {
+    expect(BillAllocationService.validateExactAllocation(518, [259], 259)).toBe(true);
+    expect(BillAllocationService.validateExactAllocation(518, [518], 259)).toBe(false);
+  });
+
   it("should return empty array if participants count <= 0", () => {
     expect(BillAllocationService.allocateEvenly(1000, 0)).toEqual([]);
   });

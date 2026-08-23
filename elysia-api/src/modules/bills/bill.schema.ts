@@ -32,6 +32,7 @@ export const CreateBillSchema = t.Object({
   title: t.Optional(t.String({ maxLength: 128, description: "Title of the bill" })),
   description: t.Optional(t.String({ description: "Description or notes for the bill" })),
   totalAmount: t.Number({ minimum: 0.01, description: "Total amount of the bill in THB" }),
+  ownerAmount: t.Optional(t.Number({ minimum: 0, description: "Owner's own share in THB. This is not created as debt." })),
   currency: t.Optional(t.String({ default: "THB", maxLength: 3, description: "3-letter currency code (defaults to THB)" })),
   groupId: t.Optional(t.String({ format: "uuid", description: "Optional group ID" })),
   participants: t.Array(ParticipantSchema, { minItems: 1, description: "List of participants in this bill" }),

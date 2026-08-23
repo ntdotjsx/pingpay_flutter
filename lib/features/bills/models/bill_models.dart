@@ -138,6 +138,8 @@ class BillModel {
     this.owner,
   });
 
+  double get totalDebtorsAmount =>
+      items.fold(0.0, (acc, item) => acc + item.currentAmount);
   double get totalPaidAmount =>
       items.fold(0.0, (acc, item) => acc + item.amountPaid);
   double get totalWrittenOffAmount =>

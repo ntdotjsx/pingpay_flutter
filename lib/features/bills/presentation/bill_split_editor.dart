@@ -153,51 +153,14 @@ class BillSplitEditor extends ConsumerWidget {
                   ],
                 ),
               ),
-              if (billState.includeOwner)
-                SizedBox(
-                  width: 105,
-                  child: TextFormField(
-                    initialValue: billState.ownerAmountBaht.toStringAsFixed(2),
-                    key: ValueKey(
-                      'owner_${billState.ownerAmountSatang}_${billState.includeOwner}',
-                    ),
-                    keyboardType: const TextInputType.numberWithOptions(
-                      decimal: true,
-                    ),
-                    textAlign: TextAlign.right,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 13,
-                      color: AppColors.primary,
-                    ),
-                    decoration: InputDecoration(
-                      prefixText: '฿ ',
-                      isDense: true,
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 6,
-                      ),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                    ),
-                    onFieldSubmitted: (v) {
-                      final val = double.tryParse(v);
-                      if (val != null) {
-                        billNotifier.adjustOwnerAmount(val);
-                      }
-                    },
-                  ),
-                )
-              else
-                const Text(
-                  '฿0.00',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: AppColors.inkMuted48,
-                    fontWeight: FontWeight.bold,
-                  ),
+              const Text(
+                '฿0.00',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: AppColors.inkMuted48,
+                  fontWeight: FontWeight.bold,
                 ),
+              ),
             ],
           ),
         ),

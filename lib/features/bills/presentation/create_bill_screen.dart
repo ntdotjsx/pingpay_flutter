@@ -20,14 +20,12 @@ import '../../profile/presentation/widgets/setup_payment_channel_sheet.dart';
 import '../models/ocr_models.dart';
 import '../providers/bill_provider.dart';
 import '../providers/ocr_provider.dart';
-import '../repositories/bill_repository.dart';
 import 'bill_split_editor.dart';
 import 'no_friends_state_widget.dart';
 import 'widgets/bill_confirmation_bottom_sheet.dart';
 import 'widgets/bill_items_summary_card.dart';
 import 'widgets/bill_items_bottom_sheet.dart';
 import 'widgets/destructive_confirmation_sheet.dart';
-import 'widgets/debt_offset_dialog.dart';
 import 'widgets/selected_friends_horizontal_bar.dart';
 
 class CreateBillScreen extends ConsumerStatefulWidget {
@@ -228,131 +226,6 @@ class _CreateBillScreenState extends ConsumerState<CreateBillScreen>
 
     if (!mounted) return;
     final billState = ref.read(billCreationProvider);
-
-    // ── Check if user has outstanding debts with any participant in this bill ──
-    final userDebts = ref.read(userDebtsProvider).allDebts;
-    final List<DebtOffsetMatch> matches = [];
-
-    for (final participant in billState.participants) {
-      final matchingDebt = userDebts.firstWhere(
-        (d) => d.creditor.id == participant.userId && d.outstandingAmount > 0,
-        orElse: () => userDebts.firstWhere(
-          (d) => d.creditor.userCode == participant.userCode && d.outstandingAmount > 0,
-          orElse: () => DebtItemModel(
-            id: '',
-            billId: '',
-            debtorId: '',
-            billTitle: '',
-            originalAmount: 0,
-            currentAmount: 0,
-            outstandingAmount: 0,
-            status: '',
-            debtStartDate: DateTime.now(),
-            creditor: const CreditorUserModel(id: '', userCode: '', displayName: ''),
-          ),
-        ),
-      );
-
-      if (matchingDebt.id.isNotEmpty && matchingDebt.outstandingAmount > 0) {
-        final share = participant.amountBaht;
-        final offsetAmount = share < matchingDebt.outstandingAmount ? share : matchingDebt.outstandingAmount;
-        final remainingShare = (share - offsetAmount).clamp(0.0, double.infinity);
-        final remainingDebt = (matchingDebt.outstandingAmount - offsetAmount).clamp(0.0, double.infinity);
-
-        matches.add(DebtOffsetMatch(
-          participantId: participant.userId,
-          participantName: participant.displayName,
-          currentBillShare: share,
-          existingDebt: matchingDebt,
-          offsetAmount: offsetAmount,
-          remainingShareAfterOffset: remainingShare,
-          remainingDebtAfterOffset: remainingDebt,
-        ));
-      }
-    }
-
-    // If matching debts found, ask user if they want to offset mutual debts
-    bool shouldOffset = false;
-    if (matches.isNotEmpty) {
-      final offsetChoice = await DebtOffsetConfirmationDialog.show(
-        context,
-        matches: matches,
-      );
-      if (offsetChoice == null) return; // User dismissed modal
-      shouldOffset = offsetChoice;
-
-      // User explicitly made their decision in DebtOffsetConfirmationDialog, execute submission immediately
-      final bill = await ref.read(billCreationProvider.notifier).submitBill();
-      if (bill != null && mounted) {
-        if (shouldOffset && matches.isNotEmpty) {
-          final billRepo = ref.read(billRepositoryProvider);
-          for (final match in matches) {
-            try {
-              // 1. Write off old debt owed to the friend
-              await billRepo.writeOffDebt(
-                billId: match.existingDebt.billId,
-                participants: [
-                  {
-                    'participantId': match.existingDebt.id,
-                    'amount': match.offsetAmount,
-                  }
-                ],
-                reason: 'หักล้างหนี้อัตโนมัติกับบิล "${bill.title ?? "บิลอาหาร"}"',
-              );
-
-              // 2. Also write off/reduce the new bill's participant debt share by the offset amount
-              final newBillItem = bill.items.where((i) => i.debtorId == match.participantId).firstOrNull;
-              if (newBillItem != null) {
-                await billRepo.writeOffDebt(
-                  billId: bill.id,
-                  participants: [
-                    {
-                      'participantId': newBillItem.id,
-                      'amount': match.offsetAmount,
-                    }
-                  ],
-                  reason: 'หักล้างหนี้อัตโนมัติจากหนี้เดิม (${match.existingDebt.billTitle})',
-                );
-              }
-            } catch (e) {
-              // Graceful handling
-            }
-          }
-        }
-
-        // Reset form controllers and provider state
-        _titleController.clear();
-        _amountController.clear();
-        _descriptionController.clear();
-        ref.read(billCreationProvider.notifier).reset();
-
-        // Refresh all related providers automatically
-        ref.invalidate(myBillsProvider);
-        ref.read(userReceivablesProvider.notifier).loadReceivables(showLoading: false);
-        ref.read(userDebtsProvider.notifier).loadDebts(showLoading: false);
-
-        if (mounted) {
-          AppToast.success(
-            context,
-            shouldOffset
-                ? 'สร้างบิลและหักล้างหนี้เดิมเรียบร้อยแล้ว!'
-                : 'สร้างบิล "${bill.title ?? 'บิลอาหาร'}" ยอด ฿${bill.totalAmount.toStringAsFixed(2)} สำเร็จ!',
-          );
-
-          if (context.canPop()) {
-            context.pop();
-          } else {
-            context.go('/home');
-          }
-        }
-      } else if (mounted) {
-        final error = ref.read(billCreationProvider).errorMessage;
-        if (error != null) {
-          AppToast.error(context, error);
-        }
-      }
-      return;
-    }
 
     if (!mounted) return;
 

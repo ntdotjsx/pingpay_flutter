@@ -38,6 +38,7 @@ class NotificationService {
   final DioClient _client;
   static String? currentFcmToken;
   String? _fcmToken;
+  bool _didScheduleTokenRetry = false;
 
   NotificationService(this._client);
 
@@ -81,6 +82,7 @@ class NotificationService {
 
       // 2. Request notification permissions from Firebase
       final messaging = FirebaseMessaging.instance;
+      await messaging.setAutoInitEnabled(true);
       final settings = await messaging.requestPermission(
         alert: true,
         announcement: false,
@@ -101,12 +103,14 @@ class NotificationService {
       debugPrint('FCM User permission status: ${settings.authorizationStatus}');
 
       // 3. Get initial FCM token
-      _fcmToken = await messaging.getToken();
+      _fcmToken = await ensureFcmToken();
       currentFcmToken = _fcmToken;
       debugPrint('FCM Device Token: $_fcmToken');
 
       if (_fcmToken != null) {
         await registerTokenWithBackend(_fcmToken!);
+      } else {
+        _scheduleTokenRetry();
       }
 
       // Listen for token refreshes
@@ -162,6 +166,66 @@ class NotificationService {
     } catch (e) {
       debugPrint('Error initializing Firebase Messaging: $e');
     }
+  }
+
+  static Future<String?> ensureFcmToken() async {
+    final messaging = FirebaseMessaging.instance;
+    await messaging.setAutoInitEnabled(true);
+
+    if (!kIsWeb && Platform.isIOS) {
+      final apnsToken = await _waitForApnsToken(messaging);
+      if (apnsToken == null) {
+        debugPrint('FCM skipped: APNs token is not available yet.');
+        return null;
+      }
+      debugPrint('APNs token is available for FCM registration.');
+    }
+
+    try {
+      final token = await messaging.getToken();
+      currentFcmToken = token;
+      return token;
+    } catch (e) {
+      debugPrint('Could not retrieve FCM token: $e');
+      return null;
+    }
+  }
+
+  void _scheduleTokenRetry() {
+    if (_didScheduleTokenRetry) return;
+    _didScheduleTokenRetry = true;
+
+    Future<void>.delayed(const Duration(seconds: 8), () async {
+      final token = await ensureFcmToken();
+      if (token == null) {
+        _didScheduleTokenRetry = false;
+        debugPrint('FCM token retry did not produce a token yet.');
+        return;
+      }
+
+      _fcmToken = token;
+      await registerTokenWithBackend(token);
+    });
+  }
+
+  static Future<String?> _waitForApnsToken(
+    FirebaseMessaging messaging, {
+    int attempts = 10,
+  }) async {
+    for (var attempt = 0; attempt < attempts; attempt += 1) {
+      try {
+        final token = await messaging.getAPNSToken();
+        if (token != null && token.isNotEmpty) {
+          return token;
+        }
+      } catch (e) {
+        debugPrint('APNs token attempt ${attempt + 1} failed: $e');
+      }
+
+      await Future<void>.delayed(const Duration(milliseconds: 600));
+    }
+
+    return null;
   }
 
   static Future<Map<String, String>> getDeviceMetadata() async {
