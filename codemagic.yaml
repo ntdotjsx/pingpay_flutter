@@ -56,16 +56,26 @@ workflows:
           pod install --repo-update
           cd ..
 
-      # STEP 7: Build Android
-      - name: Build Android Debug AAB
+      # STEP 7: Build Android APK
+      - name: Build Android Debug APK
         script: |
-          flutter build appbundle --debug --no-tree-shake-icons
+          flutter build apk --debug --no-tree-shake-icons
 
       # STEP 8: Build iOS
       - name: Build iOS Debug
         script: |
           flutter build ios --debug --no-codesign
 
+      # STEP 9: Package iOS .app into .ipa
+      - name: Package IPA
+        script: |
+          cd build/ios/iphoneos
+          mkdir -p Payload
+          cp -r Runner.app Payload/
+          zip -r app-debug.ipa Payload
+          rm -rf Payload
+          echo "IPA created: build/ios/iphoneos/app-debug.ipa"
+
     artifacts:
-      - build/**/outputs/**/*.aab
-      - build/ios/iphoneos/*.app
+      - build/**/outputs/**/*.apk
+      - build/ios/iphoneos/*.ipa
