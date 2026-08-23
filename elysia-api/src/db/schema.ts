@@ -243,7 +243,6 @@ export const bills = pgTable(
     ownerId: uuid("owner_id") // creditor - the person who paid upfront
       .notNull()
       .references(() => users.id, { onDelete: "restrict" }),
-    groupId: uuid("group_id").references(() => groups.id, { onDelete: "set null" }),
     title: varchar("title", { length: 128 }),
     currency: varchar("currency", { length: 3 }).notNull().default("THB"),
     totalAmount: numeric("total_amount", { precision: 12, scale: 2 }).notNull(),
@@ -313,46 +312,6 @@ export const billItems = pgTable(
       table.billId,
       table.debtorId
     ),
-  })
-);
-
-/* -------------------------------------------------------------------------- */
-/* GROUPS                                                                     */
-/* -------------------------------------------------------------------------- */
-
-export const groups = pgTable(
-  "groups",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    name: varchar("name", { length: 128 }).notNull(),
-    description: text("description"),
-    createdById: uuid("created_by_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "restrict" }),
-    createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at").notNull().defaultNow(),
-  }
-);
-
-export const groupMembers = pgTable(
-  "group_members",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    groupId: uuid("group_id")
-      .notNull()
-      .references(() => groups.id, { onDelete: "cascade" }),
-    userId: uuid("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    role: varchar("role", { length: 32 }).notNull().default("member"), // 'admin', 'member'
-    joinedAt: timestamp("joined_at").notNull().defaultNow(),
-  },
-  (table) => ({
-    groupUserIdx: uniqueIndex("group_members_group_user_idx").on(
-      table.groupId,
-      table.userId
-    ),
-    userIdx: index("group_members_user_idx").on(table.userId),
   })
 );
 
@@ -609,14 +568,14 @@ export const notificationOutbox = pgTable(
   "notification_outbox",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    eventType: notificationEventTypeEnum("event_type").notNull(),
+    eventType: varchar("event_type", { length: 64 }).notNull(),
     recipientUserId: uuid("recipient_user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    channel: varchar("channel", { length: 32 }).notNull().default("line"),
+    channel: varchar("channel", { length: 32 }).notNull().default("fcm"),
     payload: jsonb("payload").notNull(),
-    deduplicationKey: varchar("deduplication_key", { length: 255 }).notNull().unique(),
-    status: notificationStatusEnum("status").notNull().default("PENDING"),
+    deduplicationKey: varchar("deduplication_key", { length: 128 }).notNull(),
+    status: varchar("status", { length: 32 }).notNull().default("PENDING"),
     attempts: integer("attempts").notNull().default(0),
     maxAttempts: integer("max_attempts").notNull().default(5),
     availableAt: timestamp("available_at").notNull().defaultNow(),
@@ -644,8 +603,8 @@ export const notificationDeliveries = pgTable(
     notificationId: uuid("notification_id")
       .notNull()
       .references(() => notificationOutbox.id, { onDelete: "cascade" }),
-    provider: varchar("provider", { length: 32 }).notNull().default("line"),
-    recipientLineId: varchar("recipient_line_id", { length: 128 }),
+    provider: varchar("provider", { length: 32 }).notNull().default("fcm"),
+    recipientTarget: varchar("recipient_target", { length: 256 }),
     status: varchar("status", { length: 32 }).notNull(), // 'SENT', 'FAILED', 'SKIPPED'
     attemptNumber: integer("attempt_number").notNull(),
     responsePayload: jsonb("response_payload"),
@@ -670,7 +629,6 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   billItems: many(billItems),
   paymentsMade: many(payments, { relationName: "payer" }),
   paymentsConfirmed: many(payments, { relationName: "confirmedByOwner" }),
-  groupMemberships: many(groupMembers),
   friendRequestsSent: many(friendships, { relationName: "requester" }),
   friendRequestsReceived: many(friendships, { relationName: "addressee" }),
   editLogsPerformed: many(editLogs, { relationName: "performedBy" }),
@@ -701,10 +659,6 @@ export const billsRelations = relations(bills, ({ one, many }) => ({
   owner: one(users, {
     fields: [bills.ownerId],
     references: [users.id],
-  }),
-  group: one(groups, {
-    fields: [bills.groupId],
-    references: [groups.id],
   }),
   items: many(billItems),
   editLogs: many(editLogs),
@@ -747,26 +701,6 @@ export const paymentVerificationsRelations = relations(paymentVerifications, ({ 
   payment: one(payments, {
     fields: [paymentVerifications.paymentId],
     references: [payments.id],
-  }),
-}));
-
-export const groupsRelations = relations(groups, ({ one, many }) => ({
-  creator: one(users, {
-    fields: [groups.createdById],
-    references: [users.id],
-  }),
-  members: many(groupMembers),
-  bills: many(bills),
-}));
-
-export const groupMembersRelations = relations(groupMembers, ({ one }) => ({
-  group: one(groups, {
-    fields: [groupMembers.groupId],
-    references: [groups.id],
-  }),
-  user: one(users, {
-    fields: [groupMembers.userId],
-    references: [users.id],
   }),
 }));
 

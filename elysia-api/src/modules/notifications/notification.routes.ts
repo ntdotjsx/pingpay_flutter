@@ -4,7 +4,7 @@ import { db } from "../../db";
 import { deviceTokens } from "../../db/schema";
 import { eq } from "drizzle-orm";
 
-export const notificationRoutes = new Elysia({ prefix: "/notifications" })
+export const notificationRoutes = new Elysia()
   .get(
     "/:id",
     async ({ params: { id }, set }) => {
