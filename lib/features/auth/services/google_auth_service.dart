@@ -14,6 +14,17 @@ class GoogleAuthService {
     ],
   );
 
+  static GoogleSignInAccount? get currentUser => _googleSignIn.currentUser;
+
+  static Future<GoogleSignInAccount?> signInSilently() async {
+    try {
+      return await _googleSignIn.signInSilently();
+    } catch (e) {
+      debugPrint('Google signInSilently Error: $e');
+      return null;
+    }
+  }
+
   static Future<GoogleSignInAccount?> signIn() async {
     try {
       final account = await _googleSignIn.signIn();

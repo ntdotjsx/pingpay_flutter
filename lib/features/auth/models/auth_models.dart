@@ -24,6 +24,7 @@ enum OnboardingState {
 class UserModel {
   final String id;
   final String? userCode;
+  final String? email;
   final String? displayName;
   final String? fullName;
   final String? avatarUrl;
@@ -41,6 +42,7 @@ class UserModel {
   UserModel({
     required this.id,
     this.userCode,
+    this.email,
     this.displayName,
     this.fullName,
     this.avatarUrl,
@@ -60,6 +62,7 @@ class UserModel {
     return UserModel(
       id: json['userId'] ?? json['id'] ?? '',
       userCode: json['userCode'],
+      email: json['email'],
       displayName: json['displayName'],
       fullName: json['fullName'],
       avatarUrl: json['avatarUrl'],

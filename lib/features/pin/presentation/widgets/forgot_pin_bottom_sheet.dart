@@ -7,6 +7,7 @@ import 'package:pinput/pinput.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/app_toast.dart';
 import '../../../auth/providers/auth_provider.dart';
+import '../../../auth/services/google_auth_service.dart';
 import 'custom_pin_keypad.dart';
 
 enum ForgotPinStep { requestOtp, enterOtp, setNewPin, confirmNewPin }
@@ -36,7 +37,7 @@ class _ForgotPinBottomSheetState extends ConsumerState<ForgotPinBottomSheet> {
   Timer? _cooldownTimer;
   bool _showEmailInput = false;
 
-  // Email input if needed
+  // Email input fallback if needed
   final TextEditingController _emailController = TextEditingController();
 
   // OTP
@@ -47,6 +48,45 @@ class _ForgotPinBottomSheetState extends ConsumerState<ForgotPinBottomSheet> {
   // New PIN
   String _newPin = '';
   String _confirmPin = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _autoResolveGoogleEmail();
+  }
+
+  Future<void> _autoResolveGoogleEmail() async {
+    final user = ref.read(authStateProvider).user;
+    if (user?.email != null && user!.email!.isNotEmpty) {
+      if (mounted) {
+        setState(() {
+          _maskedEmail = _maskEmail(user.email!);
+        });
+      }
+      return;
+    }
+
+    try {
+      final googleUser = GoogleAuthService.currentUser ?? await GoogleAuthService.signInSilently();
+      if (googleUser?.email != null && googleUser!.email.isNotEmpty && mounted) {
+        setState(() {
+          _emailController.text = googleUser.email;
+          _maskedEmail = _maskEmail(googleUser.email);
+        });
+      }
+    } catch (_) {}
+  }
+
+  String _maskEmail(String email) {
+    final parts = email.split('@');
+    if (parts.length != 2) return email;
+    final name = parts[0];
+    final domain = parts[1];
+    final masked = name.length > 2 
+      ? '${name.substring(0, 2)}${'*' * (name.length - 2)}'
+      : '$name***';
+    return '$masked@$domain';
+  }
 
   @override
   void dispose() {
@@ -77,12 +117,15 @@ class _ForgotPinBottomSheetState extends ConsumerState<ForgotPinBottomSheet> {
   }
 
   Future<void> _requestOtp() async {
-    final customEmail = _emailController.text.trim();
-    if (_showEmailInput && customEmail.isEmpty) {
-      setState(() {
-        _errorMessage = 'กรุณาระบุ Email สำหรับรับรหัส OTP';
-      });
-      return;
+    String? targetEmail = _emailController.text.trim();
+    if (targetEmail.isEmpty) {
+      final user = ref.read(authStateProvider).user;
+      if (user?.email != null && user!.email!.isNotEmpty) {
+        targetEmail = user.email;
+      } else {
+        final googleUser = GoogleAuthService.currentUser ?? await GoogleAuthService.signInSilently();
+        targetEmail = googleUser?.email;
+      }
     }
 
     setState(() {
@@ -93,11 +136,11 @@ class _ForgotPinBottomSheetState extends ConsumerState<ForgotPinBottomSheet> {
     try {
       final repo = ref.read(authRepositoryProvider);
       final res = await repo.requestPinResetOtp(
-        email: customEmail.isNotEmpty ? customEmail : null,
+        email: targetEmail != null && targetEmail.isNotEmpty ? targetEmail : null,
       );
       if (mounted) {
         setState(() {
-          _maskedEmail = res['maskedEmail'] ?? customEmail;
+          _maskedEmail = res['maskedEmail'] ?? (targetEmail != null ? _maskEmail(targetEmail) : '');
           _step = ForgotPinStep.enterOtp;
           _isLoading = false;
         });
@@ -112,7 +155,7 @@ class _ForgotPinBottomSheetState extends ConsumerState<ForgotPinBottomSheet> {
         final errText = e.toString().replaceAll('Exception: ', '');
         final isNoEmail = errText.contains('NO_EMAIL') || errText.contains('ยังไม่มี Email');
         setState(() {
-          _errorMessage = isNoEmail ? 'โปรดระบุ Email ของคุณด้านล่างเพื่อรับรหัส OTP' : errText;
+          _errorMessage = isNoEmail ? 'โปรดระบุ Email ของคุณเพื่อรับรหัส OTP' : errText;
           if (isNoEmail) {
             _showEmailInput = true;
           }
@@ -337,6 +380,32 @@ class _ForgotPinBottomSheetState extends ConsumerState<ForgotPinBottomSheet> {
             height: 1.4,
           ),
         ),
+        if (_maskedEmail.isNotEmpty) ...[
+          const SizedBox(height: 14),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFF5000).withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: const Color(0xFFFF5000).withValues(alpha: 0.2)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.account_circle_outlined, size: 16, color: Color(0xFFFF5000)),
+                const SizedBox(width: 6),
+                Text(
+                  _maskedEmail,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFFFF5000),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
         if (_errorMessage != null) ...[
           const SizedBox(height: 12),
           Text(
