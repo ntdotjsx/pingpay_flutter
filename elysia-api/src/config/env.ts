@@ -21,8 +21,8 @@ export const env = {
   JWT_REFRESH_SECRET: process.env.JWT_REFRESH_SECRET || "pingpay-production-jwt-refresh-secret-key-fallback",
 
   // ── Email & OTP Services ──────────────────────────────────────────
-  RESEND_API_KEY: process.env.RESEND_API_KEY || "",
-  EMAIL_FROM: process.env.EMAIL_FROM || "PingPay <noreply@pingpay.app>",
+  RESEND_API_KEY: process.env.RESEND_API_KEY || process.env.RESEND_API || "",
+  EMAIL_FROM: process.env.EMAIL_FROM || "PingPay <onboarding@resend.dev>",
   SMTP_HOST: process.env.SMTP_HOST || "",
   SMTP_PORT: process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT, 10) : 587,
   SMTP_USER: process.env.SMTP_USER || "",
