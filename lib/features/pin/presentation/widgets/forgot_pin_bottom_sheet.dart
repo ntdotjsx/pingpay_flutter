@@ -34,6 +34,10 @@ class _ForgotPinBottomSheetState extends ConsumerState<ForgotPinBottomSheet> {
   String _maskedEmail = '';
   int _cooldownSeconds = 0;
   Timer? _cooldownTimer;
+  bool _showEmailInput = false;
+
+  // Email input if needed
+  final TextEditingController _emailController = TextEditingController();
 
   // OTP
   final TextEditingController _otpController = TextEditingController();
@@ -47,6 +51,7 @@ class _ForgotPinBottomSheetState extends ConsumerState<ForgotPinBottomSheet> {
   @override
   void dispose() {
     _cooldownTimer?.cancel();
+    _emailController.dispose();
     _otpController.dispose();
     _otpFocusNode.dispose();
     super.dispose();
@@ -72,6 +77,14 @@ class _ForgotPinBottomSheetState extends ConsumerState<ForgotPinBottomSheet> {
   }
 
   Future<void> _requestOtp() async {
+    final customEmail = _emailController.text.trim();
+    if (_showEmailInput && customEmail.isEmpty) {
+      setState(() {
+        _errorMessage = 'กรุณาระบุ Email สำหรับรับรหัส OTP';
+      });
+      return;
+    }
+
     setState(() {
       _isLoading = true;
       _errorMessage = null;
@@ -79,10 +92,12 @@ class _ForgotPinBottomSheetState extends ConsumerState<ForgotPinBottomSheet> {
 
     try {
       final repo = ref.read(authRepositoryProvider);
-      final res = await repo.requestPinResetOtp();
+      final res = await repo.requestPinResetOtp(
+        email: customEmail.isNotEmpty ? customEmail : null,
+      );
       if (mounted) {
         setState(() {
-          _maskedEmail = res['maskedEmail'] ?? '';
+          _maskedEmail = res['maskedEmail'] ?? customEmail;
           _step = ForgotPinStep.enterOtp;
           _isLoading = false;
         });
@@ -94,8 +109,13 @@ class _ForgotPinBottomSheetState extends ConsumerState<ForgotPinBottomSheet> {
       }
     } catch (e) {
       if (mounted) {
+        final errText = e.toString().replaceAll('Exception: ', '');
+        final isNoEmail = errText.contains('NO_EMAIL') || errText.contains('ยังไม่มี Email');
         setState(() {
-          _errorMessage = e.toString().replaceAll('Exception: ', '');
+          _errorMessage = isNoEmail ? 'โปรดระบุ Email ของคุณด้านล่างเพื่อรับรหัส OTP' : errText;
+          if (isNoEmail) {
+            _showEmailInput = true;
+          }
           _isLoading = false;
         });
       }
@@ -325,7 +345,50 @@ class _ForgotPinBottomSheetState extends ConsumerState<ForgotPinBottomSheet> {
             textAlign: TextAlign.center,
           ),
         ],
-        const SizedBox(height: 24),
+        if (_showEmailInput) ...[
+          const SizedBox(height: 16),
+          TextField(
+            controller: _emailController,
+            keyboardType: TextInputType.emailAddress,
+            autofocus: true,
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+              color: isDark ? AppColors.bodyOnDark : AppColors.ink,
+            ),
+            decoration: InputDecoration(
+              hintText: 'กรอกอีเมลของคุณ (เช่น name@gmail.com)',
+              hintStyle: TextStyle(
+                fontSize: 14,
+                color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
+              ),
+              prefixIcon: const Icon(Icons.email_outlined, color: Color(0xFFFF5000), size: 20),
+              filled: true,
+              fillColor: isDark ? AppColors.surfaceTile2 : const Color(0xFFF4F6F9),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide(
+                  color: isDark ? Colors.white12 : const Color(0xFFE2E4EA),
+                ),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide(
+                  color: isDark ? Colors.white12 : const Color(0xFFE2E4EA),
+                ),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: const BorderSide(
+                  color: Color(0xFFFF5000),
+                  width: 1.5,
+                ),
+              ),
+            ),
+          ),
+        ],
+        const SizedBox(height: 20),
         SizedBox(
           width: double.infinity,
           height: 50,

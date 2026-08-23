@@ -133,7 +133,7 @@ export default new Elysia()
     detail: { tags: ["Auth PIN"], summary: "Verify 6-digit PIN" }
   })
   // ── Forgot PIN Flow via Email OTP ──────────────────────────────────────
-  .post("/forgot/request-otp", async ({ userId, set }) => {
+  .post("/forgot/request-otp", async ({ userId, body, set }) => {
     try {
       const user = await db.query.users.findFirst({
         where: eq(users.id, userId)
@@ -144,8 +144,10 @@ export default new Elysia()
         return { error: "USER_NOT_FOUND", message: "ไม่พบข้อมูลผู้ใช้งาน" };
       }
 
-      // Check user email from profile or Google identity
-      let targetEmail = user.email;
+      const clientProvidedEmail = (body as any)?.email?.trim();
+
+      // Check user email from profile or Google identity or client payload
+      let targetEmail = user.email || clientProvidedEmail;
       if (!targetEmail) {
         // Check Google identity providerUserId or metadata
         const googleIdentity = await db.query.authIdentities.findFirst({
@@ -160,8 +162,13 @@ export default new Elysia()
         set.status = 400;
         return {
           error: "NO_EMAIL_CONFIGURED",
-          message: "บัญชีของคุณยังไม่มี Email สำหรับรับรหัส OTP กรุณาเข้าสู่ระบบใหม่ด้วย Google"
+          message: "บัญชีของคุณยังไม่มี Email สำหรับรับรหัส OTP กรุณาระบุ Email หรือเข้าสู่ระบบใหม่ด้วย Google"
         };
+      }
+
+      // If user didn't have email saved in DB before, save it now
+      if (!user.email && targetEmail) {
+        await db.update(users).set({ email: targetEmail, updatedAt: new Date() }).where(eq(users.id, userId));
       }
 
       // Check rate limit (cooldown 60s)
@@ -229,6 +236,9 @@ export default new Elysia()
       return { error: "INTERNAL_ERROR", message: err.message };
     }
   }, {
+    body: t.Optional(t.Object({
+      email: t.Optional(t.String()),
+    })),
     detail: { tags: ["Auth PIN"], summary: "Request Email OTP for PIN Reset" }
   })
   .post("/forgot/verify-otp", async ({ userId, body, set }) => {

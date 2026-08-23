@@ -80,9 +80,14 @@ class AuthRepository {
     }
   }
 
-  Future<Map<String, dynamic>> requestPinResetOtp() async {
+  Future<Map<String, dynamic>> requestPinResetOtp({String? email}) async {
     try {
-      final response = await _client.post('/api/v1/auth/pin/forgot/request-otp');
+      final response = await _client.post(
+        '/api/v1/auth/pin/forgot/request-otp',
+        data: {
+          if (email != null && email.isNotEmpty) 'email': email,
+        },
+      );
       return response.data as Map<String, dynamic>;
     } catch (e) {
       if (e is DioException) {
