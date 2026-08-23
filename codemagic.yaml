@@ -8,18 +8,60 @@ workflows:
       xcode: latest
       cocoapods: default
     scripts:
+      # STEP 1: Disable SPM BEFORE any flutter command
+      - name: Disable Swift Package Manager
+        script: |
+          flutter config --no-enable-swift-package-manager
+          echo "SPM disabled via flutter config"
+
+      # STEP 2: Clean ephemeral SPM artifacts
+      - name: Clean SPM artifacts
+        script: |
+          rm -rf ios/Flutter/ephemeral
+          rm -rf ios/.symlinks
+          rm -rf ios/Pods
+          rm -f ios/Podfile.lock
+          echo "Cleaned ephemeral SPM and Pods artifacts"
+
+      # STEP 3: Install dependencies (after SPM is disabled)
       - name: Install dependencies
         script: |
           flutter pub get
 
-      - name: Disable Swift Package Manager
+      # STEP 4: Patch any remaining Package.swift to iOS 15.0 (safety net)
+      - name: Patch SPM iOS platform to 15.0
         script: |
-          flutter config --no-enable-swift-package-manager
+          echo "Patching any generated Package.swift to iOS 15.0..."
+          find ios -name "Package.swift" -exec sed -i '' 's/\.iOS("[0-9.]*")/\.iOS("15.0")/g' {} + || true
+          echo "Patch complete"
 
+      # STEP 5: Patch Flutter SDK template (bulletproof - even if build regenerates)
+      - name: Patch Flutter SDK SPM template
+        script: |
+          FLUTTER_ROOT=$(flutter sdk-path)
+          echo "Flutter SDK: $FLUTTER_ROOT"
+          find "$FLUTTER_ROOT/packages/flutter_tools" -type f \( -name "*.dart" -o -name "*.swift" -o -name "*.tmpl" \) | xargs grep -l '\.iOS("1[0-4]\.' 2>/dev/null | while read f; do
+            sed -i '' 's/\.iOS("1[0-4]\.[0-9]*")/\.iOS("15.0")/g' "$f"
+            echo "Patched: $f"
+          done || true
+          # Clear cached snapshot so patched code takes effect
+          rm -f "$FLUTTER_ROOT/bin/cache/flutter_tools.snapshot" || true
+          rm -f "$FLUTTER_ROOT/bin/cache/flutter_tools.stamp" || true
+          echo "SDK template patched"
+
+      # STEP 6: Run pod install explicitly
+      - name: Pod Install
+        script: |
+          cd ios
+          pod install --repo-update
+          cd ..
+
+      # STEP 7: Build Android
       - name: Build Android Debug AAB
         script: |
           flutter build appbundle --debug --no-tree-shake-icons
 
+      # STEP 8: Build iOS
       - name: Build iOS Debug
         script: |
           flutter build ios --debug --no-codesign
