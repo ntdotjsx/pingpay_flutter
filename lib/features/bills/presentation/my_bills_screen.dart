@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/theme.dart';
 import '../../../core/widgets/app_skeleton.dart';
+import '../../friends/providers/friends_provider.dart';
 import '../../payments/services/debt_age_calculator.dart';
 import '../models/bill_models.dart';
 import '../providers/bill_provider.dart';
@@ -19,6 +20,103 @@ final myBillsFilterProvider = StateProvider<MyBillsFilter>((ref) => MyBillsFilte
 
 class MyBillsScreen extends ConsumerWidget {
   const MyBillsScreen({super.key});
+
+  Future<void> _handleCreateBill(BuildContext context, WidgetRef ref) async {
+    final friendsAsync = ref.read(friendsListProvider);
+    final friends = friendsAsync.valueOrNull ?? await ref.read(friendsRepositoryProvider).getFriends();
+    if (friends.isEmpty && context.mounted) {
+      final isDark = Theme.of(context).brightness == Brightness.dark;
+      showModalBottomSheet(
+        context: context,
+        backgroundColor: Colors.transparent,
+        builder: (ctx) => Container(
+          padding: const EdgeInsets.fromLTRB(24, 20, 24, 36),
+          decoration: ShapeDecoration(
+            color: isDark ? AppColors.surfaceBlack : Colors.white,
+            shape: const SmoothRectangleBorder(
+              borderRadius: SmoothBorderRadius.vertical(
+                top: SmoothRadius(cornerRadius: 28, cornerSmoothing: 0.7),
+              ),
+            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: isDark ? Colors.white24 : Colors.black12,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Container(
+                width: 60,
+                height: 60,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFF5000).withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.group_off_rounded,
+                  color: Color(0xFFFF5000),
+                  size: 30,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'ยังไม่มีเพื่อนในระบบ',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: -0.3,
+                  color: isDark ? AppColors.bodyOnDark : AppColors.ink,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'คุณต้องมีเพื่อนในระบบอย่างน้อย 1 คนก่อน จึงจะสามารถสร้างบิลหรือสแกนบิล OCR ได้',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.of(ctx).pop();
+                    context.push('/friends/scan');
+                  },
+                  icon: const Icon(Icons.qr_code_scanner_rounded, size: 18),
+                  label: const Text(
+                    'สแกน QR Code เพิ่มเพื่อน',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFFF5000),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+      return;
+    }
+    if (context.mounted) {
+      context.push('/bills/create');
+    }
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -44,7 +142,7 @@ class MyBillsScreen extends ConsumerWidget {
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => context.push('/bills/create'),
+        onPressed: () => _handleCreateBill(context, ref),
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
         elevation: 4,

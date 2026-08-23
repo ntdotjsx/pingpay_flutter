@@ -460,40 +460,50 @@ class _CreateBillScreenState extends ConsumerState<CreateBillScreen>
         }
       },
       child: Scaffold(
-        backgroundColor: _currentBottomNavIndex == 0
-            ? Colors.black
-            : (isDark ? AppColors.surfaceBlack : AppColors.primary),
-        body: _currentBottomNavIndex == 0
-            ? _buildCameraOcrScannerView()
-            : friendsAsync.when(
-                loading: () => const Center(
-                  child: CircularProgressIndicator(color: Colors.white),
-                ),
-                error: (err, _) => Center(
-                  child: Text(
-                    'เกิดข้อผิดพลาด: $err',
-                    style: const TextStyle(color: Colors.white),
-                  ),
-                ),
-                data: (friends) {
-                  // RULE 1: ZERO FRIENDS RULE (MANDATORY)
-                  if (friends.isEmpty) {
-                    return SafeArea(
-                      child: Column(
-                        children: [
-                          _buildTopAppBar(context),
-                          const Spacer(),
-                          const NoFriendsStateWidget(),
-                          const Spacer(),
-                        ],
-                      ),
-                    );
-                  }
-
-                  return _buildCreateBillContent(friends);
-                },
+        backgroundColor: friendsAsync.maybeWhen(
+          data: (friends) => friends.isEmpty
+              ? (isDark ? AppColors.surfaceBlack : AppColors.canvas)
+              : (_currentBottomNavIndex == 0
+                  ? Colors.black
+                  : (isDark ? AppColors.surfaceBlack : AppColors.primary)),
+          orElse: () => isDark ? AppColors.surfaceBlack : AppColors.canvas,
+        ),
+        body: friendsAsync.when(
+          loading: () => const Center(
+            child: CircularProgressIndicator(color: AppColors.primary),
+          ),
+          error: (err, _) => Center(
+            child: Text(
+              'เกิดข้อผิดพลาด: $err',
+              style: TextStyle(
+                color: isDark ? AppColors.bodyOnDark : AppColors.ink,
               ),
-        bottomNavigationBar: _buildBottomNavigationBar(),
+            ),
+          ),
+          data: (friends) {
+            // STRICT RULE: ZERO FRIENDS -> CANNOT ENTER CREATE BILL OR OCR SCANNER!
+            if (friends.isEmpty) {
+              return SafeArea(
+                child: Column(
+                  children: [
+                    _buildTopAppBar(context),
+                    const Spacer(),
+                    const NoFriendsStateWidget(),
+                    const Spacer(),
+                  ],
+                ),
+              );
+            }
+
+            return _currentBottomNavIndex == 0
+                ? _buildCameraOcrScannerView()
+                : _buildCreateBillContent(friends);
+          },
+        ),
+        bottomNavigationBar: friendsAsync.maybeWhen(
+          data: (friends) => friends.isEmpty ? null : _buildBottomNavigationBar(),
+          orElse: () => null,
+        ),
       ),
     );
   }

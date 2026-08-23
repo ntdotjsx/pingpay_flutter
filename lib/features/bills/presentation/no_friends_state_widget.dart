@@ -68,16 +68,33 @@ class NoFriendsStateWidget extends StatelessWidget {
               ),
               const SizedBox(height: 24),
               ElevatedButton.icon(
-                onPressed: () => context.push('/friends/add'),
-                icon: const Icon(Icons.person_add_alt_1_rounded, size: 20),
+                onPressed: () => context.push('/friends/scan'),
+                icon: const Icon(Icons.qr_code_scanner_rounded, size: 20),
                 label: const Text(
-                  'เพิ่มเพื่อนตอนนี้ (Add Friend)',
+                  'สแกน QR Code เพิ่มเพื่อน',
                   style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
                 ),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: AppColors.onPrimary,
+                  backgroundColor: const Color(0xFFFF5000),
+                  foregroundColor: Colors.white,
                   minimumSize: const Size(double.infinity, 48),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+              OutlinedButton.icon(
+                onPressed: () => context.push('/friends/add'),
+                icon: const Icon(Icons.person_add_alt_1_rounded, size: 18),
+                label: const Text(
+                  'เพิ่มเพื่อนตอนนี้ (Add Friend)',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                ),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: isDark ? AppColors.bodyOnDark : AppColors.ink,
+                  side: BorderSide(color: isDark ? Colors.white24 : Colors.black12),
+                  minimumSize: const Size(double.infinity, 46),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14),
                   ),
