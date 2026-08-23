@@ -5,7 +5,7 @@ import {
   authIdentities,
 } from "../../db/schema";
 import { eq, and, lte, sql, or, lt } from "drizzle-orm";
-import { NotificationProvider } from "./notification-provider.interface";
+import { defaultFcmNotificationProvider } from "./fcm-notification.provider";
 import { defaultLineNotificationProvider } from "./line-notification.provider";
 import { NotificationTemplateService } from "./notification-template.service";
 
@@ -21,7 +21,7 @@ export class NotificationWorkerService {
   private timer: any = null;
 
   constructor(
-    private provider: NotificationProvider = defaultLineNotificationProvider,
+    private provider: NotificationProvider = defaultFcmNotificationProvider,
     private customDb: any = db,
     private leaseTimeoutMs: number = 5 * 60 * 1000 // 5 minutes lease timeout for crash recovery
   ) {}

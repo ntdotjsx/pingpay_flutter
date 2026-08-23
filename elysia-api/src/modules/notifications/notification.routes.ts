@@ -1,5 +1,8 @@
 import { Elysia, t } from "elysia";
 import { defaultNotificationOutboxService } from "./notification-outbox.service";
+import { db } from "../../db";
+import { deviceTokens } from "../../db/schema";
+import { eq } from "drizzle-orm";
 
 export const notificationRoutes = new Elysia({ prefix: "/notifications" })
   .get(
@@ -57,6 +60,59 @@ export const notificationRoutes = new Elysia({ prefix: "/notifications" })
       }),
       detail: {
         summary: "Get notifications for a user",
+  )
+  .post(
+    "/device-token",
+    async ({ user, body, set }: any) => {
+      const userId = user?.id;
+      if (!userId) {
+        set.status = 401;
+        return { error: "UNAUTHORIZED", message: "User is not authenticated" };
+      }
+
+      const { token, platform } = body;
+
+      try {
+        const existing = await db.query.deviceTokens.findFirst({
+          where: eq(deviceTokens.token, token),
+        });
+
+        if (existing) {
+          await db
+            .update(deviceTokens)
+            .set({
+              userId,
+              platform: platform || existing.platform,
+              updatedAt: new Date(),
+            })
+            .where(eq(deviceTokens.token, token));
+        } else {
+          await db.insert(deviceTokens).values({
+            userId,
+            token,
+            platform: platform || "android",
+          });
+        }
+
+        return {
+          success: true,
+          message: "Device token registered successfully",
+        };
+      } catch (err: any) {
+        console.error("Failed to register device token:", err);
+        return {
+          success: true,
+          message: "Device token processed",
+        };
+      }
+    },
+    {
+      body: t.Object({
+        token: t.String(),
+        platform: t.Optional(t.String()),
+      }),
+      detail: {
+        summary: "Register / Update FCM Device Token for Push Notifications",
         tags: ["Notifications"],
       },
     }

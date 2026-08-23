@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'core/theme/theme.dart';
 import 'core/services/shorebird_service.dart';
+import 'core/services/notification_service.dart';
 import 'app/router/app_router.dart';
 import 'features/auth/providers/auth_provider.dart';
 
@@ -10,6 +12,13 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('th_TH', null);
   await initializeDateFormatting('th', null);
+
+  try {
+    await Firebase.initializeApp();
+  } catch (e) {
+    debugPrint('Firebase.initializeApp skipped or failed: $e');
+  }
+
   runApp(const ProviderScope(child: PingPayApp()));
 }
 
@@ -28,6 +37,7 @@ class _PingPayAppState extends ConsumerState<PingPayApp> with WidgetsBindingObse
     // Seamless background OTA patch check with Shorebird
     Future.microtask(() {
       ref.read(shorebirdServiceProvider).checkForUpdatesInBackground();
+      ref.read(notificationServiceProvider).initialize();
     });
   }
 

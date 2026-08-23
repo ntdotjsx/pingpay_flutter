@@ -951,6 +951,31 @@ export const authSessionsRelations = relations(authSessions, ({ one }) => ({
   }),
 }));
 
+export const deviceTokens = pgTable(
+  "device_tokens",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    token: text("token").notNull().unique(),
+    platform: varchar("platform", { length: 32 }).notNull().default("android"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => ({
+    userIdx: index("device_tokens_user_idx").on(table.userId),
+    tokenIdx: uniqueIndex("device_tokens_token_idx").on(table.token),
+  })
+);
+
+export const deviceTokensRelations = relations(deviceTokens, ({ one }) => ({
+  user: one(users, {
+    fields: [deviceTokens.userId],
+    references: [users.id],
+  }),
+}));
+
 /* -------------------------------------------------------------------------- */
 /* REWARDS & STORE CATALOG                                                    */
 /* -------------------------------------------------------------------------- */
