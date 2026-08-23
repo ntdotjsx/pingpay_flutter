@@ -32,8 +32,7 @@ const requireAuth = (app: Elysia) =>
     }
   });
 
-const MAX_FAILED_ATTEMPTS = 5;
-const LOCKOUT_MINUTES = 15;
+const MAX_FAILED_ATTEMPTS = 3;
 
 export default new Elysia()
   .use(requireAuth)
@@ -49,7 +48,8 @@ export default new Elysia()
       return { error: "PIN already set up" };
     }
 
-    const pinHash = await argon2.hash(pin);
+    const cleanPin = pin.trim();
+    const pinHash = await argon2.hash(cleanPin);
 
     await db.insert(userCredentials)
       .values({
@@ -64,7 +64,7 @@ export default new Elysia()
     return { success: true, message: "PIN created successfully." };
   }, {
     body: t.Object({
-      pin: t.String({ minLength: 6, maxLength: 6 })
+      pin: t.String({ minLength: 6, maxLength: 6, pattern: "^[0-9]+$" })
     }),
     detail: { tags: ["Auth PIN"], summary: "Setup 6-digit PIN" }
   })
@@ -80,12 +80,13 @@ export default new Elysia()
       return { error: "PIN_NOT_SET", message: "ยังไม่ได้ตั้งค่ารหัส PIN" };
     }
 
-    if (creds.lockedUntil && creds.lockedUntil > new Date()) {
-      const remainingMinutes = Math.ceil((new Date(creds.lockedUntil).getTime() - Date.now()) / (60 * 1000));
+    // If already locked out due to 3 failed attempts
+    if (creds.failedAttempts >= MAX_FAILED_ATTEMPTS || (creds.lockedUntil && creds.lockedUntil > new Date())) {
       set.status = 429;
       return {
         error: "ACCOUNT_LOCKED",
-        message: `บัญชีถูกระงับชั่วคราว ${remainingMinutes} นาที เนื่องจากกรอก PIN ผิดเกินกำหนด หรือกด "ลืมรหัส PIN?" เพื่อรีเซ็ต`,
+        isLockedOut: true,
+        message: `คุณกรอกรหัส PIN ผิดเกิน ${MAX_FAILED_ATTEMPTS} ครั้ง บัญชีถูกล็อกเพื่อความปลอดภัย กรุณากด "ลืมรหัส PIN?" เพื่อยืนยันตัวตนผ่าน Email OTP และตั้งรหัส PIN ใหม่`,
         lockedUntil: creds.lockedUntil
       };
     }
@@ -95,16 +96,17 @@ export default new Elysia()
 
     if (!isValid) {
       const newAttempts = creds.failedAttempts + 1;
-      let lockedUntil = null;
+      let lockedUntil: Date | null = null;
 
       if (newAttempts >= MAX_FAILED_ATTEMPTS) {
-        lockedUntil = new Date(Date.now() + LOCKOUT_MINUTES * 60 * 1000);
+        // Lock until Email OTP reset is performed
+        lockedUntil = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
         
         // Log security event
         await db.insert(securityEvents).values({
           userId,
-          event: "pin_brute_force",
-          metadata: { attempts: newAttempts, lockoutMinutes: LOCKOUT_MINUTES }
+          event: "pin_brute_force_locked",
+          metadata: { attempts: newAttempts, requiredAction: "email_otp_reset" }
         });
       }
 
@@ -122,7 +124,8 @@ export default new Elysia()
         set.status = 429;
         return {
           error: "ACCOUNT_LOCKED",
-          message: `คุณกรอกรหัส PIN ผิดครบ ${MAX_FAILED_ATTEMPTS} ครั้งแล้ว บัญชีถูกระงับชั่วคราว ${LOCKOUT_MINUTES} นาที หรือกด "ลืมรหัส PIN?" เพื่อรีเซ็ต`,
+          isLockedOut: true,
+          message: `คุณกรอกรหัส PIN ผิดครบ ${MAX_FAILED_ATTEMPTS} ครั้งแล้ว บัญชีถูกระงับเพื่อความปลอดภัย กรุณายืนยันรหัส OTP ผ่าน Email เพื่อรีเซ็ตรหัส PIN ใหม่`,
           attemptsLeft: 0
         };
       }
@@ -130,6 +133,7 @@ export default new Elysia()
       set.status = 400;
       return {
         error: "INVALID_PIN",
+        isLockedOut: false,
         message: `รหัส PIN ไม่ถูกต้อง (เหลือโอกาสอีก ${attemptsLeft} ครั้ง)`,
         attemptsLeft
       };

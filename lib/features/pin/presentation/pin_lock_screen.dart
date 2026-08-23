@@ -20,6 +20,7 @@ class _PinLockScreenState extends ConsumerState<PinLockScreen>
   String _pin = '';
   String? _errorMessage;
   bool _isVerifying = false;
+  bool _isLockedOut = false;
   late AnimationController _shakeController;
   late Animation<double> _shakeAnimation;
 
@@ -51,7 +52,7 @@ class _PinLockScreenState extends ConsumerState<PinLockScreen>
   }
 
   void _onDigitPressed(String digit) {
-    if (_isVerifying) return;
+    if (_isVerifying || _isLockedOut) return;
 
     if (_pin.length < 6) {
       setState(() {
@@ -66,7 +67,7 @@ class _PinLockScreenState extends ConsumerState<PinLockScreen>
   }
 
   void _onDeletePressed() {
-    if (_isVerifying) return;
+    if (_isVerifying || _isLockedOut) return;
 
     if (_pin.isNotEmpty) {
       setState(() {
@@ -76,12 +77,15 @@ class _PinLockScreenState extends ConsumerState<PinLockScreen>
     }
   }
 
-  Future<void> _triggerShakeAndReset(String message) async {
+  Future<void> _triggerShakeAndReset(String message, {bool isLockout = false}) async {
     HapticFeedback.heavyImpact();
     _shakeController.forward(from: 0.0);
     setState(() {
       _errorMessage = message;
       _isVerifying = false;
+      if (isLockout) {
+        _isLockedOut = true;
+      }
     });
 
     // Pause briefly to show the red dots shaking, then reset for typing
@@ -90,7 +94,47 @@ class _PinLockScreenState extends ConsumerState<PinLockScreen>
       setState(() {
         _pin = '';
       });
+
+      if (isLockout) {
+        _showLockoutDialog();
+      }
     }
+  }
+
+  void _showLockoutDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.lock_outline_rounded, color: AppColors.error, size: 24),
+            SizedBox(width: 8),
+            Text('บัญชีถูกล็อกชั่วคราว', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+          ],
+        ),
+        content: const Text(
+          'คุณกรอกรหัส PIN ผิดครบ 3 ครั้ง เพื่อความปลอดภัย กรุณายืนยันรหัส OTP ผ่าน Email เพื่อรีเซ็ตรหัส PIN ใหม่',
+          style: TextStyle(fontSize: 14, height: 1.4),
+        ),
+        actions: [
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              ForgotPinBottomSheet.show(context);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFFF5000),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+            ),
+            child: const Text('ยืนยัน Email และตั้ง PIN ใหม่', style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _verifyPin(String pin) async {
@@ -109,7 +153,9 @@ class _PinLockScreenState extends ConsumerState<PinLockScreen>
       }
     } catch (e) {
       if (mounted) {
-        await _triggerShakeAndReset(e.toString().replaceAll('Exception:', '').trim());
+        final errText = e.toString().replaceAll('Exception:', '').trim();
+        final isLockout = errText.contains('ล็อก') || errText.contains('LOCKED') || errText.contains('ครบ 3 ครั้ง');
+        await _triggerShakeAndReset(errText, isLockout: isLockout);
       }
     }
   }
@@ -272,11 +318,72 @@ class _PinLockScreenState extends ConsumerState<PinLockScreen>
 
               const Spacer(flex: 3),
 
-              // Custom Keypad
-              CustomPinKeypad(
-                onDigitPressed: _onDigitPressed,
-                onDeletePressed: _onDeletePressed,
-              ),
+              // Custom Keypad or Lockout Card
+              if (_isLockedOut)
+                Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+                  padding: const EdgeInsets.all(20),
+                  decoration: ShapeDecoration(
+                    color: isDark ? AppColors.surfaceTile1 : Colors.white,
+                    shape: const SmoothRectangleBorder(
+                      borderRadius: SmoothBorderRadius.all(
+                        SmoothRadius(cornerRadius: 20, cornerSmoothing: 0.8),
+                      ),
+                    ),
+                    shadows: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
+                        blurRadius: 16,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      Container(
+                        width: 52,
+                        height: 52,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: AppColors.error.withValues(alpha: 0.12),
+                        ),
+                        child: const Icon(Icons.lock_rounded, color: AppColors.error, size: 26),
+                      ),
+                      const SizedBox(height: 12),
+                      const Text(
+                        'บัญชีถูกระงับชั่วคราว',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                      ),
+                      const SizedBox(height: 6),
+                      const Text(
+                        'คุณกรอก PIN ผิดครบ 3 ครั้ง กรุณายืนยันรหัส OTP ผ่าน Email เพื่อปลดล็อกและตั้งรหัส PIN ใหม่',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(fontSize: 12, color: Colors.grey, height: 1.4),
+                      ),
+                      const SizedBox(height: 16),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 46,
+                        child: ElevatedButton.icon(
+                          onPressed: () => ForgotPinBottomSheet.show(context),
+                          icon: const Icon(Icons.mail_outline_rounded, size: 18),
+                          label: const Text('ปลดล็อกด้วย Email OTP', style: TextStyle(fontWeight: FontWeight.bold)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFFF5000),
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              else
+                CustomPinKeypad(
+                  onDigitPressed: _onDigitPressed,
+                  onDeletePressed: _onDeletePressed,
+                ),
 
               const Spacer(flex: 1),
 

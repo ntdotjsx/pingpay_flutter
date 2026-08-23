@@ -188,10 +188,10 @@ describe("Auth and Onboarding API", () => {
       }
     });
 
-    it("should enforce lockout after 5 attempts", async () => {
+    it("should enforce lockout after 3 attempts", async () => {
       globalThis.__pinSet = true;
-      globalThis.__failedAttempts = 5;
-      globalThis.__lockedUntil = new Date(Date.now() + 15 * 60 * 1000);
+      globalThis.__failedAttempts = 3;
+      globalThis.__lockedUntil = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
 
       const { status, data } = await api.api.v1.auth.pin.verify.post(
         { pin: "123456" },
