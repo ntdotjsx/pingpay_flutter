@@ -62,9 +62,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
       if (account != null) {
         final auth = await GoogleAuthService.getAuth(account);
 
-        await ref
-            .read(authStateProvider.notifier)
-            .authenticateWithGoogleTokens(
+        await ref.read(authStateProvider.notifier).authenticateWithGoogleTokens(
               idToken: auth?.idToken,
               accessToken: auth?.accessToken,
               mockGoogleId: account.id,
@@ -104,7 +102,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: isDark ? AppColors.surfaceBlack : const Color(0xFFFAFBFD),
+      backgroundColor:
+          isDark ? AppColors.surfaceBlack : const Color(0xFFFAFBFD),
       body: PageView(
         controller: _pageController,
         scrollDirection: Axis.vertical,
@@ -155,7 +154,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
             children: [
               // Top Innovation Pill Badge
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                 decoration: ShapeDecoration(
                   color: isDark
                       ? const Color(0xFFFF5000).withValues(alpha: 0.15)
@@ -225,11 +225,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                       );
                     },
                     child: Container(
-                      constraints: const BoxConstraints(maxHeight: 340, maxWidth: 340),
+                      constraints:
+                          const BoxConstraints(maxHeight: 340, maxWidth: 340),
                       decoration: BoxDecoration(
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(0xFFFF5000).withValues(alpha: isDark ? 0.2 : 0.15),
+                            color: const Color(0xFFFF5000)
+                                .withValues(alpha: isDark ? 0.2 : 0.15),
                             blurRadius: 36,
                             offset: const Offset(0, 16),
                             spreadRadius: -4,
@@ -260,20 +262,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                 ),
               ),
 
-              // Feature Highlights Row (3 Mini Pills)
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  _buildFeaturePill(Icons.document_scanner_rounded, 'AI สแกนบิล', isDark),
-                  const SizedBox(width: 8),
-                  _buildFeaturePill(Icons.qr_code_scanner_rounded, 'สแกนเพิ่มเพื่อน', isDark),
-                  const SizedBox(width: 8),
-                  _buildFeaturePill(Icons.security_rounded, 'ปลอดภัย 1 เครื่อง', isDark),
-                ],
-              ),
-
-              const SizedBox(height: 20),
-
               // Interactive Swipe-Up Action Area
               GestureDetector(
                 onTap: _scrollToLogin,
@@ -293,7 +281,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                         width: 38,
                         height: 38,
                         decoration: BoxDecoration(
-                          color: const Color(0xFFFF5000).withValues(alpha: 0.12),
+                          color:
+                              const Color(0xFFFF5000).withValues(alpha: 0.12),
                           shape: BoxShape.circle,
                         ),
                         child: const Icon(
@@ -304,53 +293,23 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                       ),
                     ),
                     const SizedBox(height: 6),
-
-                    // Primary Swipe-Up Pill Button
-                    Container(
-                      width: double.infinity,
-                      height: 52,
-                      decoration: ShapeDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFFFF6A00), Color(0xFFFF4500)],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        shape: const SmoothRectangleBorder(
-                          borderRadius: SmoothBorderRadius.all(
-                            SmoothRadius(cornerRadius: 18, cornerSmoothing: 0.8),
-                          ),
-                        ),
-                        shadows: [
-                          BoxShadow(
-                            color: const Color(0xFFFF5000).withValues(alpha: 0.35),
-                            blurRadius: 18,
-                            offset: const Offset(0, 6),
-                          ),
-                        ],
-                      ),
-                      child: const Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            'ปัดขึ้นเพื่อเริ่มต้นใช้งาน (Swipe Up)',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 15.5,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: -0.2,
-                            ),
-                          ),
-                          SizedBox(width: 8),
-                          Icon(
-                            Icons.arrow_upward_rounded,
-                            color: Colors.white,
-                            size: 18,
-                          ),
-                        ],
-                      ),
-                    ),
                   ],
                 ),
+              ),
+              // Feature Highlights Row (3 Mini Pills)
+              const SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  _buildFeaturePill(
+                      Icons.document_scanner_rounded, 'AI สแกนบิล', isDark),
+                  const SizedBox(width: 8),
+                  _buildFeaturePill(
+                      Icons.qr_code_scanner_rounded, 'สแกนเพิ่มเพื่อน', isDark),
+                  const SizedBox(width: 8),
+                  _buildFeaturePill(
+                      Icons.security_rounded, 'ปลอดภัย 1 เครื่อง', isDark),
+                ],
               ),
               const SizedBox(height: 8),
             ],
@@ -363,7 +322,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
   // =========================================================================
   // VIEW 2: PROFESSIONAL GOOGLE LOGIN SCREEN
   // =========================================================================
-  Widget _buildLoginPage(BuildContext context, AuthState authState, bool isDark) {
+  Widget _buildLoginPage(
+      BuildContext context, AuthState authState, bool isDark) {
     return Container(
       decoration: BoxDecoration(
         color: isDark ? AppColors.surfaceBlack : const Color(0xFFF7F8FA),
@@ -395,7 +355,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                           Icon(
                             Icons.keyboard_arrow_down_rounded,
                             size: 16,
-                            color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
+                            color: isDark
+                                ? AppColors.bodyMuted
+                                : AppColors.inkMuted48,
                           ),
                           const SizedBox(width: 4),
                           Text(
@@ -403,7 +365,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                             style: TextStyle(
                               fontSize: 11.5,
                               fontWeight: FontWeight.w500,
-                              color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
+                              color: isDark
+                                  ? AppColors.bodyMuted
+                                  : AppColors.inkMuted48,
                             ),
                           ),
                         ],
@@ -422,7 +386,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                   color: isDark ? AppColors.surfaceTile1 : Colors.white,
                   shadows: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: isDark ? 0.35 : 0.06),
+                      color:
+                          Colors.black.withValues(alpha: isDark ? 0.35 : 0.06),
                       blurRadius: 24,
                       offset: const Offset(0, 8),
                     ),
@@ -453,12 +418,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                           ),
                           shape: const SmoothRectangleBorder(
                             borderRadius: SmoothBorderRadius.all(
-                              SmoothRadius(cornerRadius: 22, cornerSmoothing: 0.8),
+                              SmoothRadius(
+                                  cornerRadius: 22, cornerSmoothing: 0.8),
                             ),
                           ),
                           shadows: [
                             BoxShadow(
-                              color: const Color(0xFFFF5000).withValues(alpha: 0.3),
+                              color: const Color(0xFFFF5000)
+                                  .withValues(alpha: 0.3),
                               blurRadius: 16,
                               offset: const Offset(0, 4),
                             ),
@@ -489,25 +456,30 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 13,
-                        color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
+                        color:
+                            isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
                         height: 1.35,
                       ),
                     ),
 
                     // Session Notice (Single Device Kicked Out Warning)
-                    if (authState.errorMessage != null && authState.errorMessage!.isNotEmpty) ...[
+                    if (authState.errorMessage != null &&
+                        authState.errorMessage!.isNotEmpty) ...[
                       const SizedBox(height: 18),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 12),
                         decoration: BoxDecoration(
                           color: AppColors.error.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: AppColors.error.withValues(alpha: 0.3)),
+                          border: Border.all(
+                              color: AppColors.error.withValues(alpha: 0.3)),
                         ),
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Icon(Icons.shield_outlined, color: AppColors.error, size: 20),
+                            const Icon(Icons.shield_outlined,
+                                color: AppColors.error, size: 20),
                             const SizedBox(width: 10),
                             Expanded(
                               child: Text(
@@ -529,14 +501,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
 
                     // Professional Google Sign-In Button
                     ElevatedButton(
-                      onPressed: authState.isLoading ? null : _handleGoogleLogin,
+                      onPressed:
+                          authState.isLoading ? null : _handleGoogleLogin,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: isDark ? const Color(0xFF1E1E24) : Colors.white,
-                        foregroundColor: isDark ? Colors.white : const Color(0xFF1F1F1F),
+                        backgroundColor:
+                            isDark ? const Color(0xFF1E1E24) : Colors.white,
+                        foregroundColor:
+                            isDark ? Colors.white : const Color(0xFF1F1F1F),
                         elevation: isDark ? 0 : 2,
                         shadowColor: Colors.black.withValues(alpha: 0.1),
                         side: BorderSide(
-                          color: isDark ? Colors.white12 : const Color(0xFFE2E6EC),
+                          color:
+                              isDark ? Colors.white12 : const Color(0xFFE2E6EC),
                           width: 1.2,
                         ),
                         minimumSize: const Size.fromHeight(54),
@@ -564,7 +540,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                                     fontSize: 15.5,
                                     fontWeight: FontWeight.w700,
                                     letterSpacing: -0.2,
-                                    color: isDark ? Colors.white : const Color(0xFF1F1F1F),
+                                    color: isDark
+                                        ? Colors.white
+                                        : const Color(0xFF1F1F1F),
                                   ),
                                 ),
                               ],
@@ -575,9 +553,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
 
                     // Security Badges List
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 10),
                       decoration: BoxDecoration(
-                        color: isDark ? AppColors.surfaceTile2 : const Color(0xFFF4F6F9),
+                        color: isDark
+                            ? AppColors.surfaceTile2
+                            : const Color(0xFFF4F6F9),
                         borderRadius: BorderRadius.circular(14),
                       ),
                       child: Column(

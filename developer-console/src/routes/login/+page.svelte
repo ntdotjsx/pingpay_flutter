@@ -1,22 +1,76 @@
 <script lang="ts">
-  import { setToken, verifyGoogleToken, AUTH_BASE } from '$lib/api/client';
+  import { setToken, verifyGoogleToken } from '$lib/api/client';
   import { goto } from '$app/navigation';
   import { page } from '$app/stores';
   import { onMount } from 'svelte';
   import Icon from '$lib/components/Icon.svelte';
 
+  const GOOGLE_CLIENT_ID =
+    import.meta.env.VITE_GOOGLE_CLIENT_ID ||
+    '628880255448-qvtgouniidlkanp37l0nfh2pts26fth5.apps.googleusercontent.com';
+
   let token = $state('');
   let error = $state('');
   let loading = $state(false);
   let showAdvanced = $state(false);
+  let gClientLoaded = $state(false);
 
-  let mockDevUser = $state({
-    mockGoogleId: 'google_admin_dev_001',
-    mockDisplayName: 'Admin Developer',
-    mockEmail: 'admin.dev@pingpay.app',
-  });
+  async function handleCredentialResponse(response: any) {
+    if (!response?.credential) {
+      error = 'Google authentication response missing credential';
+      return;
+    }
 
-  onMount(async () => {
+    loading = true;
+    error = '';
+    try {
+      const res = await verifyGoogleToken({
+        idToken: response.credential,
+      });
+
+      if (res.accessToken) {
+        goto('/');
+      }
+    } catch (e: any) {
+      error = e.message || 'Google authentication failed';
+    } finally {
+      loading = false;
+    }
+  }
+
+  function initGoogleBtn() {
+    if (typeof window === 'undefined') return;
+    const g = (window as any).google;
+    if (g?.accounts?.id) {
+      try {
+        g.accounts.id.initialize({
+          client_id: GOOGLE_CLIENT_ID,
+          callback: handleCredentialResponse,
+          auto_select: false,
+          cancel_on_tap_outside: true,
+        });
+
+        const container = document.getElementById('google-signin-btn-container');
+        if (container) {
+          container.innerHTML = '';
+          g.accounts.id.renderButton(container, {
+            type: 'standard',
+            theme: 'outline',
+            size: 'large',
+            text: 'signin_with',
+            shape: 'pill',
+            logo_alignment: 'left',
+            width: 320,
+          });
+          gClientLoaded = true;
+        }
+      } catch (err) {
+        console.error('Google Sign-In render error:', err);
+      }
+    }
+  }
+
+  onMount(() => {
     const queryToken = $page.url.searchParams.get('token');
     const queryError = $page.url.searchParams.get('error');
 
@@ -25,27 +79,23 @@
     } else if (queryToken) {
       setToken(queryToken);
       window.location.replace('/');
+      return;
+    }
+
+    // Check if Google script is already loaded, otherwise poll until available
+    if ((window as any).google?.accounts?.id) {
+      initGoogleBtn();
+    } else {
+      const interval = setInterval(() => {
+        if ((window as any).google?.accounts?.id) {
+          clearInterval(interval);
+          initGoogleBtn();
+        }
+      }, 200);
+
+      setTimeout(() => clearInterval(interval), 10000);
     }
   });
-
-  async function handleMockGoogleLogin() {
-    loading = true;
-    error = '';
-    try {
-      const res = await verifyGoogleToken({
-        mockGoogleId: mockDevUser.mockGoogleId,
-        mockDisplayName: mockDevUser.mockDisplayName,
-        mockEmail: mockDevUser.mockEmail,
-      });
-      if (res.accessToken) {
-        goto('/');
-      }
-    } catch (e: any) {
-      error = e.message;
-    } finally {
-      loading = false;
-    }
-  }
 
   function handleManualTokenLogin() {
     if (!token.trim()) {
@@ -76,37 +126,28 @@
       </div>
     {/if}
 
-    <div class="space-y-3.5">
-      <!-- Dev Google Login Button -->
-      <button
-        onclick={handleMockGoogleLogin}
-        disabled={loading}
-        class="flex w-full items-center justify-center gap-2.5 rounded-full bg-[#0075de] px-5 py-3 text-sm font-bold text-white shadow-sm transition-all hover:bg-[#005bab] active:scale-[0.99] disabled:opacity-50"
-      >
-        <Icon name="zap" class="h-4 w-4 text-white" />
-        <span>Developer Quick Sign-In</span>
-      </button>
+    <div class="space-y-4">
+      <!-- Real Google Sign-In Container -->
+      <div class="flex flex-col items-center justify-center min-h-[48px] py-2">
+        <div id="google-signin-btn-container" class="flex justify-center w-full"></div>
+        {#if !gClientLoaded && !loading}
+          <div class="flex items-center gap-2 text-xs text-[#615d59] py-2">
+            <span class="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-[#0075de] border-r-transparent"></span>
+            <span>Loading Google Sign-In SDK...</span>
+          </div>
+        {/if}
+        {#if loading}
+          <div class="flex items-center gap-2 text-xs text-[#0075de] font-semibold py-2">
+            <span class="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-[#0075de] border-r-transparent"></span>
+            <span>Verifying Google account credentials...</span>
+          </div>
+        {/if}
+      </div>
 
-      <!-- Mock Google Dev Config -->
-      <div class="rounded-lg bg-[#fbfbfa] p-3 border border-[#e6e6e6] space-y-2 text-left">
-        <div>
-          <label for="mock-user-id" class="block text-[10px] font-medium text-[#615d59] uppercase tracking-wider">Mock Developer Google ID</label>
-          <input
-            id="mock-user-id"
-            type="text"
-            bind:value={mockDevUser.mockGoogleId}
-            class="mt-0.5 block w-full rounded-[4px] border border-[#e6e6e6] bg-white px-2 py-1 text-xs font-mono text-[#000000] focus:border-[#0075de] focus:outline-none"
-          />
-        </div>
-        <div>
-          <label for="mock-user-name" class="block text-[10px] font-medium text-[#615d59] uppercase tracking-wider">Display Name</label>
-          <input
-            id="mock-user-name"
-            type="text"
-            bind:value={mockDevUser.mockDisplayName}
-            class="mt-0.5 block w-full rounded-[4px] border border-[#e6e6e6] bg-white px-2 py-1 text-xs text-[#000000] focus:border-[#0075de] focus:outline-none"
-          />
-        </div>
+      <div class="rounded-lg bg-[#fbfbfa] p-3 border border-[#e6e6e6] text-center">
+        <p class="text-[11px] text-[#615d59]">
+          Sign in with your authorized Google Account. Developer role (<code class="font-mono text-[#000000]">role = 'developer'</code>) is required to access back-office tools.
+        </p>
       </div>
 
       <!-- Advanced JWT Token Input Toggle -->
@@ -115,7 +156,7 @@
           onclick={() => showAdvanced = !showAdvanced}
           class="text-[11px] text-[#615d59] hover:text-[#000000] underline"
         >
-          {showAdvanced ? 'Hide manual JWT token login' : 'Advanced: Paste JWT access token directly'}
+          {showAdvanced ? 'Hide direct token input' : 'Advanced: Paste developer JWT access token directly'}
         </button>
 
         {#if showAdvanced}

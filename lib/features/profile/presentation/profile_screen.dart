@@ -1494,27 +1494,165 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   }
 
   Future<void> _handleLogout(BuildContext context) async {
-    final confirmed = await showDialog<bool>(
+    HapticFeedback.mediumImpact();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    final confirmed = await showModalBottomSheet<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('ต้องการออกจากระบบ?'),
-        content: const Text('คุณจะต้องเข้าสู่ระบบใหม่เพื่อใช้งาน PingPay อีกครั้ง'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('ยกเลิก'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.error,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.fromLTRB(24, 20, 24, 36),
+        decoration: ShapeDecoration(
+          color: isDark ? AppColors.surfaceTile1 : Colors.white,
+          shadows: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: isDark ? 0.4 : 0.08),
+              blurRadius: 28,
+              offset: const Offset(0, -4),
             ),
-            child: const Text('ออกจากระบบ'),
+          ],
+          shape: const SmoothRectangleBorder(
+            borderRadius: SmoothBorderRadius.vertical(
+              top: SmoothRadius(cornerRadius: 32, cornerSmoothing: 0.8),
+            ),
           ),
-        ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Top Grab Handle
+            Container(
+              width: 44,
+              height: 4.5,
+              decoration: BoxDecoration(
+                color: isDark ? Colors.white24 : Colors.black12,
+                borderRadius: BorderRadius.circular(3),
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // Red Warning Icon Badge
+            Container(
+              width: 68,
+              height: 68,
+              decoration: ShapeDecoration(
+                color: const Color(0xFFFF3B30).withValues(alpha: 0.12),
+                shape: const SmoothRectangleBorder(
+                  borderRadius: SmoothBorderRadius.all(
+                    SmoothRadius(cornerRadius: 22, cornerSmoothing: 0.8),
+                  ),
+                ),
+              ),
+              child: const Icon(
+                Icons.logout_rounded,
+                color: Color(0xFFFF3B30),
+                size: 32,
+              ),
+            ),
+            const SizedBox(height: 18),
+
+            // Title & Subtitle
+            Text(
+              'ต้องการออกจากระบบ?',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w900,
+                letterSpacing: -0.4,
+                color: isDark ? AppColors.bodyOnDark : AppColors.ink,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'เซสชันการใช้งานบนอุปกรณ์นี้จะสิ้นสุดลงทันที คุณสามารถกลับเข้าสู่ระบบได้ทุกเมื่อด้วยบัญชี Google ของคุณ',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 13.5,
+                color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
+                height: 1.45,
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // Cloud Security Badge
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: isDark ? AppColors.surfaceTile2 : const Color(0xFFF4F6F9),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.cloud_done_rounded,
+                    color: Color(0xFF34C759),
+                    size: 18,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'ข้อมูลบัญชีและประวัติการเงินของคุณได้รับการสำรองไว้อย่างปลอดภัย',
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w500,
+                        color: isDark ? AppColors.bodyMuted : AppColors.inkMuted80,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 26),
+
+            // Destructive Action: Confirm Logout Button
+            SizedBox(
+              width: double.infinity,
+              height: 52,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  HapticFeedback.heavyImpact();
+                  Navigator.pop(ctx, true);
+                },
+                icon: const Icon(Icons.logout_rounded, size: 20),
+                label: const Text(
+                  'ยืนยันออกจากระบบ (Logout)',
+                  style: TextStyle(
+                    fontSize: 15.5,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.2,
+                  ),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFFF3B30),
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  shadowColor: const Color(0xFFFF3B30).withValues(alpha: 0.35),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // Safe Action: Cancel Button
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: Text(
+                  'ยกเลิก (อยู่ในระบบต่อ)',
+                  style: TextStyle(
+                    fontSize: 14.5,
+                    fontWeight: FontWeight.w700,
+                    color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
 
