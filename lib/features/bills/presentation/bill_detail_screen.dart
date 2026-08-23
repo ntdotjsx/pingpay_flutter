@@ -4,6 +4,7 @@ import 'package:figma_squircle/figma_squircle.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import '../../../core/theme/theme.dart';
 import '../../../core/utils/app_toast.dart';
 import '../../../core/widgets/app_skeleton.dart';
@@ -478,7 +479,7 @@ class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
                                                 ),
                                               ),
                                             ),
-                                      if (!item.isAcknowledged && !item.isFullyPaid)
+                                      if (!item.isAcknowledged && !item.isFullyPaid && !item.isFullyWrittenOff)
                                         Positioned.fill(
                                           child: BackdropFilter(
                                             filter: ImageFilter.blur(sigmaX: 3.5, sigmaY: 3.5),
@@ -575,7 +576,7 @@ class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
                               ),
                             ],
                           ),
-                          if (item.amountWrittenOff > 0) ...[
+                          if (item.amountWrittenOff > 0 || item.isFullyWrittenOff) ...[
                             const SizedBox(height: 4),
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -596,6 +597,60 @@ class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
                                   ),
                                 ),
                               ],
+                            ),
+                            Builder(
+                              builder: (context) {
+                                final reason = bill.getWriteOffReasonForParticipant(item.id);
+                                if (reason == null || reason.isEmpty) return const SizedBox.shrink();
+                                return Container(
+                                  margin: const EdgeInsets.only(top: 6),
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                                  decoration: BoxDecoration(
+                                    color: isDark
+                                        ? AppColors.surfaceTile2
+                                        : const Color(0xFFF1F5F9),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: isDark ? Colors.white10 : const Color(0xFFE2E8F0),
+                                    ),
+                                  ),
+                                  child: Row(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      const Icon(
+                                        Icons.format_quote_rounded,
+                                        size: 14,
+                                        color: AppColors.primary,
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              'เหตุผลที่ยกหนี้ให้:',
+                                              style: TextStyle(
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.bold,
+                                                color: isDark ? AppColors.bodyMuted : AppColors.inkMuted80,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 1),
+                                            Text(
+                                              reason,
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w500,
+                                                color: isDark ? AppColors.bodyOnDark : AppColors.ink,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
                             ),
                           ],
                           const SizedBox(height: 6),
@@ -726,6 +781,152 @@ class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
                     );
                   },
                 ),
+
+                // Audit & Activity Logs Section (if editLogs present)
+                if (bill.editLogs.isNotEmpty) ...[
+                  const SizedBox(height: 24),
+                  Row(
+                    children: [
+                      const Icon(Icons.history_rounded, size: 18, color: AppColors.primary),
+                      const SizedBox(width: 8),
+                      Text(
+                        'ประวัติการแก้ไขและยกหนี้',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: isDark ? AppColors.bodyOnDark : AppColors.ink,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: ShapeDecoration(
+                      color: isDark ? AppColors.surfaceTile1 : AppColors.canvas,
+                      shape: SmoothRectangleBorder(
+                        side: BorderSide(
+                          color: isDark ? Colors.white10 : AppColors.hairline,
+                          width: 1,
+                        ),
+                        borderRadius: const SmoothBorderRadius.all(
+                          SmoothRadius(cornerRadius: 18, cornerSmoothing: 1.0),
+                        ),
+                      ),
+                    ),
+                    child: ListView.separated(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: bill.editLogs.length,
+                      separatorBuilder: (_, __) => Divider(
+                        height: 16,
+                        thickness: 1,
+                        color: isDark ? Colors.white10 : AppColors.hairline,
+                      ),
+                      itemBuilder: (ctx, idx) {
+                        final log = bill.editLogs[idx];
+                        final isWriteOff = log.action == 'debt_written_off' || log.action == 'write_off';
+                        final isCancel = log.action == 'bill_cancelled';
+                        final actionLabel = isWriteOff
+                            ? 'ยกหนี้ให้'
+                            : (isCancel ? 'ยกเลิกบิล' : 'แก้ไขข้อมูลบิล');
+                        final logColor = isCancel
+                            ? AppColors.error
+                            : (isWriteOff ? const Color(0xFFFF9500) : AppColors.primary);
+                        final logIcon = isCancel
+                            ? Icons.cancel_rounded
+                            : (isWriteOff ? Icons.money_off_rounded : Icons.edit_note_rounded);
+                        final performerName = log.performedBy?.displayName ?? 'เจ้าของบิล';
+
+                        return Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: logColor.withValues(alpha: 0.12),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(logIcon, size: 14, color: logColor),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(
+                                        actionLabel,
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.bold,
+                                          color: isDark ? AppColors.bodyOnDark : AppColors.ink,
+                                        ),
+                                      ),
+                                      if (log.createdAt != null)
+                                        Text(
+                                          DateFormat('dd/MM/yy HH:mm').format(log.createdAt!),
+                                          style: const TextStyle(
+                                            fontSize: 10,
+                                            color: AppColors.inkMuted48,
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    'ดำเนินการโดย $performerName',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
+                                    ),
+                                  ),
+                                  if (log.note != null && log.note!.trim().isNotEmpty) ...[
+                                    const SizedBox(height: 4),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                      decoration: BoxDecoration(
+                                        color: isDark ? AppColors.surfaceTile2 : const Color(0xFFF8FAFC),
+                                        borderRadius: BorderRadius.circular(6),
+                                        border: Border.all(
+                                          color: isDark ? Colors.white10 : const Color(0xFFE2E8F0),
+                                        ),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          const Text(
+                                            'เหตุผล: ',
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.bold,
+                                              color: AppColors.primary,
+                                            ),
+                                          ),
+                                          Expanded(
+                                            child: Text(
+                                              log.note!.trim(),
+                                              style: TextStyle(
+                                                fontSize: 11,
+                                                fontStyle: FontStyle.italic,
+                                                color: isDark ? AppColors.bodyOnDark : AppColors.ink,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                          ],
+                        );
+                      },
+                    ),
+                  ),
+                ],
               ],
             ),
           );

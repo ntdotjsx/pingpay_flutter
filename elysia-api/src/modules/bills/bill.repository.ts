@@ -109,6 +109,12 @@ export class BillRepository {
           with: { debtor: true, payments: true },
         },
         owner: true,
+        editLogs: {
+          with: {
+            performedBy: true,
+          },
+          orderBy: (editLogs: any, { desc }: any) => [desc(editLogs.createdAt)],
+        },
       },
     });
   }
@@ -129,6 +135,12 @@ export class BillRepository {
           with: { debtor: true, payments: true },
         },
         owner: true,
+        editLogs: {
+          with: {
+            performedBy: true,
+          },
+          orderBy: (editLogs: any, { desc }: any) => [desc(editLogs.createdAt)],
+        },
       },
       orderBy: (bills: any, { desc }: any) => [desc(bills.createdAt)],
     });

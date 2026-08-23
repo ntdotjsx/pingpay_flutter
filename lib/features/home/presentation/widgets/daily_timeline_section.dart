@@ -44,10 +44,11 @@ class DailyTimelineSection extends StatelessWidget {
     final formattedDate =
         '${selectedDate.day} ${thaiFullMonths[selectedDate.month - 1]} ${selectedDate.year + 543}';
 
-    // Calculate metrics for selected date
-    final totalExpense = bills.fold(0.0, (acc, b) => acc + b.totalAmount);
-    final totalCollected = bills.fold(0.0, (acc, b) => acc + b.totalPaidAmount);
-    final totalOutstanding = bills.fold(0.0, (acc, b) => acc + b.totalOutstandingAmount);
+    // Calculate metrics for selected date (excluding cancelled and fully written off bills)
+    final activeBills = bills.where((b) => !b.isCancelled && !b.isFullyWrittenOff).toList();
+    final totalExpense = activeBills.fold(0.0, (acc, b) => acc + b.totalAmount);
+    final totalCollected = activeBills.fold(0.0, (acc, b) => acc + b.totalPaidAmount);
+    final totalOutstanding = activeBills.fold(0.0, (acc, b) => acc + b.totalOutstandingAmount);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -574,7 +575,7 @@ class DailyTimelineSection extends StatelessWidget {
                       const SizedBox(height: 2),
                       Builder(
                         builder: (context) {
-                          final hasUnacknowledged = bill.items.any((i) => !i.isAcknowledged && !i.isFullyPaid);
+                          final hasUnacknowledged = bill.items.any((i) => !i.isAcknowledged && !i.isFullyPaid && !i.isFullyWrittenOff);
                           final statusText = _formatStatus(bill.status);
                           final displayStatus = hasUnacknowledged ? '$statusText (รอการยอมรับ)' : statusText;
 
@@ -828,7 +829,14 @@ class DailyTimelineSection extends StatelessWidget {
       case 'partially_paid':
         return 'ชำระบางส่วน';
       case 'cancelled':
+      case 'canceled':
         return 'ยกเลิกแล้ว';
+      case 'fully_written_off':
+      case 'written_off':
+        return 'ยกหนี้ให้แล้ว';
+      case 'partially_written_off':
+        return 'ยกหนี้บางส่วน';
+      case 'unpaid':
       default:
         return 'รอชำระ';
     }
@@ -842,7 +850,12 @@ class DailyTimelineSection extends StatelessWidget {
       case 'partially_paid':
         return AppColors.warning;
       case 'cancelled':
+      case 'canceled':
         return AppColors.error;
+      case 'fully_written_off':
+      case 'written_off':
+      case 'partially_written_off':
+        return AppColors.inkMuted48;
       default:
         return AppColors.inkMuted48;
     }

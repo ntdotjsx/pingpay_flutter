@@ -721,35 +721,35 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         final billsAsync = ref.watch(myBillsProvider);
                         final currentUserId = ref.read(authStateProvider).user?.id;
                         final bills = (billsAsync.valueOrNull ?? [])
-                            .where((b) => b.ownerId == currentUserId)
+                            .where((b) => b.ownerId == currentUserId && !b.isCancelled && !b.isFullyWrittenOff)
                             .toList();
                         final userDebtsState = ref.watch(userDebtsProvider);
                         final debts = userDebtsState.allDebts;
 
-                        // Collect dates that have bills created by user (Orange dot)
+                        // Collect dates that have active bills created by user (Orange dot)
                         final activeDates = bills
-                            .where((b) => b.createdAt != null)
+                            .where((b) => b.createdAt != null && !b.isCancelled && !b.isFullyWrittenOff)
                             .map((b) => DateFormat('yyyy-MM-dd').format(b.createdAt!))
                             .toSet();
 
                         // Collect dates where user has accepted/acknowledged debt to friends (Blue dot)
                         final debtDates = debts
-                            .where((d) => d.isOutstanding && d.outstandingAmount > 0 && d.isAcknowledged)
+                            .where((d) => d.isOutstanding && d.outstandingAmount > 0 && d.isAcknowledged && d.status != 'written_off' && d.status != 'cancelled')
                             .map((d) => DateFormat('yyyy-MM-dd').format(d.debtStartDate))
                             .toSet();
 
-                        // Filter bills for currently selected date
+                        // Filter bills for currently selected date (exclude cancelled and fully written off)
                         final selectedDateStr =
                             DateFormat('yyyy-MM-dd').format(_selectedDate);
                         final filteredBills = bills.where((b) {
-                          if (b.createdAt == null) return false;
+                          if (b.createdAt == null || b.isCancelled || b.isFullyWrittenOff) return false;
                           return DateFormat('yyyy-MM-dd').format(b.createdAt!) ==
                               selectedDateStr;
                         }).toList();
 
-                        // Filter accepted debts for currently selected date
+                        // Filter accepted debts for currently selected date (exclude written off and cancelled)
                         final filteredDebts = debts.where((d) {
-                          if (!d.isOutstanding || d.outstandingAmount <= 0 || !d.isAcknowledged) return false;
+                          if (!d.isOutstanding || d.outstandingAmount <= 0 || !d.isAcknowledged || d.status == 'written_off' || d.status == 'cancelled') return false;
                           return DateFormat('yyyy-MM-dd').format(d.debtStartDate) ==
                               selectedDateStr;
                         }).toList();

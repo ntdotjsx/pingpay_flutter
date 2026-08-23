@@ -224,17 +224,22 @@ class MyBillsScreen extends ConsumerWidget {
             }
           }
           final totalDebtors = uniqueDebtorIds.length;
-          final unpaidBillsCount = bills.where((b) => b.status != 'paid' && b.status != 'cancelled').length;
+          final unpaidBillsCount = bills.where((b) =>
+            !b.isCancelled &&
+            !b.isFullyWrittenOff &&
+            !b.isFullyPaid &&
+            b.totalOutstandingAmount > 0
+          ).length;
 
           // Filter bills
           final filteredBills = bills.where((b) {
             switch (selectedFilter) {
               case MyBillsFilter.unpaid:
-                return b.status == 'unpaid';
+                return b.status == 'unpaid' && !b.isCancelled && !b.isFullyWrittenOff;
               case MyBillsFilter.partiallyPaid:
-                return b.status == 'partially_paid';
+                return b.status == 'partially_paid' || b.status == 'partially_written_off';
               case MyBillsFilter.paid:
-                return b.status == 'paid';
+                return b.status == 'paid' || b.status == 'fully_paid' || b.status == 'fully_written_off';
               case MyBillsFilter.all:
                 return true;
             }
@@ -646,7 +651,7 @@ class MyBillsScreen extends ConsumerWidget {
                     ],
                   ),
                 ),
-                _buildStatusBadge(bill.status),
+                _buildStatusBadge(bill.status, isDark),
               ],
             ),
 
@@ -789,7 +794,7 @@ class MyBillsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildStatusBadge(String status) {
+  Widget _buildStatusBadge(String status, bool isDark) {
     Color bg;
     Color fg;
     String label;
@@ -797,6 +802,7 @@ class MyBillsScreen extends ConsumerWidget {
 
     switch (status) {
       case 'paid':
+      case 'fully_paid':
         bg = AppColors.success.withValues(alpha: 0.12);
         fg = AppColors.success;
         label = 'ชำระครบแล้ว';
@@ -809,10 +815,24 @@ class MyBillsScreen extends ConsumerWidget {
         icon = Icons.hourglass_top_rounded;
         break;
       case 'cancelled':
+      case 'canceled':
         bg = AppColors.error.withValues(alpha: 0.12);
         fg = AppColors.error;
         label = 'ยกเลิกแล้ว';
         icon = Icons.cancel_rounded;
+        break;
+      case 'fully_written_off':
+      case 'written_off':
+        bg = isDark ? Colors.white12 : AppColors.hairline;
+        fg = isDark ? AppColors.bodyMuted : AppColors.inkMuted80;
+        label = 'ยกหนี้แล้ว';
+        icon = Icons.money_off_rounded;
+        break;
+      case 'partially_written_off':
+        bg = AppColors.warning.withValues(alpha: 0.12);
+        fg = AppColors.warning;
+        label = 'ยกหนี้บางส่วน';
+        icon = Icons.money_off_rounded;
         break;
       default:
         bg = AppColors.primary.withValues(alpha: 0.12);

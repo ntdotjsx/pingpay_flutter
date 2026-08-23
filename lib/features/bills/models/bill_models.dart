@@ -41,8 +41,11 @@ class BillItemParticipantModel {
     return remaining > 0 ? remaining : 0.0;
   }
 
-  bool get isFullyPaid => status == 'paid' || amountPaid >= currentAmount;
-  bool get isFullyWrittenOff => status == 'written_off';
+  bool get isFullyPaid => status == 'paid' || status == 'fully_paid' || amountPaid >= currentAmount;
+  bool get isFullyWrittenOff =>
+      status == 'written_off' ||
+      status == 'fully_written_off' ||
+      (amountWrittenOff >= currentAmount && currentAmount > 0);
 
   factory BillItemParticipantModel.fromJson(Map<String, dynamic> json) {
     return BillItemParticipantModel(
@@ -104,6 +107,54 @@ class BillDebtorUserModel {
   }
 }
 
+class BillEditLogModel {
+  final String id;
+  final String billId;
+  final String? billItemId;
+  final String performedById;
+  final String? affectedUserId;
+  final String action; // debt_written_off, bill_cancelled, etc.
+  final dynamic previousValue;
+  final dynamic newValue;
+  final String? note; // Write-off reason / note
+  final DateTime? createdAt;
+  final BillDebtorUserModel? performedBy;
+
+  const BillEditLogModel({
+    required this.id,
+    required this.billId,
+    this.billItemId,
+    required this.performedById,
+    this.affectedUserId,
+    required this.action,
+    this.previousValue,
+    this.newValue,
+    this.note,
+    this.createdAt,
+    this.performedBy,
+  });
+
+  factory BillEditLogModel.fromJson(Map<String, dynamic> json) {
+    return BillEditLogModel(
+      id: json['id'] as String? ?? '',
+      billId: json['billId'] as String? ?? '',
+      billItemId: json['billItemId'] as String?,
+      performedById: json['performedById'] as String? ?? '',
+      affectedUserId: json['affectedUserId'] as String?,
+      action: json['action'] as String? ?? '',
+      previousValue: json['previousValue'],
+      newValue: json['newValue'],
+      note: json['note'] as String?,
+      createdAt: json['createdAt'] != null
+          ? DateTime.tryParse(json['createdAt'].toString())?.toLocal()
+          : null,
+      performedBy: json['performedBy'] != null
+          ? BillDebtorUserModel.fromJson(json['performedBy'] as Map<String, dynamic>)
+          : null,
+    );
+  }
+}
+
 class BillModel {
   final String id;
   final String ownerId;
@@ -113,12 +164,13 @@ class BillModel {
   final String currency;
   final String? groupId;
   final String
-  status; // unpaid, partially_paid, fully_paid, partially_written_off, fully_written_off
+  status; // unpaid, partially_paid, fully_paid, partially_written_off, fully_written_off, cancelled
   final dynamic itemsBreakdown;
   final String? receiptImageUrl;
   final DateTime? createdAt;
   final DateTime? updatedAt;
   final List<BillItemParticipantModel> items;
+  final List<BillEditLogModel> editLogs;
   final BillDebtorUserModel? owner;
 
   const BillModel({
@@ -135,8 +187,42 @@ class BillModel {
     this.createdAt,
     this.updatedAt,
     this.items = const [],
+    this.editLogs = const [],
     this.owner,
   });
+
+  bool get isCancelled => status == 'cancelled' || status == 'canceled';
+  bool get isFullyWrittenOff =>
+      status == 'fully_written_off' ||
+      status == 'written_off' ||
+      (items.isNotEmpty && items.every((i) => i.isFullyWrittenOff));
+  bool get isFullyPaid =>
+      status == 'paid' ||
+      status == 'fully_paid' ||
+      (items.isNotEmpty && items.every((i) => i.isFullyPaid));
+  bool get isFullySettled => isFullyPaid || isFullyWrittenOff || isCancelled || totalOutstandingAmount <= 0;
+
+  /// Find write-off reason for a specific participant item if available
+  String? getWriteOffReasonForParticipant(String participantId) {
+    // 1. Try finding in editLogs
+    final log = editLogs.where((l) =>
+      (l.action == 'debt_written_off' || l.action == 'write_off') &&
+      l.billItemId == participantId &&
+      l.note != null &&
+      l.note!.trim().isNotEmpty
+    ).firstOrNull;
+    if (log != null && log.note != null && log.note!.trim().isNotEmpty) {
+      return log.note!.trim();
+    }
+
+    // 2. Fallback to general write-off log on this bill
+    final generalLog = editLogs.where((l) =>
+      (l.action == 'debt_written_off' || l.action == 'write_off') &&
+      l.note != null &&
+      l.note!.trim().isNotEmpty
+    ).firstOrNull;
+    return generalLog?.note?.trim();
+  }
 
   double get totalDebtorsAmount =>
       items.fold(0.0, (acc, item) => acc + item.currentAmount);
@@ -154,6 +240,7 @@ class BillModel {
 
   factory BillModel.fromJson(Map<String, dynamic> json) {
     final itemsList = (json['items'] as List?) ?? [];
+    final editLogsList = (json['editLogs'] as List?) ?? [];
     return BillModel(
       id: json['id'] as String? ?? '',
       ownerId: json['ownerId'] as String? ?? '',
@@ -174,6 +261,11 @@ class BillModel {
       items: itemsList
           .map(
             (e) => BillItemParticipantModel.fromJson(e as Map<String, dynamic>),
+          )
+          .toList(),
+      editLogs: editLogsList
+          .map(
+            (e) => BillEditLogModel.fromJson(e as Map<String, dynamic>),
           )
           .toList(),
       owner: json['owner'] != null
