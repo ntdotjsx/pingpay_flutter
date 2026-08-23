@@ -1,0 +1,29 @@
+workflows:
+  pingpay-debug:
+    name: PingPay Debug Build
+    max_build_duration: 30
+    instance_type: mac_mini_m2
+    environment:
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+    scripts:
+      - name: Install dependencies
+        script: |
+          flutter pub get
+
+      - name: Disable Swift Package Manager
+        script: |
+          flutter config --no-enable-swift-package-manager
+
+      - name: Build Android Debug AAB
+        script: |
+          flutter build appbundle --debug --no-tree-shake-icons
+
+      - name: Build iOS Debug
+        script: |
+          flutter build ios --debug --no-codesign
+
+    artifacts:
+      - build/**/outputs/**/*.aab
+      - build/ios/iphoneos/*.app
