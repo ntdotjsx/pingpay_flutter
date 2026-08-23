@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:dio/dio.dart';
+import '../../../core/errors/app_exception.dart';
 import '../../../core/network/dio_client.dart';
 import '../../../core/services/notification_service.dart';
 import '../models/auth_models.dart';
@@ -70,13 +71,16 @@ class AuthRepository {
       final data = res.data;
       return data['success'] == true || data['valid'] == true;
     } catch (e) {
+      if (e is AppException) {
+        throw Exception(e.message);
+      }
       if (e is DioException) {
-        final errorMsg = e.response?.data?['error']?.toString();
+        final errorMsg = (e.response?.data is Map ? e.response?.data['message'] ?? e.response?.data['error'] : null)?.toString();
         if (errorMsg != null && errorMsg.isNotEmpty) {
           throw Exception(errorMsg);
         }
       }
-      return false;
+      rethrow;
     }
   }
 

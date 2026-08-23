@@ -135,9 +135,11 @@ class AuthNotifier extends StateNotifier<AuthState> {
         mockEmail: mockEmail,
         mockDisplayName: mockDisplayName,
       );
+      final shouldLock = user.onboardingState == OnboardingState.completed;
       state = state.copyWith(
         status: AuthStatus.authenticated,
         user: user,
+        isLocked: shouldLock,
         isLoading: false,
       );
       _syncFcmToken();

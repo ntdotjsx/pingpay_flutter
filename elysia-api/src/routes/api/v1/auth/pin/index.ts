@@ -77,12 +77,17 @@ export default new Elysia()
 
     if (!creds || !creds.pinHash) {
       set.status = 400;
-      return { error: "PIN not set up" };
+      return { error: "PIN_NOT_SET", message: "ยังไม่ได้ตั้งค่ารหัส PIN" };
     }
 
     if (creds.lockedUntil && creds.lockedUntil > new Date()) {
+      const remainingMinutes = Math.ceil((new Date(creds.lockedUntil).getTime() - Date.now()) / (60 * 1000));
       set.status = 429;
-      return { error: "Account temporarily locked due to too many failed attempts" };
+      return {
+        error: "ACCOUNT_LOCKED",
+        message: `บัญชีถูกระงับชั่วคราว ${remainingMinutes} นาที เนื่องจากกรอก PIN ผิดเกินกำหนด หรือกด "ลืมรหัส PIN?" เพื่อรีเซ็ต`,
+        lockedUntil: creds.lockedUntil
+      };
     }
 
     const isValid = await argon2.verify(creds.pinHash, pin);
@@ -110,8 +115,23 @@ export default new Elysia()
         })
         .where(eq(userCredentials.userId, userId));
 
-      set.status = 401;
-      return { error: "Invalid PIN", attemptsLeft: Math.max(0, MAX_FAILED_ATTEMPTS - newAttempts) };
+      const attemptsLeft = Math.max(0, MAX_FAILED_ATTEMPTS - newAttempts);
+
+      if (attemptsLeft === 0) {
+        set.status = 429;
+        return {
+          error: "ACCOUNT_LOCKED",
+          message: `คุณกรอกรหัส PIN ผิดครบ ${MAX_FAILED_ATTEMPTS} ครั้งแล้ว บัญชีถูกระงับชั่วคราว ${LOCKOUT_MINUTES} นาที หรือกด "ลืมรหัส PIN?" เพื่อรีเซ็ต`,
+          attemptsLeft: 0
+        };
+      }
+
+      set.status = 400;
+      return {
+        error: "INVALID_PIN",
+        message: `รหัส PIN ไม่ถูกต้อง (เหลือโอกาสอีก ${attemptsLeft} ครั้ง)`,
+        attemptsLeft
+      };
     }
 
     // Reset failed attempts on success

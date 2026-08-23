@@ -34,8 +34,11 @@ class AuthInterceptor extends Interceptor {
         errorMsg.toLowerCase().contains('unauthorized') ||
         errorMsg.toLowerCase().contains('invalid access token');
 
-    // Handle 401 / Unauthorized token refresh
-    if (isUnauthorized && !err.requestOptions.path.contains('/auth/refresh') && !err.requestOptions.path.contains('/auth/login')) {
+    // Handle 401 / Unauthorized token refresh (exclude login, pin verify, and refresh)
+    if (isUnauthorized &&
+        !err.requestOptions.path.contains('/auth/refresh') &&
+        !err.requestOptions.path.contains('/auth/login') &&
+        !err.requestOptions.path.contains('/auth/pin')) {
       final refreshToken = await _storage.getRefreshToken();
       if (refreshToken != null && refreshToken.isNotEmpty) {
         try {
