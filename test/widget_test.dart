@@ -27,9 +27,11 @@ void main() {
       ),
     );
 
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 200));
+
     expect(find.text('ยินดีต้อนรับสู่ PingPay'), findsOneWidget);
-    expect(find.text('เข้าสู่ระบบด้วย Google'), findsOneWidget);
+    expect(find.text('ปัดขึ้นเพื่อเริ่มต้นใช้งาน (Swipe Up)'), findsOneWidget);
   });
 }
 
