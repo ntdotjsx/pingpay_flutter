@@ -60,8 +60,11 @@
 	</dict>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>FirebaseAppDelegateProxyEnabled</key>
+	<false/>
 	<key>UIBackgroundModes</key>
 	<array>
+		<string>fetch</string>
 		<string>remote-notification</string>
 	</array>
 	<key>UILaunchStoryboardName</key>
@@ -82,8 +85,10 @@
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 	<key>NSCameraUsageDescription</key>
-	<string>PingPay ต้องการใช้กล้องเพื่อสแกน QR Code สำหรับเพิ่มเพื่อนและจัดการบิล</string>
+	<string>PingPay ต้องการใช้กล้องเพื่อถ่ายภาพใบเสร็จ สแกนบิล OCR และสแกน QR Code สำหรับเพิ่มเพื่อน</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>PingPay ต้องการเข้าถึงคลังรูปภาพเพื่อเลือกรูปภาพ QR Code หรือใบเสร็จ</string>
+	<string>PingPay ต้องการเข้าถึงคลังรูปภาพเพื่อเลือกรูปภาพใบเสร็จ สลิป หรือ QR Code</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>PingPay ต้องการบันทึกรูปภาพ QR Code และใบเสร็จลงในคลังรูปภาพ</string>
 </dict>
 </plist>

@@ -202,6 +202,41 @@ class NotificationService {
     }
   }
 
+  static Future<NotificationSettings?> requestNotificationPermission() async {
+    try {
+      final messaging = FirebaseMessaging.instance;
+      final settings = await messaging.requestPermission(
+        alert: true,
+        announcement: false,
+        badge: true,
+        carPlay: false,
+        criticalAlert: false,
+        provisional: false,
+        sound: true,
+      );
+
+      if (Platform.isIOS) {
+        final iosPlugin = flutterLocalNotificationsPlugin
+            .resolvePlatformSpecificImplementation<
+                IOSFlutterLocalNotificationsPlugin>();
+        await iosPlugin?.requestPermissions(
+          alert: true,
+          badge: true,
+          sound: true,
+        );
+      }
+
+      final token = await ensureFcmToken();
+      if (token != null) {
+        currentFcmToken = token;
+      }
+      return settings;
+    } catch (e) {
+      debugPrint('Error requesting notification permission: $e');
+      return null;
+    }
+  }
+
   void _scheduleTokenRetry() {
     if (_didScheduleTokenRetry) return;
     _didScheduleTokenRetry = true;
@@ -221,19 +256,20 @@ class NotificationService {
 
   static Future<String?> _waitForApnsToken(
     FirebaseMessaging messaging, {
-    int attempts = 10,
+    int attempts = 15,
   }) async {
     for (var attempt = 0; attempt < attempts; attempt += 1) {
       try {
         final token = await messaging.getAPNSToken();
         if (token != null && token.isNotEmpty) {
+          debugPrint('[iOS APNs] APNs token retrieved successfully on attempt ${attempt + 1}: $token');
           return token;
         }
       } catch (e) {
-        debugPrint('APNs token attempt ${attempt + 1} failed: $e');
+        debugPrint('[iOS APNs] APNs token attempt ${attempt + 1} failed: $e');
       }
 
-      await Future<void>.delayed(const Duration(milliseconds: 600));
+      await Future<void>.delayed(const Duration(milliseconds: 350));
     }
 
     return null;

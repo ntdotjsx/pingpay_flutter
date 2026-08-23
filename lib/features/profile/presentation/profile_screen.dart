@@ -186,7 +186,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   title: 'นโยบายความเป็นส่วนตัว (PDPA)',
                   subtitle: 'เงื่อนไขการคุ้มครองข้อมูลส่วนบุคคลและ Audit Logs',
                   isDark: isDark,
-                  onTap: () => context.push('/pdpa'),
+                  onTap: () => _showPdpaPolicyBottomSheet(context),
                 ),
               ],
             ),
@@ -1529,6 +1529,275 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           ),
         );
       },
+    );
+  }
+
+  void _showPdpaPolicyBottomSheet(BuildContext context) {
+    HapticFeedback.lightImpact();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.88,
+        ),
+        decoration: ShapeDecoration(
+          color: isDark ? AppColors.surfaceTile1 : Colors.white,
+          shape: const SmoothRectangleBorder(
+            borderRadius: SmoothBorderRadius.vertical(
+              top: SmoothRadius(cornerRadius: 32, cornerSmoothing: 0.8),
+            ),
+          ),
+          shadows: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: isDark ? 0.5 : 0.15),
+              blurRadius: 28,
+              offset: const Offset(0, -4),
+            ),
+          ],
+        ),
+        child: Column(
+          children: [
+            // Top Handle & Header
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 14, 20, 12),
+              child: Column(
+                children: [
+                  Container(
+                    width: 38,
+                    height: 4.5,
+                    decoration: BoxDecoration(
+                      color: isDark ? Colors.white24 : Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(3),
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  Row(
+                    children: [
+                      Container(
+                        width: 44,
+                        height: 44,
+                        decoration: ShapeDecoration(
+                          color: Colors.teal.withValues(alpha: isDark ? 0.2 : 0.1),
+                          shape: const SmoothRectangleBorder(
+                            borderRadius: SmoothBorderRadius.all(
+                              SmoothRadius(cornerRadius: 14, cornerSmoothing: 0.8),
+                            ),
+                          ),
+                        ),
+                        child: const Icon(
+                          Icons.shield_outlined,
+                          color: Colors.teal,
+                          size: 24,
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'นโยบายความเป็นส่วนตัว (PDPA)',
+                              style: TextStyle(
+                                fontSize: 17,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: -0.3,
+                                color: isDark ? AppColors.bodyOnDark : AppColors.ink,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'มาตรฐาน พ.ร.บ. คุ้มครองข้อมูลส่วนบุคคล พ.ศ. 2562',
+                              style: TextStyle(
+                                fontSize: 11.5,
+                                color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF00B900).withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.check_circle_rounded, size: 12, color: Color(0xFF00B900)),
+                            SizedBox(width: 4),
+                            Text(
+                              'คุ้มครองแล้ว',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF00B900),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+
+            const Divider(height: 1),
+
+            // Scrollable Content
+            Expanded(
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildPolicyCard(
+                      icon: Icons.folder_shared_outlined,
+                      iconColor: const Color(0xFFFF5000),
+                      title: '1. การจัดเก็บข้อมูลส่วนบุคคล',
+                      body:
+                          'PingPay จัดเก็บข้อมูลบัญชีผู้ใช้ (ชื่อ, อีเมล, รูปโปรไฟล์), เบอร์โทรศัพท์, ข้อมูลพร้อมเพย์สำหรับการรับเงิน, รายการบิลหารค่าใช้จ่าย และภาพถ่ายสลิปธุรกรรม โดยมีวัตถุประสงค์เพื่อการคำนวณยอดหนี้และส่งการแจ้งเตือนภายในระบบเท่านั้น',
+                      isDark: isDark,
+                    ),
+                    const SizedBox(height: 12),
+                    _buildPolicyCard(
+                      icon: Icons.lock_outline_rounded,
+                      iconColor: const Color(0xFF007AFF),
+                      title: '2. มาตรฐานความปลอดภัยและการเข้ารหัส',
+                      body:
+                          'ข้อมูลสลิปและธุรกรรมทางการเงินทั้งหมดถูกส่งผ่านโปรโตคอลความปลอดภัยระดับ TLS/HTTPS และเข้ารหัสข้อมูล (Encryption at Rest) โดยไม่มีการเปิดเผย จำหน่าย หรือส่งต่อข้อมูลส่วนบุคคลของท่านแก่บุคคลภายนอกที่ไม่เกี่ยวข้องโดยเด็ดขาด',
+                      isDark: isDark,
+                    ),
+                    const SizedBox(height: 12),
+                    _buildPolicyCard(
+                      icon: Icons.history_edu_rounded,
+                      iconColor: const Color(0xFF5856D6),
+                      title: '3. บันทึกประวัติและป้องกันการทุจริต (Audit Logs)',
+                      body:
+                          'ระบบจะเก็บบันทึกประวัติการสร้างบิล การปรับยอดหนี้ และการยืนยันการชำระเงิน (Audit Trails) เพื่อเป็นหลักฐานยืนยันความโปร่งใสระหว่างเพื่อนร่วมหาร และใช้ระงับข้อพิพาททางการเงินอย่างเป็นธรรม',
+                      isDark: isDark,
+                    ),
+                    const SizedBox(height: 12),
+                    _buildPolicyCard(
+                      icon: Icons.verified_user_outlined,
+                      iconColor: Colors.teal,
+                      title: '4. สิทธิของเจ้าของข้อมูล (Data Subject Rights)',
+                      body:
+                          'ท่านมีสิทธิในการขอเข้าถึง ขอสำเนา ขอแก้ไข หรือขอลบข้อมูลส่วนบุคคลและประวัติบัญชีของท่านได้ตลอดเวลาผ่านการตั้งค่าบัญชีในแอปพลิเคชัน หรือติดต่อทีมงานผู้พัฒนา PingPay',
+                      isDark: isDark,
+                    ),
+                    const SizedBox(height: 16),
+                    Center(
+                      child: Text(
+                        'PingPay Data Protection & Privacy Framework • v1.0.0',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: isDark ? Colors.white30 : AppColors.inkMuted48,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            // Bottom Action Button
+            Padding(
+              padding: EdgeInsets.fromLTRB(20, 10, 20, 16 + MediaQuery.of(context).padding.bottom),
+              child: SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: ElevatedButton(
+                  onPressed: () {
+                    HapticFeedback.lightImpact();
+                    Navigator.pop(ctx);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFFF5000),
+                    foregroundColor: Colors.white,
+                    elevation: 2,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                  child: const Text(
+                    'รับทราบและปิดหน้าต่าง',
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPolicyCard({
+    required IconData icon,
+    required Color iconColor,
+    required String title,
+    required String body,
+    required bool isDark,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: ShapeDecoration(
+        color: isDark ? AppColors.surfaceTile2 : const Color(0xFFF7F8FA),
+        shape: SmoothRectangleBorder(
+          side: BorderSide(
+            color: isDark ? Colors.white10 : const Color(0xFFEBEFF5),
+            width: 1,
+          ),
+          borderRadius: const SmoothBorderRadius.all(
+            SmoothRadius(cornerRadius: 16, cornerSmoothing: 0.8),
+          ),
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: iconColor.withValues(alpha: 0.12),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: iconColor, size: 18),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? AppColors.bodyOnDark : AppColors.ink,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  body,
+                  style: TextStyle(
+                    fontSize: 12,
+                    height: 1.5,
+                    color: isDark ? AppColors.bodyMuted : AppColors.inkMuted80,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
