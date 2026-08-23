@@ -6,7 +6,8 @@ import '../repositories/payment_repository.dart';
 
 enum DebtFilter {
   all, // ทั้งหมด
-  unpaid, // ค้างชำระ
+  unpaid, // ค้างชำระ (รวมรอตอบรับและค้างชำระ)
+  pendingAcceptance, // รอตอบรับ (คำร้องขอเป็นหนี้)
   partiallyPaid, // ชำระบางส่วน
   pendingConfirmation, // รอยืนยัน
   history, // ประวัติ (ชำระแล้ว/ตัดหนี้)
@@ -64,30 +65,42 @@ class UserDebtsState {
         .toList();
   }
 
-  /// Filtered and sorted debts according to user selections (only acknowledged debts)
+  /// Pending debt requests that debtor needs to acknowledge
+  List<DebtItemModel> get pendingAcceptanceDebts {
+    return allDebts
+        .where((d) => d.isOutstanding && d.outstandingAmount > 0 && !d.isAcknowledged)
+        .toList();
+  }
+
+  /// Filtered and sorted debts according to user selections
   List<DebtItemModel> get filteredDebts {
-    final acknowledgedDebts = allDebts.where((d) => d.isAcknowledged).toList();
     List<DebtItemModel> result;
 
     switch (currentFilter) {
       case DebtFilter.all:
-        result = List.from(acknowledgedDebts);
+        result = List.from(allDebts);
+        break;
+      case DebtFilter.pendingAcceptance:
+        result = allDebts
+            .where((d) => d.isOutstanding && !d.isAcknowledged)
+            .toList();
         break;
       case DebtFilter.unpaid:
-        result = acknowledgedDebts
+        // Include actionable debts and pending requests
+        result = allDebts
             .where((d) => d.isOutstanding && d.amountPaid == 0)
             .toList();
         break;
       case DebtFilter.partiallyPaid:
-        result = acknowledgedDebts.where((d) => d.isPartiallyPaid).toList();
+        result = allDebts.where((d) => d.isPartiallyPaid).toList();
         break;
       case DebtFilter.pendingConfirmation:
-        result = acknowledgedDebts
+        result = allDebts
             .where((d) => d.latestPaymentStatus == 'pending_owner_confirmation')
             .toList();
         break;
       case DebtFilter.history:
-        result = acknowledgedDebts
+        result = allDebts
             .where((d) => !d.isOutstanding || d.outstandingAmount <= 0)
             .toList();
         break;

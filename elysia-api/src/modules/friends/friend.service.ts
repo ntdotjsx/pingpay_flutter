@@ -484,6 +484,7 @@ export class FriendService {
     if (debt.hasOutstandingDebt) {
       return {
         hasOutstandingDebt: true,
+        canRemove: false,
         requiresExplicitDebtConfirmation: true,
         outstanding: {
           youOweFriend: debt.userAOwesUserB,
@@ -491,18 +492,19 @@ export class FriendService {
         },
         warning: {
           code: "OUTSTANDING_DEBT_EXISTS",
-          message: "There is still outstanding debt between these users.",
+          message: "ไม่สามารถลบเพื่อนได้เนื่องจากยังมียอดเงินค้างชำระระหว่างกัน กรุณาเคลียร์ยอดเงินให้ครบถ้วนก่อน",
         },
       };
     }
 
     return {
       hasOutstandingDebt: false,
+      canRemove: true,
       requiresExplicitDebtConfirmation: false,
     };
   }
 
-  static async removeFriend(friendshipId: string, currentUserId: string, confirmOutstandingDebt: boolean) {
+  static async removeFriend(friendshipId: string, currentUserId: string, confirmOutstandingDebt: boolean = false) {
     const removed = await db.transaction(async (tx) => {
       const friendship = await tx.query.friendships.findFirst({
         where: eq(friendships.id, friendshipId),
@@ -520,8 +522,8 @@ export class FriendService {
 
       const debt = await DebtRelationshipService.getOutstandingDebtBetween(currentUserId, friendId);
 
-      if (debt.hasOutstandingDebt && !confirmOutstandingDebt) {
-        throw new Error("OUTSTANDING_DEBT_CONFIRMATION_REQUIRED");
+      if (debt.hasOutstandingDebt) {
+        throw new Error("CANNOT_REMOVE_FRIEND_WITH_OUTSTANDING_DEBT: ไม่สามารถลบเพื่อนได้เนื่องจากยังมียอดหนี้ค้างชำระระหว่างกัน กรุณาเคลียร์ยอดเงินให้ครบถ้วนก่อน");
       }
 
       const [updated] = await tx

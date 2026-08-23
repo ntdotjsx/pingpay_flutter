@@ -19,6 +19,7 @@ import '../../features/bills/presentation/my_bills_screen.dart';
 import '../../features/friends/screens/friends_screen.dart';
 import '../../features/friends/screens/add_friend_screen.dart';
 import '../../features/friends/screens/friend_detail_screen.dart';
+import '../../features/friends/screens/friend_leaderboard_screen.dart';
 import '../../features/friends/screens/qr_scan_friend_screen.dart';
 import '../../features/payments/presentation/payments_screen.dart';
 import '../../features/profile/presentation/profile_screen.dart';
@@ -46,6 +47,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/pin/setup',
         pageBuilder: (context, state) => AppPageTransition.fade(key: state.pageKey, child: const PinSetupScreen()),
+      ),
+      GoRoute(
+        path: '/pin/change',
+        pageBuilder: (context, state) => AppPageTransition.slide(key: state.pageKey, child: const PinSetupScreen()),
       ),
       GoRoute(
         path: '/pin/lock',
@@ -129,6 +134,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/friends',
         pageBuilder: (context, state) => AppPageTransition.slide(key: state.pageKey, child: const FriendsScreen()),
+      ),
+      GoRoute(
+        path: '/friends/leaderboard',
+        pageBuilder: (context, state) => AppPageTransition.slide(key: state.pageKey, child: const FriendLeaderboardScreen()),
       ),
       GoRoute(
         path: '/friends/add',

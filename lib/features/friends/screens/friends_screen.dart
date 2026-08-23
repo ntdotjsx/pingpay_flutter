@@ -216,6 +216,11 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
           onPressed: () => context.pop(),
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.emoji_events_rounded, size: 22, color: Color(0xFFFFD700)),
+            tooltip: 'ทำเนียบจัดอันดับเพื่อน 🏆',
+            onPressed: () => context.push('/friends/leaderboard'),
+          ),
           if (currentUser?.userCode != null)
             IconButton(
               icon: const Icon(Icons.qr_code_scanner_rounded, size: 22, color: Color(0xFFFF5000)),
@@ -461,59 +466,63 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
             child: Container(
-              height: 44,
-              decoration: ShapeDecoration(
-                color: isDark ? AppColors.surfaceTile1 : Colors.white,
-                shape: const SmoothRectangleBorder(
-                  borderRadius: SmoothBorderRadius.all(
-                    SmoothRadius(cornerRadius: 14, cornerSmoothing: 0.8),
-                  ),
-                ),
-                shadows: [
+              decoration: BoxDecoration(
+                boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: isDark ? 0.15 : 0.03),
-                    blurRadius: 8,
+                    color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
+                    blurRadius: 10,
                     offset: const Offset(0, 2),
                   ),
                 ],
               ),
-              padding: const EdgeInsets.symmetric(horizontal: 14),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.search_rounded,
-                    size: 20,
+              child: TextField(
+                controller: _searchController,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: isDark ? AppColors.bodyOnDark : AppColors.ink,
+                ),
+                decoration: InputDecoration(
+                  hintText: 'ค้นหาด้วยชื่อเพื่อน หรือรหัส User ID...',
+                  hintStyle: TextStyle(
+                    fontSize: 13,
                     color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
                   ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: TextField(
-                      controller: _searchController,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: isDark ? AppColors.bodyOnDark : AppColors.ink,
-                      ),
-                      decoration: InputDecoration(
-                        hintText: 'ค้นหาด้วยชื่อเพื่อน หรือรหัส User ID...',
-                        hintStyle: TextStyle(
-                          fontSize: 13,
-                          color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
-                        ),
-                        border: InputBorder.none,
-                        isDense: true,
-                      ),
+                  prefixIcon: const Icon(
+                    Icons.search_rounded,
+                    size: 20,
+                    color: AppColors.inkMuted48,
+                  ),
+                  suffixIcon: _searchController.text.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(Icons.cancel_rounded, size: 18, color: AppColors.inkMuted48),
+                          onPressed: () => _searchController.clear(),
+                        )
+                      : null,
+                  filled: true,
+                  fillColor: isDark ? AppColors.surfaceTile1 : Colors.white,
+                  isDense: true,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: BorderSide(
+                      color: isDark ? Colors.white10 : const Color(0xFFE9ECF0),
                     ),
                   ),
-                  if (_searchController.text.isNotEmpty)
-                    GestureDetector(
-                      onTap: () => _searchController.clear(),
-                      child: Icon(
-                        Icons.cancel_rounded,
-                        size: 18,
-                        color: isDark ? AppColors.bodyMuted : Colors.grey,
-                      ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: BorderSide(
+                      color: isDark ? Colors.white10 : const Color(0xFFE9ECF0),
                     ),
-                ],
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: const BorderSide(
+                      color: Color(0xFFFF5000),
+                      width: 1.5,
+                    ),
+                  ),
+                ),
               ),
             ),
           ),

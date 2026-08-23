@@ -44,6 +44,7 @@ class DebtAgeCalculator {
 
   /// Formats date to Thai calendar date e.g. "20 ส.ค. 2569" or "8 ส.ค. 2569"
   static String formatThaiDate(DateTime date) {
+    final bkkDate = date.isUtc ? date.toLocal() : date;
     const thaiMonths = [
       'ม.ค.',
       'ก.พ.',
@@ -59,10 +60,19 @@ class DebtAgeCalculator {
       'ธ.ค.',
     ];
 
-    final day = date.day;
-    final month = thaiMonths[date.month - 1];
-    final year = date.year + 543; // Buddhist Era
+    final day = bkkDate.day;
+    final month = thaiMonths[bkkDate.month - 1];
+    final year = bkkDate.year + 543; // Buddhist Era
 
     return '$day $month $year';
+  }
+
+  /// Formats date and time to Thai format e.g. "20 ส.ค. 2569 เวลา 14:30 น."
+  static String formatThaiDateTime(DateTime date) {
+    final bkkDate = date.isUtc ? date.toLocal() : date;
+    final dateStr = formatThaiDate(bkkDate);
+    final hour = bkkDate.hour.toString().padLeft(2, '0');
+    final minute = bkkDate.minute.toString().padLeft(2, '0');
+    return '$dateStr เวลา $hour:$minute น.';
   }
 }

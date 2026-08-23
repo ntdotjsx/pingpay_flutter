@@ -857,13 +857,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   // Search Input Squircle Pill (Clickable)
                   Expanded(
                     child: GestureDetector(
-                      onTap: () => GlobalSearchSheet.show(context),
+                      onTap: () {
+                        HapticFeedback.lightImpact();
+                        GlobalSearchSheet.show(context);
+                      },
                       child: Container(
                         height: 42,
                         decoration: ShapeDecoration(
-                          color: Colors.white.withValues(alpha: 0.18),
-                          shape: const SmoothRectangleBorder(
-                            borderRadius: SmoothBorderRadius.all(
+                          color: Colors.white.withValues(alpha: isDark ? 0.15 : 0.22),
+                          shape: SmoothRectangleBorder(
+                            side: BorderSide(
+                              color: Colors.white.withValues(alpha: isDark ? 0.2 : 0.35),
+                              width: 1,
+                            ),
+                            borderRadius: const SmoothBorderRadius.all(
                               SmoothRadius(
                                 cornerRadius: 21,
                                 cornerSmoothing: 1.0,
@@ -872,19 +879,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           ),
                         ),
                         padding: const EdgeInsets.symmetric(horizontal: 14),
-                        child: const Row(
+                        child: Row(
                           children: [
-                            Icon(
+                            const Icon(
                               Icons.search_rounded,
                               size: 20,
                               color: Colors.white,
                             ),
-                            SizedBox(width: 8),
+                            const SizedBox(width: 8),
                             Text(
-                              'ค้นหาเพื่อน หรือ รายการบิล',
+                              'ค้นหาเพื่อน หรือ รายการบิล...',
                               style: TextStyle(
-                                color: Colors.white70,
-                                fontSize: 14,
+                                color: Colors.white.withValues(alpha: 0.95),
+                                fontSize: 13.5,
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
                           ],

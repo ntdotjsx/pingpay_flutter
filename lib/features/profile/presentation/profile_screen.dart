@@ -138,7 +138,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   title: 'เปลี่ยนรหัส PIN ความปลอดภัย',
                   subtitle: 'รหัส 6 หลักสำหรับยืนยันการทำธุรกรรมและการเงิน',
                   isDark: isDark,
-                  onTap: () => context.push('/pin/setup'),
+                  onTap: () => context.push('/pin/change'),
                 ),
                 _buildTileDivider(isDark),
 

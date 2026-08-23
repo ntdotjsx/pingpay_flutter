@@ -1,4 +1,7 @@
+process.env.TZ = "Asia/Bangkok";
+
 export const env = {
+  TZ: "Asia/Bangkok",
   DATABASE_URL: process.env.DATABASE_URL as string,
 
   // ── LINE Mobile App Config ─────────────────────────────────────────

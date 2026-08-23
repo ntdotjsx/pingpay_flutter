@@ -21,8 +21,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
   late final Animation<double> _floatingAnimation;
   late final Animation<double> _chevronAnimation;
 
-  int _currentPage = 0;
-
   @override
   void initState() {
     super.initState();
@@ -108,11 +106,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
         controller: _pageController,
         scrollDirection: Axis.vertical,
         physics: const BouncingScrollPhysics(),
-        onPageChanged: (page) {
-          setState(() {
-            _currentPage = page;
-          });
-        },
         children: [
           // ── PAGE 0: WELCOME SCREEN (MASCOT & SWIPE UP) ───────────────
           _buildWelcomePage(context, isDark),

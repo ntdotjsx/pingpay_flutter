@@ -360,7 +360,7 @@ class _GlobalSearchSheetState extends ConsumerState<GlobalSearchSheet> {
       child: ListTile(
         onTap: () {
           Navigator.of(context).pop();
-          context.push('/bills/detail/${b.id}');
+          context.push('/bills/${b.id}');
         },
         leading: Container(
           width: 40,

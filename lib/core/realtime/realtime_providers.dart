@@ -109,23 +109,31 @@ class RealtimeController {
   }
 
   void _refreshFriends(RealtimeEvent event) {
+    // ignore: unused_result
     _ref.refresh(friendsListProvider);
+    // ignore: unused_result
     _ref.refresh(incomingFriendRequestsProvider);
+    // ignore: unused_result
     _ref.refresh(outgoingFriendRequestsProvider);
 
     final friendshipId = event.data['friendshipId']?.toString();
     if (friendshipId != null && friendshipId.isNotEmpty) {
+      // ignore: unused_result
       _ref.refresh(friendDetailProvider(friendshipId));
+      // ignore: unused_result
       _ref.refresh(removalCheckProvider(friendshipId));
     }
   }
 
   void _refreshBillState(RealtimeEvent event) {
     final billId = event.resourceId ?? event.data['billId']?.toString();
+    // ignore: unused_result
     _ref.refresh(myBillsProvider);
 
     if (billId != null && billId.isNotEmpty) {
+      // ignore: unused_result
       _ref.refresh(billDetailProvider(billId));
+      // ignore: unused_result
       _ref.refresh(billPaymentHistoryProvider(billId));
     }
 
@@ -141,9 +149,13 @@ class RealtimeController {
   }
 
   void _recoverMissedState() {
+    // ignore: unused_result
     _ref.refresh(friendsListProvider);
+    // ignore: unused_result
     _ref.refresh(incomingFriendRequestsProvider);
+    // ignore: unused_result
     _ref.refresh(outgoingFriendRequestsProvider);
+    // ignore: unused_result
     _ref.refresh(myBillsProvider);
     _refreshPaymentSummaries();
   }
