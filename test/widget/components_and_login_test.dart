@@ -41,7 +41,7 @@ void main() {
     expect(find.byType(CircularProgressIndicator), findsOneWidget);
   });
 
-  testWidgets('LoginScreen renders official LINE Login button', (
+  testWidgets('LoginScreen renders official Google Login button', (
     WidgetTester tester,
   ) async {
     await tester.pumpWidget(
@@ -59,7 +59,7 @@ void main() {
 
     await tester.pumpAndSettle();
     expect(find.text('ยินดีต้อนรับสู่ PingPay'), findsOneWidget);
-    expect(find.text('เข้าสู่ระบบด้วย LINE'), findsOneWidget);
+    expect(find.text('เข้าสู่ระบบด้วย Google'), findsOneWidget);
   });
 }
 
@@ -74,10 +74,11 @@ class AuthNotifierMock extends StateNotifier<AuthState>
   Future<void> checkSession() async {}
 
   @override
-  Future<void> authenticateWithLineTokens({
+  Future<void> authenticateWithGoogleTokens({
     String? idToken,
     String? accessToken,
-    String? mockLineUserId,
+    String? mockGoogleId,
+    String? mockEmail,
     String? mockDisplayName,
   }) async {}
 

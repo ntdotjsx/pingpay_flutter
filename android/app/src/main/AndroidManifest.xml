@@ -33,9 +33,8 @@
             android:name="flutterEmbedding"
             android:value="2" />
     </application>
-    <!-- Required to query activities for LINE SDK, Chrome Custom Tabs, and text processing -->
+    <!-- Required to query activities for Custom Tabs, Web views, and text processing -->
     <queries>
-        <package android:name="jp.naver.line.android" />
         <intent>
             <action android:name="android.intent.action.VIEW" />
             <category android:name="android.intent.category.BROWSABLE" />

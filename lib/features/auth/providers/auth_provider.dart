@@ -104,18 +104,20 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
-  Future<void> authenticateWithLineTokens({
+  Future<void> authenticateWithGoogleTokens({
     String? idToken,
     String? accessToken,
-    String? mockLineUserId,
+    String? mockGoogleId,
+    String? mockEmail,
     String? mockDisplayName,
   }) async {
     state = state.copyWith(isLoading: true, errorMessage: null);
     try {
-      final user = await _repo.verifyLineToken(
+      final user = await _repo.verifyGoogleToken(
         idToken: idToken,
         accessToken: accessToken,
-        mockLineUserId: mockLineUserId,
+        mockGoogleId: mockGoogleId,
+        mockEmail: mockEmail,
         mockDisplayName: mockDisplayName,
       );
       state = state.copyWith(

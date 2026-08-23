@@ -161,7 +161,7 @@ export const users = pgTable(
     avatarUrl: text("avatar_url"),
 
     // Rewards & Gamification
-    rewardPoints: integer("reward_points").notNull().default(27),
+    rewardPoints: integer("reward_points").notNull().default(0),
     shippingAddress: text("shipping_address"),
     shippingPhone: varchar("shipping_phone", { length: 32 }),
     shippingRecipientName: varchar("shipping_recipient_name", { length: 128 }),

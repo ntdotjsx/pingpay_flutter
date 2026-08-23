@@ -5,13 +5,11 @@ import 'core/theme/theme.dart';
 import 'core/services/shorebird_service.dart';
 import 'app/router/app_router.dart';
 import 'features/auth/providers/auth_provider.dart';
-import 'features/auth/services/line_auth_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('th_TH', null);
   await initializeDateFormatting('th', null);
-  await LineAuthService.initialize();
   runApp(const ProviderScope(child: PingPayApp()));
 }
 

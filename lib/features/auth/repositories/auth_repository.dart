@@ -7,18 +7,20 @@ class AuthRepository {
 
   AuthRepository(this._client);
 
-  Future<UserModel> verifyLineToken({
+  Future<UserModel> verifyGoogleToken({
     String? idToken,
     String? accessToken,
-    String? mockLineUserId,
+    String? mockGoogleId,
+    String? mockEmail,
     String? mockDisplayName,
   }) async {
     final response = await _client.post(
-      '/api/v1/auth/line/verify-token',
+      '/api/v1/auth/google/verify-token',
       data: {
         if (idToken != null) 'idToken': idToken,
         if (accessToken != null) 'accessToken': accessToken,
-        if (mockLineUserId != null) 'mockLineUserId': mockLineUserId,
+        if (mockGoogleId != null) 'mockGoogleId': mockGoogleId,
+        if (mockEmail != null) 'mockEmail': mockEmail,
         if (mockDisplayName != null) 'mockDisplayName': mockDisplayName,
       },
     );
