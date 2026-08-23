@@ -44,7 +44,7 @@ export default new Elysia()
     authUrl.searchParams.append("client_id", env.LINE_WEB_CHANNEL_ID);
     authUrl.searchParams.append("redirect_uri", env.LINE_WEB_CALLBACK_URL);
     authUrl.searchParams.append("state", state);
-    authUrl.searchParams.append("scope", "profile openid email");
+    authUrl.searchParams.append("scope", "profile openid");
 
     return redirect(authUrl.toString());
   }, {

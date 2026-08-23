@@ -29,7 +29,7 @@ class LineAuthService {
     }
 
     final result = await LineSDK.instance.login(
-      scopes: ['profile', 'openid', 'email'],
+      scopes: ['profile', 'openid'],
       option: LoginOption(
         false, // onlyWebLogin
         'normal', // botPrompt
