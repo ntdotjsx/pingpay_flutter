@@ -15,6 +15,7 @@ import {
   notificationOutbox,
   notificationDeliveries,
   securityEvents,
+  deviceTokens,
 } from "../../db/schema";
 import { eq, and, gte, lte, desc, sql, ilike, or, asc } from "drizzle-orm";
 
@@ -283,6 +284,11 @@ export class AdminRepository {
   async getUserById(userId: string) {
     return db.query.users.findFirst({
       where: eq(users.id, userId),
+      with: {
+        deviceTokens: true,
+        sessions: true,
+        consentRecords: true,
+      },
     });
   }
 
@@ -584,6 +590,54 @@ export class AdminRepository {
     return updated;
   }
 
+  async getUsersWithFcm(search?: string) {
+    const tokens = await db.query.deviceTokens.findMany({
+      with: {
+        user: true,
+      },
+      orderBy: [desc(deviceTokens.updatedAt)],
+    });
+
+    const userMap = new Map<string, any>();
+    for (const t of tokens) {
+      if (!t.user) continue;
+      const u = t.user;
+      if (search && search.trim()) {
+        const q = search.toLowerCase().trim();
+        const matches =
+          (u.displayName && u.displayName.toLowerCase().includes(q)) ||
+          (u.fullName && u.fullName.toLowerCase().includes(q)) ||
+          (u.userCode && u.userCode.toLowerCase().includes(q)) ||
+          (u.phoneNumber && u.phoneNumber.toLowerCase().includes(q));
+        if (!matches) continue;
+      }
+
+      if (!userMap.has(u.id)) {
+        userMap.set(u.id, {
+          id: u.id,
+          userCode: u.userCode,
+          displayName: u.displayName,
+          fullName: u.fullName,
+          avatarUrl: u.avatarUrl,
+          phoneNumber: u.phoneNumber,
+          role: u.role,
+          accountStatus: u.accountStatus,
+          tokenCount: 1,
+          platforms: t.platform ? [t.platform] : ["android"],
+          lastTokenAt: t.updatedAt,
+        });
+      } else {
+        const existing = userMap.get(u.id);
+        existing.tokenCount++;
+        if (t.platform && !existing.platforms.includes(t.platform)) {
+          existing.platforms.push(t.platform);
+        }
+      }
+    }
+
+    return Array.from(userMap.values()).slice(0, 50);
+  }
+
   // ── Security Events ───────────────────────────────────────────────
 
   async getSecurityEvents(pagination: PaginationParams, userId?: string, event?: string) {
@@ -658,6 +712,139 @@ export class AdminRepository {
       pendingRedemptions: pendingRedemptionsResult[0]?.count ?? 0,
       pendingNotifications: pendingNotificationsResult[0]?.count ?? 0,
       securityEventsCount: securityEventsResult[0]?.count ?? 0,
+    };
+  }
+
+  // ── System & Behavioral Analytics ─────────────────────────────────
+
+  async getSystemAnalytics() {
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+    const [
+      dailyTxRows,
+      paymentChannelRows,
+      billStatusRows,
+      acknowledgementRows,
+      methodRows,
+      redemptionsCatRows,
+      fcmStatusRows,
+      settlementDurationResult,
+    ] = await Promise.all([
+      // 1. Daily volume
+      db
+        .select({
+          date: sql<string>`DATE(created_at)`,
+          type: financialTransactions.type,
+          sum: sql<number>`COALESCE(SUM(amount::numeric), 0)::float`,
+          count: sql<number>`COUNT(*)::int`,
+        })
+        .from(financialTransactions)
+        .where(gte(financialTransactions.createdAt, sevenDaysAgo))
+        .groupBy(sql`DATE(created_at)`, financialTransactions.type)
+        .orderBy(sql`DATE(created_at)`),
+
+      // 2. Payment channels
+      db
+        .select({
+          channel: payments.channel,
+          count: sql<number>`COUNT(*)::int`,
+          totalAmount: sql<number>`COALESCE(SUM(amount::numeric), 0)::float`,
+        })
+        .from(payments)
+        .groupBy(payments.channel),
+
+      // 3. Bill status breakdown
+      db
+        .select({
+          status: bills.status,
+          count: sql<number>`COUNT(*)::int`,
+          totalAmount: sql<number>`COALESCE(SUM(total_amount::numeric), 0)::float`,
+        })
+        .from(bills)
+        .groupBy(bills.status),
+
+      // 4. Debtor acknowledgement rate
+      db
+        .select({
+          isAcknowledged: billItems.isAcknowledged,
+          count: sql<number>`COUNT(*)::int`,
+        })
+        .from(billItems)
+        .groupBy(billItems.isAcknowledged),
+
+      // 5. Payment method: full vs installment
+      db
+        .select({
+          method: payments.method,
+          count: sql<number>`COUNT(*)::int`,
+        })
+        .from(payments)
+        .groupBy(payments.method),
+
+      // 6. Reward redemption categories
+      db
+        .select({
+          category: rewardItems.category,
+          count: sql<number>`COUNT(*)::int`,
+          pointsSpent: sql<number>`COALESCE(SUM(reward_redemptions.points_spent), 0)::int`,
+        })
+        .from(rewardRedemptions)
+        .leftJoin(rewardItems, eq(rewardRedemptions.rewardItemId, rewardItems.id))
+        .groupBy(rewardItems.category),
+
+      // 7. FCM notification delivery status
+      db
+        .select({
+          status: notificationOutbox.status,
+          count: sql<number>`COUNT(*)::int`,
+        })
+        .from(notificationOutbox)
+        .groupBy(notificationOutbox.status),
+
+      // 8. Real average settlement duration from creation to payment (in hours)
+      db
+        .select({
+          avgHours: sql<number>`COALESCE(AVG(EXTRACT(EPOCH FROM (payments.created_at - bill_items.created_at)) / 3600), 0)::float`,
+          settledCount: sql<number>`COUNT(*)::int`,
+        })
+        .from(payments)
+        .innerJoin(billItems, eq(payments.billItemId, billItems.id))
+        .where(eq(payments.status, "confirmed")),
+    ]);
+
+    // Build true 7 consecutive dates (YYYY-MM-DD)
+    const consecutiveDays: Array<{ date: string; sum: number; count: number }> = [];
+    const dateMap = new Map<string, { sum: number; count: number }>();
+    for (const r of dailyTxRows) {
+      const d = String(r.date);
+      const curr = dateMap.get(d) || { sum: 0, count: 0 };
+      curr.sum += Number(r.sum || 0);
+      curr.count += Number(r.count || 0);
+      dateMap.set(d, curr);
+    }
+
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const key = d.toISOString().slice(0, 10);
+      const val = dateMap.get(key) || { sum: 0, count: 0 };
+      consecutiveDays.push({
+        date: key,
+        sum: Math.round(val.sum * 100) / 100,
+        count: val.count,
+      });
+    }
+
+    return {
+      dailyTransactions: consecutiveDays,
+      paymentChannels: paymentChannelRows,
+      billStatuses: billStatusRows,
+      acknowledgementStats: acknowledgementRows,
+      paymentMethods: methodRows,
+      rewardsCategories: redemptionsCatRows,
+      fcmStatuses: fcmStatusRows,
+      settlementDuration: settlementDurationResult[0] || { avgHours: 0, settledCount: 0 },
     };
   }
 }

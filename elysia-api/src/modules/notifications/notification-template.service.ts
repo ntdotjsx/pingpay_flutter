@@ -2,10 +2,13 @@ import {
   BillCreatedPayload,
   BillUpdatedPayload,
   BillWrittenOffPayload,
+  BillCancelledPayload,
   PaymentPendingConfirmationPayload,
   PaymentConfirmedPayload,
   PaymentRejectedPayload,
   DebtWeeklyReminderPayload,
+  FriendRequestReceivedPayload,
+  FriendRequestAcceptedPayload,
   NotificationPayload,
   NotificationEventType,
 } from "./notification.types";
@@ -301,6 +304,90 @@ export class NotificationTemplateService {
   }
 
   /**
+   * Friend Request Received Notification Template
+   */
+  static friendRequestReceived(payload: FriendRequestReceivedPayload, locale = "th"): FormattedNotificationMessage {
+    if (locale === "th") {
+      const body = [
+        `👋 มีคำขอเป็นเพื่อนใหม่`,
+        ``,
+        `จาก: ${payload.requesterName} (@${payload.requesterUserCode})`,
+        ``,
+        `เปิดแอป PingPay เพื่อตอบรับหรือปฏิเสธคำขอได้เลยครับ`,
+      ].join("\n");
+
+      return {
+        title: `👋 คำขอเป็นเพื่อนจาก ${payload.requesterName}`,
+        body,
+        fallbackText: `${payload.requesterName} (@${payload.requesterUserCode}) ส่งคำขอเป็นเพื่อนถึงคุณ`,
+      };
+    }
+
+    return {
+      title: `👋 Friend Request from ${payload.requesterName}`,
+      body: `${payload.requesterName} (@${payload.requesterUserCode}) sent you a friend request.`,
+      fallbackText: `Friend request from ${payload.requesterName}`,
+    };
+  }
+
+  /**
+   * Friend Request Accepted Notification Template
+   */
+  static friendRequestAccepted(payload: FriendRequestAcceptedPayload, locale = "th"): FormattedNotificationMessage {
+    if (locale === "th") {
+      const body = [
+        `🎉 ตอบรับคำขอเป็นเพื่อนแล้ว`,
+        ``,
+        `${payload.friendName} (@${payload.friendUserCode}) ตอบรับคำขอเป็นเพื่อนของคุณแล้ว`,
+        `ตอนนี้คุณสามารถแชร์บิลและหารค่าใช้จ่ายร่วมกันได้เลย!`,
+      ].join("\n");
+
+      return {
+        title: `🎉 ${payload.friendName} ตอบรับเป็นเพื่อนแล้ว`,
+        body,
+        fallbackText: `${payload.friendName} ตอบรับคำขอเป็นเพื่อนของคุณแล้ว`,
+      };
+    }
+
+    return {
+      title: `🎉 ${payload.friendName} accepted your friend request`,
+      body: `${payload.friendName} (@${payload.friendUserCode}) is now your friend on PingPay!`,
+      fallbackText: `${payload.friendName} accepted your friend request`,
+    };
+  }
+
+  /**
+   * Bill Cancelled Notification Template
+   */
+  static billCancelled(payload: BillCancelledPayload, locale = "th"): FormattedNotificationMessage {
+    if (locale === "th") {
+      const lines = [
+        `🚫 บิลถูกยกเลิก: ${payload.billTitle}`,
+        ``,
+        `ยกเลิกโดย: ${payload.cancellerName}`,
+      ];
+
+      if (payload.reason) {
+        lines.push(`เหตุผล: ${payload.reason}`);
+      }
+
+      lines.push(``, `รายการหนี้และยอดค้างชำระทั้งหมดในบิลนี้ถูกยกเลิกแล้ว`);
+
+      return {
+        title: `🚫 บิลถูกยกเลิก: ${payload.billTitle}`,
+        body: lines.join("\n"),
+        fallbackText: `บิล ${payload.billTitle} ถูกยกเลิกโดย ${payload.cancellerName}`,
+      };
+    }
+
+    return {
+      title: `🚫 Bill Cancelled: ${payload.billTitle}`,
+      body: `Bill cancelled: ${payload.billTitle}\nCancelled by: ${payload.cancellerName}`,
+      fallbackText: `Bill ${payload.billTitle} cancelled`,
+    };
+  }
+
+  /**
    * Central dispatch generator based on event type
    */
   static formatMessage(
@@ -315,6 +402,8 @@ export class NotificationTemplateService {
         return this.billUpdated(payload as BillUpdatedPayload, locale);
       case "BILL_WRITTEN_OFF":
         return this.billWrittenOff(payload as BillWrittenOffPayload, locale);
+      case "BILL_CANCELLED":
+        return this.billCancelled(payload as BillCancelledPayload, locale);
       case "PAYMENT_PENDING_CONFIRMATION":
         return this.paymentPendingConfirmation(payload as PaymentPendingConfirmationPayload, locale);
       case "PAYMENT_CONFIRMED":
@@ -323,6 +412,10 @@ export class NotificationTemplateService {
         return this.paymentRejected(payload as PaymentRejectedPayload, locale);
       case "DEBT_WEEKLY_REMINDER":
         return this.weeklyDebtReminder(payload as DebtWeeklyReminderPayload, locale);
+      case "FRIEND_REQUEST_RECEIVED":
+        return this.friendRequestReceived(payload as FriendRequestReceivedPayload, locale);
+      case "FRIEND_REQUEST_ACCEPTED":
+        return this.friendRequestAccepted(payload as FriendRequestAcceptedPayload, locale);
       default:
         throw new Error(`Unsupported notification event type: ${eventType}`);
     }

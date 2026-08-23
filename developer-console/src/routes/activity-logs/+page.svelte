@@ -39,10 +39,6 @@
 
   onMount(load);
 
-  function applyFilters() {
-    load();
-  }
-
   async function handlePurge() {
     if (!confirm('Delete all regular activity logs older than 1 month?\n\nNOTE: Flagged/suspicious logs are retained permanently and will NOT be deleted.')) return;
     try {
@@ -84,26 +80,12 @@
       <p class="mt-0.5 text-xs text-[#615d59]">Per-user and system activity tracking with automated 1-month retention policy and interactive DataTables.</p>
     </div>
     <div class="flex flex-wrap items-center gap-2">
-      <ExportCsvButton {table} filename="activity-logs.csv" />
-      <a href="/suspicious" class="rounded-md border border-[#e6e6e6] bg-white px-3 py-1.5 text-xs font-semibold text-[#0075de] hover:bg-[#e8f3fc] transition-colors">
-        Suspicious Logs &rarr;
-      </a>
       <button onclick={handlePurge} class="rounded-md border border-[#e6e6e6] bg-white px-3 py-1.5 text-xs font-medium text-[#dd5b00] hover:bg-[#fef2e8] transition-colors">
         Purge Old (&gt;1 mo)
       </button>
       <button onclick={handleClearAll} class="rounded-md bg-[#c53030] px-3 py-1.5 text-xs font-medium text-white hover:bg-[#a82525] transition-colors">
         Clear All Regular Logs
       </button>
-    </div>
-  </div>
-
-  <!-- Retention Policy Notice -->
-  <div class="mb-6 rounded-xl border border-[#e6e6e6] bg-white p-4 shadow-sm">
-    <div class="flex items-center gap-2.5">
-      <Icon name="info" class="h-4 w-4 text-[#0075de] flex-shrink-0" />
-      <div class="text-xs text-[#615d59]">
-        <span class="font-semibold text-[#000000]">Retention Policy:</span> Regular activity logs auto-purge after 1 month. Flagged & suspicious logs are kept indefinitely.
-      </div>
     </div>
   </div>
 
@@ -121,91 +103,92 @@
     </div>
   {/if}
 
-  <div class="mb-6 rounded-xl border border-[#e6e6e6] bg-white p-4 shadow-sm">
-    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-      <div>
-        <label for="act-user-id" class="block text-[11px] font-medium text-[#615d59]">User ID / Code</label>
-        <input id="act-user-id" type="text" bind:value={filters.userId} class="mt-1 block w-full rounded-[4px] border border-[#e6e6e6] bg-white px-2.5 py-1.5 text-xs text-[#000000] focus:border-[#0075de] focus:ring-1 focus:ring-[#0075de] focus:outline-none" placeholder="UUID or User Code" />
-      </div>
-      <div>
-        <label for="act-action" class="block text-[11px] font-medium text-[#615d59]">Action Type</label>
-        <input id="act-action" type="text" bind:value={filters.action} class="mt-1 block w-full rounded-[4px] border border-[#e6e6e6] bg-white px-2.5 py-1.5 text-xs text-[#000000] focus:border-[#0075de] focus:ring-1 focus:ring-[#0075de] focus:outline-none" placeholder="e.g. login, create_bill, writeoff" />
-      </div>
-      <div>
-        <label for="act-from" class="block text-[11px] font-medium text-[#615d59]">From Date</label>
-        <input id="act-from" type="date" bind:value={filters.dateFrom} class="mt-1 block w-full rounded-[4px] border border-[#e6e6e6] bg-white px-2.5 py-1.5 text-xs text-[#000000] focus:border-[#0075de] focus:ring-1 focus:ring-[#0075de] focus:outline-none" />
-      </div>
-      <div>
-        <label for="act-to" class="block text-[11px] font-medium text-[#615d59]">To Date</label>
-        <input id="act-to" type="date" bind:value={filters.dateTo} class="mt-1 block w-full rounded-[4px] border border-[#e6e6e6] bg-white px-2.5 py-1.5 text-xs text-[#000000] focus:border-[#0075de] focus:ring-1 focus:ring-[#0075de] focus:outline-none" />
-      </div>
-    </div>
-    <div class="mt-4 flex items-center justify-between border-t border-[#e6e6e6] pt-3">
-      <button onclick={applyFilters} class="rounded-md bg-[#0075de] px-4 py-1.5 text-xs font-medium text-white hover:bg-[#005bab] transition-colors">Apply Filters</button>
-      <span class="text-xs text-[#615d59] font-mono">Backend Total: {total} logs</span>
-    </div>
-  </div>
+  <!-- Unified DataTable Card with Integrated Controls -->
+  <div class="overflow-hidden rounded-xl border border-[#e6e6e6] bg-white shadow-sm">
+    <!-- Integrated Header & Filter Toolbar -->
+    <div class="flex flex-col gap-3 border-b border-[#e6e6e6] bg-[#fbfbfa] p-4 lg:flex-row lg:items-center lg:justify-between">
+      <SearchInput {table} placeholder="Search user, action, metadata..." class="w-full lg:w-72" />
 
-  <div class="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-    <SearchInput {table} placeholder="Search activity by user, action, metadata..." class="w-full sm:w-80" />
-    <span class="text-xs text-[#615d59] font-mono">Filtered: {table.rowCount.total} logs</span>
-  </div>
+      <!-- Integrated Filters -->
+      <div class="flex flex-wrap items-center gap-2.5">
+        <div class="flex items-center gap-1.5">
+          <span class="text-[11px] font-medium text-[#615d59]">Action:</span>
+          <input
+            type="text"
+            bind:value={filters.action}
+            placeholder="e.g. login, create_bill..."
+            onchange={load}
+            class="rounded-[4px] border border-[#e6e6e6] bg-white px-2 py-1 text-xs text-[#000000] focus:border-[#0075de] focus:outline-none w-36"
+          />
+        </div>
 
-  {#if loading}
-    <div class="rounded-xl border border-[#e6e6e6] bg-white shadow-sm">
-      <LoadingLottie text="Loading activity logs..." size={150} />
+        <button
+          onclick={load}
+          class="inline-flex h-7 items-center justify-center rounded border border-[#e6e6e6] bg-white px-2.5 text-xs font-medium text-[#31302e] hover:bg-[#f6f5f4] transition-colors"
+        >
+          Refresh
+        </button>
+
+        <ExportCsvButton {table} filename="activity-logs.csv" />
+      </div>
     </div>
-  {:else}
-    <div class="overflow-x-auto rounded-xl border border-[#e6e6e6] bg-white shadow-sm">
-      <table class="min-w-full divide-y divide-[#e6e6e6]">
-        <thead class="bg-[#f6f5f4]">
-          <tr>
-            <ThSort {table} field={(row) => row.userName || row.userCode || row.userId || ''}>User</ThSort>
-            <ThSort {table} field="action">Action</ThSort>
-            <th class="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-[#615d59]">Metadata</th>
-            <ThSort {table} field="createdAt">Timestamp</ThSort>
-            <th class="px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wider text-[#615d59]">Actions</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-[#e6e6e6] bg-white">
-          {#each table.rows as row}
-            <tr class="hover:bg-[#faf9f8] transition-colors">
-              <td class="px-4 py-3 text-xs font-medium text-[#000000]">
-                {row.userName || row.userCode || (row.userId ? row.userId.slice(0, 8) + '...' : 'System')}
-              </td>
-              <td class="px-4 py-3 text-xs font-mono text-[#0075de]">{row.action}</td>
-              <td class="px-4 py-3 text-xs text-[#615d59] max-w-xs truncate">
-                {#if row.metadata}
-                  <code class="rounded bg-[#f0efed] px-1.5 py-0.5 text-[11px] text-[#31302e] font-mono">{JSON.stringify(row.metadata)}</code>
-                {:else}
-                  -
-                {/if}
-              </td>
-              <td class="px-4 py-3 text-xs text-[#615d59]">{new Date(row.createdAt).toLocaleString()}</td>
-              <td class="px-4 py-3 text-right space-x-1">
-                <button
-                  onclick={() => selectedLog = row}
-                  class="rounded border border-[#e6e6e6] bg-white px-2.5 py-1 text-xs font-medium text-[#31302e] hover:bg-[#f6f5f4] transition-colors"
-                >
-                  View
-                </button>
-                <button
-                  onclick={() => handleDeleteSingle(row.id)}
-                  class="rounded bg-[#fde8e8] px-2 py-1 text-xs font-medium text-[#c53030] hover:bg-[#fbd5d5] transition-colors"
-                  title="Delete this log"
-                >
-                  Delete
-                </button>
-              </td>
+
+    {#if loading}
+      <div class="p-8">
+        <LoadingLottie text="Loading activity logs..." size={150} />
+      </div>
+    {:else}
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-[#e6e6e6]">
+          <thead class="bg-[#f6f5f4]">
+            <tr>
+              <ThSort {table} field={(row) => row.userName || row.userCode || row.userId || ''}>User</ThSort>
+              <ThSort {table} field="action">Action</ThSort>
+              <th class="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-[#615d59]">Metadata</th>
+              <ThSort {table} field="createdAt">Timestamp</ThSort>
+              <th class="px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wider text-[#615d59]">Actions</th>
             </tr>
-          {:else}
-            <tr><td colspan="5" class="px-4 py-8 text-center text-xs text-[#615d59]">No matching activity logs found</td></tr>
-          {/each}
-        </tbody>
-      </table>
-    </div>
-    <DataTablePagination {table} class="mt-2" />
-  {/if}
+          </thead>
+          <tbody class="divide-y divide-[#e6e6e6] bg-white">
+            {#each table.rows as row}
+              <tr class="hover:bg-[#faf9f8] transition-colors">
+                <td class="px-4 py-3 text-xs font-medium text-[#000000]">
+                  {row.userName || row.userCode || (row.userId ? row.userId.slice(0, 8) + '...' : 'System')}
+                </td>
+                <td class="px-4 py-3 text-xs font-mono text-[#0075de]">{row.action}</td>
+                <td class="px-4 py-3 text-xs text-[#615d59] max-w-xs truncate">
+                  {#if row.metadata}
+                    <code class="rounded bg-[#f0efed] px-1.5 py-0.5 text-[11px] text-[#31302e] font-mono">{JSON.stringify(row.metadata)}</code>
+                  {:else}
+                    -
+                  {/if}
+                </td>
+                <td class="px-4 py-3 text-xs text-[#615d59]">{new Date(row.createdAt).toLocaleString()}</td>
+                <td class="px-4 py-3 text-right space-x-1">
+                  <button
+                    onclick={() => selectedLog = row}
+                    class="rounded border border-[#e6e6e6] bg-white px-2.5 py-1 text-xs font-medium text-[#31302e] hover:bg-[#f6f5f4] transition-colors"
+                  >
+                    View
+                  </button>
+                  <button
+                    onclick={() => handleDeleteSingle(row.id)}
+                    class="rounded bg-[#fde8e8] px-2 py-1 text-xs font-medium text-[#c53030] hover:bg-[#fbd5d5] transition-colors"
+                    title="Delete this log"
+                  >
+                    Delete
+                  </button>
+                </td>
+              </tr>
+            {:else}
+              <tr><td colspan="5" class="px-4 py-8 text-center text-xs text-[#615d59]">No matching activity logs found</td></tr>
+            {/each}
+          </tbody>
+        </table>
+      </div>
+      <DataTablePagination {table} />
+    {/if}
+  </div>
 </div>
 
 <!-- Metadata Detail Modal -->

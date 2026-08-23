@@ -165,19 +165,31 @@ class NotificationService {
   }
 
   static Future<Map<String, String>> getDeviceMetadata() async {
-    String deviceName = 'Unknown Device';
-    String deviceModel = 'Unknown Model';
-    String deviceBrand = 'Unknown Brand';
-    String osVersion = 'Unknown OS';
+    String deviceName = 'Mobile Device';
+    String deviceModel = 'Generic Device';
+    String deviceBrand = 'Android';
+    String osVersion = 'Android';
     String appVersion = '1.0.0';
 
     try {
       final deviceInfo = DeviceInfoPlugin();
-      if (Platform.isAndroid) {
+      if (kIsWeb) {
+        final webInfo = await deviceInfo.webBrowserInfo;
+        deviceBrand = 'Web';
+        deviceModel = webInfo.browserName.name;
+        deviceName = '${webInfo.browserName.name} Browser';
+        osVersion = webInfo.userAgent ?? 'Web';
+      } else if (Platform.isAndroid) {
         final androidInfo = await deviceInfo.androidInfo;
-        deviceBrand = androidInfo.brand.isNotEmpty ? androidInfo.brand : (androidInfo.manufacturer ?? 'Android');
+        final brand = androidInfo.brand.isNotEmpty
+            ? androidInfo.brand
+            : (androidInfo.manufacturer.isNotEmpty ? androidInfo.manufacturer : 'Android');
+        deviceBrand = brand;
         deviceModel = androidInfo.model.isNotEmpty ? androidInfo.model : 'Android Device';
-        deviceName = '${androidInfo.manufacturer} ${androidInfo.model}'.trim();
+
+        final mfg = androidInfo.manufacturer.isNotEmpty ? androidInfo.manufacturer : brand;
+        deviceName = '$mfg ${androidInfo.model}'.trim();
+        if (deviceName.isEmpty) deviceName = '$brand $deviceModel'.trim();
         osVersion = 'Android ${androidInfo.version.release} (SDK ${androidInfo.version.sdkInt})';
       } else if (Platform.isIOS) {
         final iosInfo = await deviceInfo.iosInfo;
@@ -185,15 +197,29 @@ class NotificationService {
         deviceModel = iosInfo.utsname.machine.isNotEmpty ? iosInfo.utsname.machine : iosInfo.model;
         deviceName = iosInfo.name.isNotEmpty ? iosInfo.name : 'iPhone';
         osVersion = 'iOS ${iosInfo.systemVersion}';
+      } else if (Platform.isWindows) {
+        final winInfo = await deviceInfo.windowsInfo;
+        deviceBrand = 'Microsoft';
+        deviceModel = 'Windows PC';
+        deviceName = winInfo.computerName.isNotEmpty ? winInfo.computerName : 'Windows PC';
+        osVersion = 'Windows ${winInfo.displayVersion}';
+      } else if (Platform.isMacOS) {
+        final macInfo = await deviceInfo.macOsInfo;
+        deviceBrand = 'Apple';
+        deviceModel = macInfo.model;
+        deviceName = macInfo.computerName;
+        osVersion = 'macOS ${macInfo.osRelease}';
       }
     } catch (e) {
-      debugPrint('Error getting device info: $e');
+      debugPrint('[DeviceInfo] Error getting native device info: $e');
     }
 
     try {
       final packageInfo = await PackageInfo.fromPlatform();
       appVersion = '${packageInfo.version}+${packageInfo.buildNumber}';
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('[DeviceInfo] Error getting package info: $e');
+    }
 
     return {
       'deviceName': deviceName,

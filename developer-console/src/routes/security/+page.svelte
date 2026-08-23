@@ -49,64 +49,54 @@
       <h1 class="text-2xl font-bold tracking-tight text-[#000000]">Security Events Monitor</h1>
       <p class="mt-0.5 text-xs text-[#615d59]">Track PIN brute-force attempts, suspicious authentication anomalies, and IP access patterns.</p>
     </div>
-    <div class="flex items-center gap-2">
-      <ExportCsvButton {table} filename="security-events-export.csv" />
-    </div>
   </div>
 
-  <!-- Filters Bar -->
-  <div class="mb-6 rounded-xl border border-[#e6e6e6] bg-white p-4 shadow-sm">
-    <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
-      <div>
-        <label for="filter-user-id" class="block text-[11px] font-medium text-[#615d59]">User ID</label>
-        <input
-          id="filter-user-id"
-          type="text"
-          bind:value={filters.userId}
-          placeholder="Filter by user UUID..."
-          class="mt-1 block w-full rounded-[4px] border border-[#e6e6e6] bg-white px-2.5 py-1.5 text-xs text-[#000000] focus:border-[#0075de] focus:outline-none"
-        />
-      </div>
-      <div>
-        <label for="filter-event-type" class="block text-[11px] font-medium text-[#615d59]">Event Type</label>
-        <select
-          id="filter-event-type"
-          bind:value={filters.event}
-          onchange={load}
-          class="mt-1 block w-full rounded-[4px] border border-[#e6e6e6] bg-white px-2.5 py-1.5 text-xs text-[#000000] focus:border-[#0075de] focus:outline-none"
-        >
-          <option value="">All Events</option>
-          <option value="pin_brute_force">PIN Brute Force</option>
-          <option value="pin_lockout">PIN Lockout</option>
-          <option value="suspicious_login">Suspicious Login</option>
-          <option value="unauthorized_access">Unauthorized Access</option>
-        </select>
-      </div>
-      <div class="flex items-end">
+  {#if error}
+    <div class="mb-4 rounded-md bg-[#fde8e8] border border-[#fde8e8] p-3 text-xs text-[#c53030] flex items-center justify-between">
+      <span>{error}</span>
+      <button onclick={() => error = ''} class="text-[#c53030] font-bold">&times;</button>
+    </div>
+  {/if}
+
+  <!-- Unified DataTable Card with Integrated Controls -->
+  <div class="overflow-hidden rounded-xl border border-[#e6e6e6] bg-white shadow-sm">
+    <!-- Integrated Header & Filter Toolbar -->
+    <div class="flex flex-col gap-3 border-b border-[#e6e6e6] bg-[#fbfbfa] p-4 lg:flex-row lg:items-center lg:justify-between">
+      <SearchInput {table} placeholder="Search event type, IP, user name..." class="w-full lg:w-72" />
+
+      <!-- Integrated Filters -->
+      <div class="flex flex-wrap items-center gap-2.5">
+        <div class="flex items-center gap-1.5">
+          <span class="text-[11px] font-medium text-[#615d59]">Event:</span>
+          <select
+            bind:value={filters.event}
+            onchange={load}
+            class="rounded-[4px] border border-[#e6e6e6] bg-white px-2 py-1 text-xs text-[#000000] focus:border-[#0075de] focus:outline-none"
+          >
+            <option value="">All Events</option>
+            <option value="pin_brute_force">PIN Brute Force</option>
+            <option value="pin_lockout">PIN Lockout</option>
+            <option value="suspicious_login">Suspicious Login</option>
+            <option value="unauthorized_access">Unauthorized Access</option>
+          </select>
+        </div>
+
         <button
           onclick={load}
-          class="w-full rounded-md bg-[#0075de] px-4 py-2 text-xs font-semibold text-white hover:bg-[#005bab] transition-colors"
+          class="inline-flex h-7 items-center justify-center rounded border border-[#e6e6e6] bg-white px-2.5 text-xs font-medium text-[#31302e] hover:bg-[#f6f5f4] transition-colors"
         >
-          Apply Filter
+          Refresh
         </button>
+
+        <ExportCsvButton {table} filename="security-events-export.csv" />
       </div>
     </div>
-  </div>
 
-  <!-- Search and Count Bar -->
-  <div class="mb-4 flex items-center justify-between">
-    <SearchInput {table} placeholder="Search event type, IP, user name..." />
-    <span class="text-xs text-[#615d59] font-mono">Total: {total} security records</span>
-  </div>
-
-  {#if loading}
-    <div class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-sm">
-      <LoadingLottie text="Loading security events..." size={160} />
-    </div>
-  {:else if error}
-    <div class="rounded-md bg-[#fde8e8] border border-[#fde8e8] p-3 text-xs text-[#c53030]">{error}</div>
-  {:else}
-    <div class="overflow-hidden rounded-xl border border-[#e6e6e6] bg-white shadow-sm">
+    {#if loading}
+      <div class="p-8">
+        <LoadingLottie text="Loading security events..." size={160} />
+      </div>
+    {:else}
       <div class="overflow-x-auto">
         <table class="min-w-full divide-y border-[#e6e6e6] text-left text-xs">
           <thead class="bg-[#fbfbfa] text-[#615d59]">
@@ -155,8 +145,8 @@
         </table>
       </div>
       <DataTablePagination {table} />
-    </div>
-  {/if}
+    {/if}
+  </div>
 </div>
 
 <!-- Event Detail Modal -->

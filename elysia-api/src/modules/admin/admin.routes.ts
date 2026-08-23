@@ -21,6 +21,18 @@ export const adminRoutes = new Elysia()
     },
   })
 
+  // ── Analytics ───────────────────────────────────────────────────
+  .get("/analytics", async ({ adminUser }) => {
+    const analytics = await adminService.getAnalytics(adminUser.id);
+    return { success: true, data: analytics };
+  }, {
+    detail: {
+      tags: ["Admin"],
+      summary: "Get system & user behavior analytics",
+      description: "Comprehensive financial volume, payment channels, settlement duration, and user behavior metrics.",
+    },
+  })
+
   // ── Transactions ────────────────────────────────────────────────
   .get("/transactions", async ({ adminUser, query }) => {
     const result = await adminService.getTransactions(
@@ -566,6 +578,46 @@ export const adminRoutes = new Elysia()
     detail: {
       tags: ["Admin"],
       summary: "Retry failed notification outbox item",
+    },
+  })
+
+  .post("/notifications/send-fcm", async ({ adminUser, body, set }) => {
+    try {
+      const result = await adminService.sendFcmNotification(adminUser.id, body);
+      return {
+        success: true,
+        message: `FCM message processed: ${result.sentCount} sent, ${result.failedCount} failed.`,
+        data: result,
+      };
+    } catch (e: any) {
+      set.status = 400;
+      return { success: false, error: e.message };
+    }
+  }, {
+    body: t.Object({
+      target: t.Union([t.Literal("all"), t.Literal("user"), t.Literal("token")]),
+      userId: t.Optional(t.String({ format: "uuid" })),
+      deviceToken: t.Optional(t.String()),
+      title: t.String({ minLength: 1 }),
+      body: t.String({ minLength: 1 }),
+      dataPayload: t.Optional(t.Any()),
+    }),
+    detail: {
+      tags: ["Admin"],
+      summary: "Send custom Firebase Cloud Messaging (FCM) push notification",
+    },
+  })
+
+  .get("/notifications/fcm-users", async ({ adminUser, query }) => {
+    const users = await adminService.getFcmUsers(adminUser.id, query.search);
+    return { success: true, data: { users } };
+  }, {
+    query: t.Object({
+      search: t.Optional(t.String()),
+    }),
+    detail: {
+      tags: ["Admin"],
+      summary: "Get list of registered users who have active FCM device tokens",
     },
   })
 

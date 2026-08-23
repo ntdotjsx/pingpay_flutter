@@ -3,6 +3,7 @@ import { users, friendships, editLogs, accountStatusEnum } from "../../db/schema
 import { eq, or, and, desc, isNull, ne } from "drizzle-orm";
 import type { RelationshipState } from "./friend.types";
 import { DebtRelationshipService } from "../debt/debt-relationship.service";
+import { defaultNotificationOutboxService } from "../notifications/notification-outbox.service";
 
 export class FriendService {
   /**
@@ -118,6 +119,25 @@ export class FriendService {
         })
         .returning();
 
+      // Enqueue friend request notification for addressee
+      const requester = await tx.query.users.findFirst({
+        where: eq(users.id, currentUserId),
+      });
+
+      if (requester) {
+        await defaultNotificationOutboxService.enqueueInTx(tx, {
+          eventType: "FRIEND_REQUEST_RECEIVED",
+          recipientUserId: target.id,
+          deduplicationKey: `FRIEND_REQUEST_RECEIVED:${newRequest.id}:${target.id}`,
+          payload: {
+            requestId: newRequest.id,
+            requesterId: currentUserId,
+            requesterName: requester.displayName || requester.fullName || "ผู้ใช้ PingPay",
+            requesterUserCode: requester.userCode,
+          },
+        });
+      }
+
       return newRequest;
     });
   }
@@ -214,6 +234,25 @@ export class FriendService {
         editorId: currentUserId,
         action: "friend_added",
       });
+
+      // Enqueue friend request accepted notification for requester
+      const acceptor = await tx.query.users.findFirst({
+        where: eq(users.id, currentUserId),
+      });
+
+      if (acceptor) {
+        await defaultNotificationOutboxService.enqueueInTx(tx, {
+          eventType: "FRIEND_REQUEST_ACCEPTED",
+          recipientUserId: request.requesterId,
+          deduplicationKey: `FRIEND_REQUEST_ACCEPTED:${updated.id}:${request.requesterId}`,
+          payload: {
+            friendshipId: updated.id,
+            friendId: currentUserId,
+            friendName: acceptor.displayName || acceptor.fullName || "เพื่อนของคุณ",
+            friendUserCode: acceptor.userCode,
+          },
+        });
+      }
 
       return updated;
     });

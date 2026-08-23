@@ -62,6 +62,10 @@ export class NotificationWorkerService {
     const now = new Date();
     const leaseExpirationThreshold = new Date(now.getTime() - this.leaseTimeoutMs);
 
+    if (!this.db || typeof this.db.transaction !== "function") {
+      return result;
+    }
+
     // 1. Claim eligible jobs atomically using transaction with SKIP LOCKED
     const claimedJobs = await this.db.transaction(async (tx: any) => {
       // Find candidate jobs: (PENDING and availableAt <= now) OR (PROCESSING and lockedAt <= leaseExpirationThreshold)

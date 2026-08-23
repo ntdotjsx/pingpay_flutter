@@ -304,34 +304,54 @@
 
   <!-- Tab 2: Redemptions Orders -->
   {#if activeTab === 'redemptions'}
-    <!-- Filter Bar -->
-    <div class="mb-4 rounded-xl border border-[#e6e6e6] bg-white p-4 shadow-sm flex flex-wrap items-center justify-between gap-3">
-      <div class="flex items-center gap-3">
-        <label for="filter-redemption-status" class="text-xs font-medium text-[#615d59]">Status:</label>
-        <select
-          id="filter-redemption-status"
-          bind:value={redemptionsFilter.status}
-          onchange={loadRedemptions}
-          class="rounded-[4px] border border-[#e6e6e6] bg-white px-2.5 py-1 text-xs text-[#000000] focus:border-[#0075de] focus:outline-none"
-        >
-          <option value="">All Statuses</option>
-          <option value="pending_delivery">Pending Delivery</option>
-          <option value="shipped">Shipped</option>
-          <option value="delivered">Delivered</option>
-          <option value="cancelled">Cancelled</option>
-        </select>
+    {#if redemptionsError}
+      <div class="mb-4 rounded-md bg-[#fde8e8] border border-[#fde8e8] p-3 text-xs text-[#c53030] flex items-center justify-between">
+        <span>{redemptionsError}</span>
+        <button onclick={() => redemptionsError = ''} class="text-[#c53030] font-bold">&times;</button>
       </div>
-      <SearchInput table={redemptionsTable} placeholder="Search recipient, item title, phone..." />
-    </div>
+    {/if}
 
-    {#if loadingRedemptions}
-      <div class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-sm">
-        <LoadingLottie text="Loading redemptions..." size={160} />
+    <!-- Unified DataTable Card -->
+    <div class="overflow-hidden rounded-xl border border-[#e6e6e6] bg-white shadow-sm">
+      <!-- Integrated Header & Filter Toolbar -->
+      <div class="flex flex-col gap-3 border-b border-[#e6e6e6] bg-[#fbfbfa] p-4 lg:flex-row lg:items-center lg:justify-between">
+        <SearchInput table={redemptionsTable} placeholder="Search recipient, item, phone..." class="w-full lg:w-72" />
+
+        <!-- Integrated Filters -->
+        <div class="flex flex-wrap items-center gap-2.5">
+          <div class="flex items-center gap-1.5">
+            <span class="text-[11px] font-medium text-[#615d59]">Status:</span>
+            <select
+              bind:value={redemptionsFilter.status}
+              onchange={loadRedemptions}
+              class="rounded-[4px] border border-[#e6e6e6] bg-white px-2 py-1 text-xs text-[#000000] focus:border-[#0075de] focus:outline-none"
+            >
+              <option value="">All Statuses</option>
+              <option value="pending_delivery">Pending Delivery</option>
+              <option value="shipped">Shipped</option>
+              <option value="delivered">Delivered</option>
+              <option value="cancelled">Cancelled</option>
+            </select>
+          </div>
+
+          <button
+            onclick={loadRedemptions}
+            class="inline-flex h-7 items-center justify-center rounded border border-[#e6e6e6] bg-white px-2.5 text-xs font-medium text-[#31302e] hover:bg-[#f6f5f4] transition-colors"
+          >
+            Refresh
+          </button>
+
+          <ExportCsvButton table={redemptionsTable} filename="rewards-redemptions-export.csv" />
+        </div>
       </div>
-    {:else if redemptionsError}
-      <div class="rounded-md bg-[#fde8e8] border border-[#fde8e8] p-3 text-xs text-[#c53030]">{redemptionsError}</div>
-    {:else}
-      <div class="overflow-hidden rounded-xl border border-[#e6e6e6] bg-white shadow-sm">
+
+      {#if loadingRedemptions}
+        <div class="p-8">
+          <LoadingLottie text="Loading redemptions..." size={160} />
+        </div>
+      {:else if redemptionsError}
+        <div class="p-4 text-xs text-[#c53030]">{redemptionsError}</div>
+      {:else}
         <div class="overflow-x-auto">
           <table class="min-w-full divide-y border-[#e6e6e6] text-left text-xs">
             <thead class="bg-[#fbfbfa] text-[#615d59]">
@@ -376,8 +396,8 @@
           </table>
         </div>
         <DataTablePagination table={redemptionsTable} />
-      </div>
-    {/if}
+      {/if}
+    </div>
   {/if}
 </div>
 

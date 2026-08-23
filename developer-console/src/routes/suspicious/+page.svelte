@@ -46,10 +46,6 @@
 
   onMount(load);
 
-  function applyFilters() {
-    load();
-  }
-
   async function submitFlag() {
     if (!newFlag.description.trim()) {
       alert('Please enter a description');
@@ -100,12 +96,11 @@
       <p class="mt-0.5 text-xs text-[#615d59]">Security audit trail retained permanently for dispute investigations and fraud analysis with interactive DataTables.</p>
     </div>
     <div class="flex flex-wrap items-center gap-2">
-      <ExportCsvButton {table} filename="suspicious-logs.csv" />
       <button onclick={() => showForm = !showForm} class="rounded-md bg-[#0075de] px-3.5 py-1.5 text-xs font-medium text-white shadow-sm hover:bg-[#005bab] transition-colors">
-        {showForm ? 'Cancel' : '+ Flag Suspicious Activity'}
+        {showForm ? 'Cancel' : '+ Flag Suspicious'}
       </button>
       <button onclick={handleClearAll} class="rounded-md bg-[#c53030] px-3.5 py-1.5 text-xs font-medium text-white shadow-sm hover:bg-[#a82525] transition-colors">
-        Clear All Suspicious Logs
+        Clear All Logs
       </button>
     </div>
   </div>
@@ -130,11 +125,11 @@
       <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <div>
           <label for="flag-user-id" class="block text-[11px] font-medium text-[#615d59]">User ID (optional)</label>
-          <input id="flag-user-id" type="text" bind:value={newFlag.userId} class="mt-1 block w-full rounded-[4px] border border-[#e6e6e6] bg-white px-2.5 py-1.5 text-xs text-[#000000] focus:border-[#0075de] focus:ring-1 focus:ring-[#0075de] focus:outline-none" placeholder="User UUID" />
+          <input id="flag-user-id" type="text" bind:value={newFlag.userId} class="mt-1 block w-full rounded-[4px] border border-[#e6e6e6] bg-white px-2.5 py-1.5 text-xs text-[#000000] focus:border-[#0075de] focus:outline-none" placeholder="User UUID" />
         </div>
         <div>
           <label for="flag-threat-type" class="block text-[11px] font-medium text-[#615d59]">Threat Type</label>
-          <select id="flag-threat-type" bind:value={newFlag.type} class="mt-1 block w-full rounded-[4px] border border-[#e6e6e6] bg-white px-2.5 py-1.5 text-xs text-[#000000] focus:border-[#0075de] focus:ring-1 focus:ring-[#0075de] focus:outline-none">
+          <select id="flag-threat-type" bind:value={newFlag.type} class="mt-1 block w-full rounded-[4px] border border-[#e6e6e6] bg-white px-2.5 py-1.5 text-xs text-[#000000] focus:border-[#0075de] focus:outline-none">
             <option value="duplicate_slip">Duplicate Slip</option>
             <option value="multi_account_ip">Multi-Account from Same IP</option>
             <option value="frequent_writeoff">Frequent / Unusual Write-offs</option>
@@ -145,7 +140,7 @@
         </div>
         <div>
           <label for="flag-description" class="block text-[11px] font-medium text-[#615d59]">Description / Evidence</label>
-          <input id="flag-description" type="text" bind:value={newFlag.description} class="mt-1 block w-full rounded-[4px] border border-[#e6e6e6] bg-white px-2.5 py-1.5 text-xs text-[#000000] focus:border-[#0075de] focus:ring-1 focus:ring-[#0075de] focus:outline-none" placeholder="Details and observations..." />
+          <input id="flag-description" type="text" bind:value={newFlag.description} class="mt-1 block w-full rounded-[4px] border border-[#e6e6e6] bg-white px-2.5 py-1.5 text-xs text-[#000000] focus:border-[#0075de] focus:outline-none" placeholder="Details and observations..." />
         </div>
       </div>
       <div class="mt-4 flex justify-end gap-2 border-t border-[#e6e6e6] pt-3">
@@ -155,99 +150,98 @@
     </div>
   {/if}
 
-  <div class="mb-6 rounded-xl border border-[#e6e6e6] bg-white p-4 shadow-sm">
-    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-      <div>
-        <label for="filter-suspicious-user" class="block text-[11px] font-medium text-[#615d59]">User ID / Code</label>
-        <input id="filter-suspicious-user" type="text" bind:value={filters.userId} class="mt-1 block w-full rounded-[4px] border border-[#e6e6e6] bg-white px-2.5 py-1.5 text-xs text-[#000000] focus:border-[#0075de] focus:ring-1 focus:ring-[#0075de] focus:outline-none" placeholder="Filter by User ID" />
-      </div>
-      <div>
-        <label for="filter-suspicious-type" class="block text-[11px] font-medium text-[#615d59]">Threat Type</label>
-        <select id="filter-suspicious-type" bind:value={filters.type} class="mt-1 block w-full rounded-[4px] border border-[#e6e6e6] bg-white px-2.5 py-1.5 text-xs text-[#000000] focus:border-[#0075de] focus:ring-1 focus:ring-[#0075de] focus:outline-none">
-          <option value="">All Types</option>
-          <option value="duplicate_slip">Duplicate Slip</option>
-          <option value="multi_account_ip">Multi-Account IP</option>
-          <option value="frequent_writeoff">Frequent Write-offs</option>
-          <option value="frequent_bill_edit">Frequent Bill Edits</option>
-          <option value="fake_slip_manipulation">Slip Manipulation</option>
-          <option value="other">Other</option>
-        </select>
-      </div>
-      <div>
-        <label for="filter-suspicious-from" class="block text-[11px] font-medium text-[#615d59]">From Date</label>
-        <input id="filter-suspicious-from" type="date" bind:value={filters.dateFrom} class="mt-1 block w-full rounded-[4px] border border-[#e6e6e6] bg-white px-2.5 py-1.5 text-xs text-[#000000] focus:border-[#0075de] focus:ring-1 focus:ring-[#0075de] focus:outline-none" />
-      </div>
-      <div>
-        <label for="filter-suspicious-to" class="block text-[11px] font-medium text-[#615d59]">To Date</label>
-        <input id="filter-suspicious-to" type="date" bind:value={filters.dateTo} class="mt-1 block w-full rounded-[4px] border border-[#e6e6e6] bg-white px-2.5 py-1.5 text-xs text-[#000000] focus:border-[#0075de] focus:ring-1 focus:ring-[#0075de] focus:outline-none" />
-      </div>
-    </div>
-    <div class="mt-4 flex items-center justify-between border-t border-[#e6e6e6] pt-3">
-      <button onclick={applyFilters} class="rounded-md bg-[#0075de] px-4 py-1.5 text-xs font-medium text-white hover:bg-[#005bab] transition-colors">Apply Filters</button>
-      <span class="text-xs text-[#615d59] font-mono">Backend Total: {total} records</span>
-    </div>
-  </div>
+  <!-- Unified DataTable Card with Integrated Controls -->
+  <div class="overflow-hidden rounded-xl border border-[#e6e6e6] bg-white shadow-sm">
+    <!-- Integrated Header & Filter Toolbar -->
+    <div class="flex flex-col gap-3 border-b border-[#e6e6e6] bg-[#fbfbfa] p-4 lg:flex-row lg:items-center lg:justify-between">
+      <SearchInput {table} placeholder="Search threat logs by type, user, description..." class="w-full lg:w-72" />
 
-  <div class="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-    <SearchInput {table} placeholder="Search threat logs by type, user, description..." class="w-full sm:w-80" />
-    <span class="text-xs text-[#615d59] font-mono">Filtered: {table.rowCount.total} records</span>
-  </div>
+      <!-- Integrated Filters -->
+      <div class="flex flex-wrap items-center gap-2.5">
+        <div class="flex items-center gap-1.5">
+          <span class="text-[11px] font-medium text-[#615d59]">Threat Type:</span>
+          <select
+            bind:value={filters.type}
+            onchange={load}
+            class="rounded-[4px] border border-[#e6e6e6] bg-white px-2 py-1 text-xs text-[#000000] focus:border-[#0075de] focus:outline-none"
+          >
+            <option value="">All Types</option>
+            <option value="duplicate_slip">Duplicate Slip</option>
+            <option value="multi_account_ip">Multi-Account IP</option>
+            <option value="frequent_writeoff">Frequent Write-offs</option>
+            <option value="frequent_bill_edit">Frequent Bill Edits</option>
+            <option value="fake_slip_manipulation">Slip Manipulation</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
 
-  {#if loading}
-    <div class="rounded-xl border border-[#e6e6e6] bg-white shadow-sm">
-      <LoadingLottie text="Loading suspicious activity logs..." size={150} />
+        <button
+          onclick={load}
+          class="inline-flex h-7 items-center justify-center rounded border border-[#e6e6e6] bg-white px-2.5 text-xs font-medium text-[#31302e] hover:bg-[#f6f5f4] transition-colors"
+        >
+          Refresh
+        </button>
+
+        <ExportCsvButton {table} filename="suspicious-logs.csv" />
+      </div>
     </div>
-  {:else}
-    <div class="overflow-x-auto rounded-xl border border-[#e6e6e6] bg-white shadow-sm">
-      <table class="min-w-full divide-y divide-[#e6e6e6]">
-        <thead class="bg-[#f6f5f4]">
-          <tr>
-            <ThSort {table} field="type">Threat Type</ThSort>
-            <ThSort {table} field={(row) => row.userName || row.userCode || row.userId || ''}>User</ThSort>
-            <ThSort {table} field="description">Description</ThSort>
-            <ThSort {table} field="createdAt">Recorded Date</ThSort>
-            <th class="px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wider text-[#615d59]">Actions</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-[#e6e6e6] bg-white">
-          {#each table.rows as row}
-            <tr class="hover:bg-[#faf9f8] transition-colors">
-              <td class="px-4 py-3"><StatusBadge status={row.type} /></td>
-              <td class="px-4 py-3 text-xs">
-                {#if row.userId}
-                  <a href="/users/{row.userId}" class="font-medium text-[#0075de] hover:underline">
-                    {row.userName || row.userCode || row.userId.slice(0, 8) + '...'}
-                  </a>
-                {:else}
-                  <span class="text-[#a39e98]">Unknown / Unregistered</span>
-                {/if}
-              </td>
-              <td class="px-4 py-3 text-xs text-[#31302e] max-w-sm">{row.description}</td>
-              <td class="px-4 py-3 text-xs text-[#615d59]">{new Date(row.createdAt).toLocaleString()}</td>
-              <td class="px-4 py-3 text-right space-x-1">
-                <button
-                  onclick={() => selectedLog = row}
-                  class="rounded border border-[#e6e6e6] bg-white px-2.5 py-1 text-xs font-medium text-[#31302e] hover:bg-[#f6f5f4] transition-colors"
-                >
-                  Inspect
-                </button>
-                <button
-                  onclick={() => handleDeleteSingle(row.id)}
-                  class="rounded bg-[#fde8e8] px-2 py-1 text-xs font-medium text-[#c53030] hover:bg-[#fbd5d5] transition-colors"
-                  title="Delete this log"
-                >
-                  Delete
-                </button>
-              </td>
+
+    {#if loading}
+      <div class="p-8">
+        <LoadingLottie text="Loading suspicious activity logs..." size={150} />
+      </div>
+    {:else}
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-[#e6e6e6]">
+          <thead class="bg-[#f6f5f4]">
+            <tr>
+              <ThSort {table} field="type">Threat Type</ThSort>
+              <ThSort {table} field={(row) => row.userName || row.userCode || row.userId || ''}>User</ThSort>
+              <ThSort {table} field="description">Description</ThSort>
+              <ThSort {table} field="createdAt">Recorded Date</ThSort>
+              <th class="px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wider text-[#615d59]">Actions</th>
             </tr>
-          {:else}
-            <tr><td colspan="5" class="px-4 py-8 text-center text-xs text-[#615d59]">No matching suspicious logs found</td></tr>
-          {/each}
-        </tbody>
-      </table>
-    </div>
-    <DataTablePagination {table} class="mt-2" />
-  {/if}
+          </thead>
+          <tbody class="divide-y divide-[#e6e6e6] bg-white">
+            {#each table.rows as row}
+              <tr class="hover:bg-[#faf9f8] transition-colors">
+                <td class="px-4 py-3"><StatusBadge status={row.type} /></td>
+                <td class="px-4 py-3 text-xs">
+                  {#if row.userId}
+                    <a href="/users/{row.userId}" class="font-medium text-[#0075de] hover:underline">
+                      {row.userName || row.userCode || row.userId.slice(0, 8) + '...'}
+                    </a>
+                  {:else}
+                    <span class="text-[#a39e98]">Unknown / Unregistered</span>
+                  {/if}
+                </td>
+                <td class="px-4 py-3 text-xs text-[#31302e] max-w-sm">{row.description}</td>
+                <td class="px-4 py-3 text-xs text-[#615d59]">{new Date(row.createdAt).toLocaleString()}</td>
+                <td class="px-4 py-3 text-right space-x-1">
+                  <button
+                    onclick={() => selectedLog = row}
+                    class="rounded border border-[#e6e6e6] bg-white px-2.5 py-1 text-xs font-medium text-[#31302e] hover:bg-[#f6f5f4] transition-colors"
+                  >
+                    Inspect
+                  </button>
+                  <button
+                    onclick={() => handleDeleteSingle(row.id)}
+                    class="rounded bg-[#fde8e8] px-2 py-1 text-xs font-medium text-[#c53030] hover:bg-[#fbd5d5] transition-colors"
+                    title="Delete this log"
+                  >
+                    Delete
+                  </button>
+                </td>
+              </tr>
+            {:else}
+              <tr><td colspan="5" class="px-4 py-8 text-center text-xs text-[#615d59]">No matching suspicious logs found</td></tr>
+            {/each}
+          </tbody>
+        </table>
+      </div>
+      <DataTablePagination {table} />
+    {/if}
+  </div>
 </div>
 
 <!-- Inspect Modal -->

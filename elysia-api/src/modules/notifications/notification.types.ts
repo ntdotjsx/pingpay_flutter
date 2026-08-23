@@ -2,10 +2,13 @@ export type NotificationEventType =
   | "BILL_CREATED"
   | "BILL_UPDATED"
   | "BILL_WRITTEN_OFF"
+  | "BILL_CANCELLED"
   | "PAYMENT_PENDING_CONFIRMATION"
   | "PAYMENT_CONFIRMED"
   | "PAYMENT_REJECTED"
-  | "DEBT_WEEKLY_REMINDER";
+  | "DEBT_WEEKLY_REMINDER"
+  | "FRIEND_REQUEST_RECEIVED"
+  | "FRIEND_REQUEST_ACCEPTED";
 
 export type NotificationStatus =
   | "PENDING"
@@ -104,14 +107,40 @@ export interface DebtWeeklyReminderPayload {
   weekKey: string; // e.g. 2026-W34
 }
 
+export interface FriendRequestReceivedPayload {
+  requestId: string;
+  requesterId: string;
+  requesterName: string;
+  requesterUserCode: string;
+}
+
+export interface FriendRequestAcceptedPayload {
+  friendshipId: string;
+  friendId: string;
+  friendName: string;
+  friendUserCode: string;
+}
+
+export interface BillCancelledPayload {
+  billId: string;
+  billTitle: string;
+  cancellerId: string;
+  cancellerName: string;
+  participantId?: string;
+  reason?: string;
+}
+
 export type NotificationPayload =
   | BillCreatedPayload
   | BillUpdatedPayload
   | BillWrittenOffPayload
+  | BillCancelledPayload
   | PaymentPendingConfirmationPayload
   | PaymentConfirmedPayload
   | PaymentRejectedPayload
-  | DebtWeeklyReminderPayload;
+  | DebtWeeklyReminderPayload
+  | FriendRequestReceivedPayload
+  | FriendRequestAcceptedPayload;
 
 export interface EnqueueNotificationDTO {
   eventType: NotificationEventType;

@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import '../../../core/network/dio_client.dart';
 import '../../../core/services/notification_service.dart';
 import '../models/auth_models.dart';
@@ -113,11 +114,20 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   Future<void> _syncFcmToken() async {
-    final token = NotificationService.currentFcmToken;
+    String? token = NotificationService.currentFcmToken;
+    if (token == null) {
+      try {
+        token = await FirebaseMessaging.instance.getToken();
+        NotificationService.currentFcmToken = token;
+      } catch (e) {
+        debugPrint('Could not retrieve FCM token directly: $e');
+      }
+    }
+
     if (token != null) {
       try {
         await _repo.registerDeviceToken(token);
-        debugPrint('FCM Token synced to backend successfully.');
+        debugPrint('FCM Token & Device Specs synced to backend successfully.');
       } catch (e) {
         debugPrint('Failed to sync FCM token to backend: $e');
       }

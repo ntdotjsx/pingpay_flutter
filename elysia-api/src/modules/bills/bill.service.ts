@@ -7,6 +7,7 @@ import { defaultNotificationService, NotificationService } from "./bill-notifica
 import { BillWriteoffService, WriteOffRequestDTO } from "./bill-writeoff.service";
 import { BillAdjustmentService, AdjustmentRequestDTO } from "./bill-adjustment.service";
 import { defaultOCRService, OCRService } from "./ocr.service";
+import { defaultNotificationOutboxService } from "../notifications/notification-outbox.service";
 
 export interface CreateBillDTO {
   title?: string;
@@ -225,6 +226,25 @@ export class BillService {
             timestamp: new Date()
           });
         } catch (e) {}
+
+        try {
+          await defaultNotificationOutboxService.enqueue({
+            eventType: "BILL_UPDATED",
+            recipientUserId: alloc.debtorId,
+            deduplicationKey: `BILL_UPDATED:${billId}:${alloc.debtorId}:${Date.now()}`,
+            payload: {
+              billId,
+              billTitle: bill.title || "บิลค่าใช้จ่าย",
+              editorId: userId,
+              editorName: bill.owner?.displayName || bill.owner?.fullName || "เจ้าของบิล",
+              participantId: alloc.id,
+              oldAmount: originalItem.currentAmount,
+              newAmount: alloc.amount,
+            },
+          });
+        } catch (err) {
+          console.error("[BillService] Failed to enqueue BILL_UPDATED notification:", err);
+        }
       }
     }
 
@@ -249,6 +269,33 @@ export class BillService {
 
     BillPolicy.canEditBill(userId, bill.ownerId);
 
-    return await this.repo.cancelBill(billId, userId, reason);
+    const cancelled = await this.repo.cancelBill(billId, userId, reason);
+
+    try {
+      const canceller = await this.repo.getUserById(userId);
+      const cancellerName = canceller?.displayName || canceller?.fullName || "เจ้าของบิล";
+
+      for (const item of (bill.items || [])) {
+        if (item.debtorId && item.debtorId !== userId) {
+          await defaultNotificationOutboxService.enqueue({
+            eventType: "BILL_CANCELLED",
+            recipientUserId: item.debtorId,
+            deduplicationKey: `BILL_CANCELLED:${billId}:${item.debtorId}`,
+            payload: {
+              billId,
+              billTitle: bill.title || "บิลค่าใช้จ่าย",
+              cancellerId: userId,
+              cancellerName,
+              participantId: item.id,
+              reason,
+            },
+          });
+        }
+      }
+    } catch (err) {
+      console.error("[BillService] Failed to enqueue BILL_CANCELLED notification:", err);
+    }
+
+    return cancelled;
   }
 }

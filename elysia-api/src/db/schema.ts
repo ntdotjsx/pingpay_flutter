@@ -125,6 +125,7 @@ export const notificationEventTypeEnum = pgEnum("notification_event_type", [
   "PAYMENT_CONFIRMED",
   "PAYMENT_REJECTED",
   "DEBT_WEEKLY_REMINDER",
+  "ADMIN_BROADCAST",
 ]);
 
 export const notificationStatusEnum = pgEnum("notification_status", [
@@ -625,6 +626,7 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   authIdentity: one(authIdentities),
   credentials: one(userCredentials),
   sessions: many(authSessions),
+  deviceTokens: many(deviceTokens),
   consentRecords: many(consentRecords),
   ownedBills: many(bills),
   billItems: many(billItems),

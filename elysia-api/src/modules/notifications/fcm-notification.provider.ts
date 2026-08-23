@@ -3,6 +3,7 @@ import {
   NotificationResult,
 } from "./notification-provider.interface";
 import { FormattedNotificationMessage } from "./notification-template.service";
+import { defaultFcmV1Service } from "./fcm-v1.service";
 import { db } from "../../db";
 import { deviceTokens } from "../../db/schema";
 import { eq } from "drizzle-orm";
@@ -83,8 +84,8 @@ export class FcmNotificationProvider implements NotificationProvider {
 
     // Fetch user device tokens from database
     let tokens: string[] = [];
-    if (recipientProviderId && !recipientProviderId.startsWith("USR-")) {
-      tokens = [recipientProviderId];
+    if (recipientProviderId && recipientProviderId.startsWith("fcm_token_")) {
+      tokens = [recipientProviderId.replace("fcm_token_", "")];
     } else {
       const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(recipientUserId);
       if (isUuid) {
@@ -109,36 +110,56 @@ export class FcmNotificationProvider implements NotificationProvider {
       };
     }
 
-    const serverKey = process.env.FCM_SERVER_KEY || process.env.FIREBASE_SERVER_KEY;
     const providerMessageId = `fcm-msg-${crypto.randomUUID()}`;
+    let isDispatched = false;
 
-    // If live FCM Server Key is configured, dispatch HTTP push message
-    if (serverKey && !this.isMockMode) {
+    // 1. Dispatch using official Google FCM HTTP v1 API (Service Account)
+    if (defaultFcmV1Service.isConfigured() && !this.isMockMode) {
       try {
         for (const token of tokens) {
-          await fetch("https://fcm.googleapis.com/fcm/send", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `key=${serverKey}`,
-            },
-            body: JSON.stringify({
-              to: token,
-              notification: {
-                title: message.title || "PingPay Notification",
-                body: message.body,
-                sound: "default",
-                badge: 1,
-              },
-              data: {
-                click_action: "FLUTTER_NOTIFICATION_CLICK",
-                timestamp: new Date().toISOString(),
-              },
-            }),
+          const res = await defaultFcmV1Service.sendMessage({
+            token,
+            title: message.title || "PingPay Notification",
+            body: message.body,
           });
+          if (res.success) isDispatched = true;
         }
       } catch (err: any) {
-        console.error("FCM dispatch error:", err);
+        console.error("[FCM v1 Error]:", err);
+      }
+    } else {
+      // 2. Legacy fallback
+      const serverKey = process.env.FCM_SERVER_KEY || process.env.FIREBASE_SERVER_KEY;
+      if (serverKey && !this.isMockMode) {
+        try {
+          for (const token of tokens) {
+            const fcmRes = await fetch("https://fcm.googleapis.com/fcm/send", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `key=${serverKey}`,
+              },
+              body: JSON.stringify({
+                to: token,
+                notification: {
+                  title: message.title || "PingPay Notification",
+                  body: message.body,
+                  sound: "default",
+                  badge: 1,
+                },
+                data: {
+                  click_action: "FLUTTER_NOTIFICATION_CLICK",
+                  timestamp: new Date().toISOString(),
+                },
+              }),
+            });
+            if (fcmRes.ok) isDispatched = true;
+          }
+        } catch (err: any) {
+          console.error("[FCM Legacy Error]:", err);
+        }
+      } else {
+        console.warn("[WARN] Firebase Service Account or FCM_SERVER_KEY is not configured in elysia-api/.env. Real Firebase Push was not dispatched.");
       }
     }
 
@@ -154,7 +175,13 @@ export class FcmNotificationProvider implements NotificationProvider {
       provider: this.name,
       recipientId: recipientUserId,
       providerMessageId,
-      responsePayload: { status: 200, message: "OK (FCM Push Dispatched)", providerMessageId },
+      responsePayload: {
+        status: 200,
+        message: isDispatched
+          ? "OK (FCM HTTP v1 Push Dispatched)"
+          : "OK (Mock / Service Account Key missing in .env)",
+        providerMessageId,
+      },
     };
   }
 }

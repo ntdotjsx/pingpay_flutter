@@ -1,4 +1,9 @@
 import { AdminRepository } from "./admin.repository";
+import { defaultFcmNotificationProvider } from "../notifications/fcm-notification.provider";
+import { db } from "../../db";
+import { deviceTokens, notificationOutbox } from "../../db/schema";
+import { eq } from "drizzle-orm";
+import crypto from "crypto";
 
 export class AdminService {
   private repo: AdminRepository;
@@ -10,11 +15,6 @@ export class AdminService {
   // ── Dashboard ─────────────────────────────────────────────────────
 
   async getDashboardStats(adminId: string) {
-    await this.repo.logAdminAction({
-      adminId,
-      actionType: "view_transactions",
-      metadata: { action: "dashboard_view" },
-    });
     return this.repo.getDashboardStats();
   }
 
@@ -31,7 +31,7 @@ export class AdminService {
     page = 1,
     limit = 20
   ) {
-    const result = await this.repo.getTransactions(
+    return this.repo.getTransactions(
       {
         userId: filters.userId,
         type: filters.type,
@@ -40,14 +40,6 @@ export class AdminService {
       },
       { page, limit }
     );
-
-    await this.repo.logAdminAction({
-      adminId,
-      actionType: "view_transactions",
-      metadata: { filters, page, limit },
-    });
-
-    return result;
   }
 
   // ── Activity Logs ─────────────────────────────────────────────────
@@ -63,7 +55,7 @@ export class AdminService {
     page = 1,
     limit = 20
   ) {
-    const result = await this.repo.getActivityLogs(
+    return this.repo.getActivityLogs(
       {
         userId: filters.userId,
         action: filters.action,
@@ -72,14 +64,6 @@ export class AdminService {
       },
       { page, limit }
     );
-
-    await this.repo.logAdminAction({
-      adminId,
-      actionType: "view_logs",
-      metadata: { filters, page, limit },
-    });
-
-    return result;
   }
 
   async purgeOldActivityLogs(adminId: string) {
@@ -435,6 +419,116 @@ export class AdminService {
     return result;
   }
 
+  async sendFcmNotification(
+    adminId: string,
+    params: {
+      target: "all" | "user" | "token";
+      userId?: string;
+      deviceToken?: string;
+      title: string;
+      body: string;
+      dataPayload?: any;
+    }
+  ) {
+    let sentCount = 0;
+    let failedCount = 0;
+    const errors: string[] = [];
+
+    if (params.target === "user" && params.userId) {
+      const userTokens = await db.query.deviceTokens.findMany({
+        where: eq(deviceTokens.userId, params.userId),
+      });
+
+      // Record in notification outbox
+      const dedupKey = `admin-manual-${params.userId}-${Date.now()}`;
+      await db.insert(notificationOutbox).values({
+        eventType: "ADMIN_BROADCAST",
+        recipientUserId: params.userId,
+        channel: "fcm",
+        payload: {
+          title: params.title,
+          body: params.body,
+          data: params.dataPayload || {},
+        },
+        deduplicationKey: dedupKey,
+        status: "SENT",
+        sentAt: new Date(),
+      });
+
+      const res = await defaultFcmNotificationProvider.send(
+        params.userId,
+        null,
+        {
+          title: params.title,
+          body: params.body,
+        }
+      );
+
+      if (res.success) {
+        sentCount = userTokens.length || 1;
+      } else {
+        failedCount = 1;
+        if (res.error) errors.push(res.error);
+        if (res.skippedReason) errors.push(res.skippedReason);
+      }
+    } else if (params.target === "token" && params.deviceToken) {
+      const res = await defaultFcmNotificationProvider.send(
+        "direct-token-target",
+        params.deviceToken,
+        {
+          title: params.title,
+          body: params.body,
+        }
+      );
+
+      if (res.success) {
+        sentCount = 1;
+      } else {
+        failedCount = 1;
+        if (res.error) errors.push(res.error);
+      }
+    } else if (params.target === "all") {
+      const allTokens = await db.query.deviceTokens.findMany();
+      const uniqueUsers = Array.from(new Set(allTokens.map((t) => t.userId)));
+
+      for (const uid of uniqueUsers) {
+        try {
+          const res = await defaultFcmNotificationProvider.send(
+            uid,
+            null,
+            {
+              title: params.title,
+              body: params.body,
+            }
+          );
+          if (res.success) sentCount++;
+          else failedCount++;
+        } catch (err: any) {
+          failedCount++;
+          errors.push(err.message);
+        }
+      }
+    }
+
+    await this.repo.logAdminAction({
+      adminId,
+      actionType: "view_logs",
+      metadata: {
+        action: "send_fcm_notification",
+        target: params.target,
+        title: params.title,
+        sentCount,
+        failedCount,
+      },
+    });
+
+    return {
+      sentCount,
+      failedCount,
+      errors: errors.slice(0, 5),
+    };
+  }
+
   // ── Security Events ───────────────────────────────────────────────
 
   async getSecurityEvents(
@@ -445,5 +539,15 @@ export class AdminService {
     limit = 20
   ) {
     return this.repo.getSecurityEvents({ page, limit }, userId, event);
+  }
+
+  // ── Analytics ─────────────────────────────────────────────────────
+
+  async getAnalytics(adminId: string) {
+    return this.repo.getSystemAnalytics();
+  }
+
+  async getFcmUsers(adminId: string, search?: string) {
+    return this.repo.getUsersWithFcm(search);
   }
 }

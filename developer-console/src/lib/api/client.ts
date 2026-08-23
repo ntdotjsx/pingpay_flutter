@@ -73,6 +73,10 @@ export async function getDashboard() {
 	return request<{ success: boolean; data: any }>('/dashboard');
 }
 
+export async function getAnalytics() {
+	return request<{ success: boolean; data: any }>('/analytics');
+}
+
 // ── Transactions ────────────────────────────────────────────────
 
 export async function getTransactions(filters: {
@@ -335,6 +339,32 @@ export async function retryNotification(id: string) {
 	return request<{ success: boolean; data: any }>(`/notifications/outbox/${id}/retry`, {
 		method: 'POST',
 	});
+}
+
+export async function sendFcmNotification(data: {
+	target: 'all' | 'user' | 'token';
+	userId?: string;
+	deviceToken?: string;
+	title: string;
+	body: string;
+	dataPayload?: any;
+}) {
+	return request<{
+		success: boolean;
+		message: string;
+		data: { sentCount: number; failedCount: number; errors: string[] };
+	}>('/notifications/send-fcm', {
+		method: 'POST',
+		body: JSON.stringify(data),
+	});
+}
+
+export async function getFcmUsers(search?: string) {
+	const query = search ? `?search=${encodeURIComponent(search)}` : '';
+	return request<{
+		success: boolean;
+		data: { users: any[] };
+	}>(`/notifications/fcm-users${query}`);
 }
 
 // ── Security Events ─────────────────────────────────────────────

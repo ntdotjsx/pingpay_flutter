@@ -48,3 +48,4 @@ Time: ${message.timestamp.toISOString()}`);
 }
 
 export const defaultNotificationService = new FakeFcmNotificationService();
+export const FakeLineNotificationService = FakeFcmNotificationService;
