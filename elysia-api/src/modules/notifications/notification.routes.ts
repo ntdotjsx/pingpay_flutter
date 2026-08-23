@@ -60,6 +60,9 @@ export const notificationRoutes = new Elysia({ prefix: "/notifications" })
       }),
       detail: {
         summary: "Get notifications for a user",
+        tags: ["Notifications"],
+      },
+    }
   )
   .post(
     "/device-token",
