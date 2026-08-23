@@ -8,6 +8,7 @@ import 'package:thai_promptpay/thai_promptpay.dart';
 import '../../../core/theme/theme.dart';
 import '../../../core/utils/app_toast.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../friends/providers/friends_provider.dart';
 import '../../home/providers/pull_sensitivity_provider.dart';
 import 'widgets/setup_payment_channel_sheet.dart';
 
@@ -25,323 +26,381 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final user = authState.user;
     final themeMode = ref.watch(themeModeProvider);
     final pullSensitivity = ref.watch(pullSensitivityProvider);
+    final friendsAsync = ref.watch(friendsListProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
+    final friendCount = friendsAsync.valueOrNull?.length ?? 0;
+
     return Scaffold(
-      backgroundColor: isDark ? AppColors.surfaceBlack : const Color(0xFFF6F7F9),
+      backgroundColor: isDark ? AppColors.surfaceBlack : const Color(0xFFF4F6F9),
       appBar: AppBar(
         title: const Text(
           'โปรไฟล์ของฉัน',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+          style: TextStyle(
+            fontWeight: FontWeight.w800,
+            fontSize: 19,
+            letterSpacing: -0.4,
+          ),
         ),
         centerTitle: true,
         backgroundColor: Colors.transparent,
         elevation: 0,
         automaticallyImplyLeading: false,
+        actions: [
+          if (user?.userCode != null)
+            IconButton(
+              icon: const Icon(Icons.qr_code_rounded, size: 22),
+              tooltip: 'QR Code ของฉัน',
+              onPressed: () => _showMyQrCodeModal(
+                context,
+                user!.userCode!,
+                user.displayName ?? 'PingPay User',
+              ),
+            ),
+          const SizedBox(width: 6),
+        ],
       ),
       body: SingleChildScrollView(
         physics: const BouncingScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
+        padding: const EdgeInsets.fromLTRB(18, 4, 18, 48),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // 1. User Profile Header Card
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: ShapeDecoration(
-                color: isDark ? AppColors.surfaceTile1 : Colors.white,
-                shadows: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.05),
-                    blurRadius: 16,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-                shape: SmoothRectangleBorder(
-                  side: BorderSide(
-                    color: isDark ? Colors.white10 : AppColors.hairline,
-                    width: 1,
-                  ),
-                  borderRadius: const SmoothBorderRadius.all(
-                    SmoothRadius(cornerRadius: 24, cornerSmoothing: 1.0),
-                  ),
-                ),
-              ),
-              child: Column(
-                children: [
-                  Row(
-                    children: [
-                      // Avatar with Squircle / Circle Outline
-                      Stack(
-                        children: [
-                          CircleAvatar(
-                            radius: 36,
-                            backgroundColor: AppColors.primary.withValues(alpha: 0.15),
-                            backgroundImage: user?.avatarUrl != null
-                                ? NetworkImage(user!.avatarUrl!)
-                                : null,
-                            child: user?.avatarUrl == null
-                                ? Text(
-                                    (user?.displayName != null && user!.displayName!.isNotEmpty)
-                                        ? user.displayName![0].toUpperCase()
-                                        : 'U',
-                                    style: const TextStyle(
-                                      fontSize: 26,
-                                      fontWeight: FontWeight.bold,
-                                      color: AppColors.primary,
-                                    ),
-                                  )
-                                : null,
-                          ),
-                          Positioned(
-                            bottom: 0,
-                            right: 0,
-                            child: Container(
-                              padding: const EdgeInsets.all(4),
-                              decoration: const BoxDecoration(
-                                color: AppColors.primary,
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(
-                                Icons.verified_rounded,
-                                color: Colors.white,
-                                size: 14,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(width: 16),
-                      // User Info
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              user?.displayName ?? 'ผู้ใช้งาน PingPay',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: isDark ? AppColors.bodyOnDark : AppColors.ink,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            // User Code with Copy Button
-                            GestureDetector(
-                              onTap: () {
-                                if (user?.userCode != null) {
-                                  Clipboard.setData(ClipboardData(text: user!.userCode!));
-                                  AppToast.success(context, 'คัดลอกรหัส ${user.userCode} เรียบร้อยแล้ว');
-                                }
-                              },
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: AppColors.primary.withValues(alpha: 0.08),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(
-                                      'รหัส: ${user?.userCode ?? "-"}',
-                                      style: const TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w600,
-                                        color: AppColors.primary,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 4),
-                                    const Icon(
-                                      Icons.copy_rounded,
-                                      size: 13,
-                                      color: AppColors.primary,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 18),
-                  Divider(
-                    height: 1,
-                    thickness: 1,
-                    color: isDark ? Colors.white10 : AppColors.dividerSoft,
-                  ),
-                  const SizedBox(height: 14),
-                  // Coins & Activity Status
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      _buildProfileMetric(
-                        icon: Icons.monetization_on,
-                        iconColor: const Color(0xFFFFD700),
-                        label: 'PingPay Coins',
-                        value: '27 เหรียญ',
-                        isDark: isDark,
-                      ),
-                      Container(
-                        height: 28,
-                        width: 1,
-                        color: isDark ? Colors.white10 : AppColors.dividerSoft,
-                      ),
-                      _buildProfileMetric(
-                        icon: Icons.shield_rounded,
-                        iconColor: AppColors.success,
-                        label: 'สถานะบัญชี',
-                        value: 'ยืนยันตัวตนแล้ว',
-                        isDark: isDark,
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
+            // ── 1. Hero VIP Profile Executive Card ───────────────────────
+            _buildHeroProfileCard(context, user, isDark, friendCount),
 
-            const SizedBox(height: 20),
+            const SizedBox(height: 24),
 
-            // 2. Settings Group 1: Appearance & Gesture
-            _buildSectionTitle('การตั้งค่าและการแสดงผล', isDark),
-            const SizedBox(height: 8),
+            // ── 2. Settings Group: Financials & Payouts ─────────────────
+            _buildSectionHeader('การเงินและการรับเงิน', Icons.account_balance_wallet_rounded, const Color(0xFF00B900), isDark),
+            const SizedBox(height: 10),
             _buildSettingsContainer(
               isDark: isDark,
               children: [
-                // Theme Mode Selector
-                _buildSettingsTile(
-                  icon: Icons.dark_mode_outlined,
-                  iconColor: Colors.deepPurple,
-                  title: 'ธีมการแสดงผล (Theme)',
-                  subtitle: _getThemeLabel(themeMode),
-                  isDark: isDark,
-                  trailing: DropdownButtonHideUnderline(
-                    child: DropdownButton<ThemeMode>(
-                      value: themeMode,
-                      dropdownColor: isDark ? AppColors.surfaceTile2 : Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      items: const [
-                        DropdownMenuItem(
-                          value: ThemeMode.system,
-                          child: Text('ตามระบบ (System)', style: TextStyle(fontSize: 13)),
-                        ),
-                        DropdownMenuItem(
-                          value: ThemeMode.light,
-                          child: Text('สว่าง (Light)', style: TextStyle(fontSize: 13)),
-                        ),
-                        DropdownMenuItem(
-                          value: ThemeMode.dark,
-                          child: Text('มืด (Dark)', style: TextStyle(fontSize: 13)),
-                        ),
-                      ],
-                      onChanged: (mode) {
-                        if (mode != null) {
-                          ref.read(themeModeProvider.notifier).setThemeMode(mode);
-                        }
-                      },
-                    ),
-                  ),
-                ),
-                _buildTileDivider(isDark),
-                // Pull Sensitivity Setting
-                _buildSettingsTile(
-                  icon: Icons.swipe_down_rounded,
-                  iconColor: AppColors.primary,
-                  title: 'ความไวดึงลงเพื่อสร้างบิล',
-                  subtitle: pullSensitivity.label,
-                  isDark: isDark,
-                  onTap: () => _showSensitivitySheet(context),
-                  trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.inkMuted48),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 20),
-
-            // 3. Settings Group 2: Account & Security
-            _buildSectionTitle('ความปลอดภัยและบัญชี', isDark),
-            const SizedBox(height: 8),
-            _buildSettingsContainer(
-              isDark: isDark,
-              children: [
-                _buildSettingsTile(
-                  icon: Icons.lock_outline_rounded,
-                  iconColor: const Color(0xFF007AFF),
-                  title: 'เปลี่ยนรหัส PIN ความปลอดภัย',
-                  subtitle: 'ตั้งรหัส PIN 6 หลักใหม่สำหรับยืนยันการเงิน',
-                  isDark: isDark,
-                  onTap: () => context.push('/pin/setup'),
-                  trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.inkMuted48),
-                ),
-                _buildTileDivider(isDark),
-                _buildSettingsTile(
+                // PromptPay Setup / View QR
+                _buildModernSettingsTile(
                   icon: Icons.qr_code_2_rounded,
+                  iconBgColor: const Color(0xFF00B900).withValues(alpha: 0.12),
                   iconColor: const Color(0xFF00B900),
                   title: 'PromptPay QR สำหรับรับเงิน',
-                  subtitle: user?.promptPayId != null && user!.promptPayId!.isNotEmpty
+                  subtitle: (user?.promptPayId != null && user!.promptPayId!.isNotEmpty)
                       ? 'เบอร์พร้อมเพย์: ${user.promptPayId}'
-                      : 'แตะเพื่อดู QR Code หรือผูกบัญชีพร้อมเพย์',
+                      : 'แตะเพื่อผูกบัญชีหรือดู QR รับเงิน',
+                  badge: (user?.promptPayId != null && user!.promptPayId!.isNotEmpty)
+                      ? _buildStatusBadge('ผูกแล้ว', const Color(0xFF00B900))
+                      : _buildStatusBadge('ยังไม่ผูก', Colors.orange),
                   isDark: isDark,
                   onTap: () => _showPromptPayQRModal(context),
-                  trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.inkMuted48),
                 ),
                 _buildTileDivider(isDark),
-                _buildSettingsTile(
+
+                // Rewards Store Shortcut
+                _buildModernSettingsTile(
                   icon: Icons.card_giftcard_rounded,
+                  iconBgColor: const Color(0xFFFF9500).withValues(alpha: 0.12),
                   iconColor: const Color(0xFFFF9500),
-                  title: 'ร้านค้าแลกของรางวัล (Rewards Store)',
-                  subtitle: 'ใช้แต้มแลกของรางวัลในชีวิตจริง จัดส่งถึงบ้าน',
+                  title: 'ร้านค้าแลกของรางวัล (Rewards)',
+                  subtitle: 'ใช้เหรียญ PingPay Coins แลกของรางวัลส่งตรงถึงบ้าน',
+                  badge: _buildStatusBadge('${user?.rewardPoints ?? 27} แต้ม', const Color(0xFFFF9500)),
                   isDark: isDark,
                   onTap: () => context.push('/rewards'),
-                  trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.inkMuted48),
                 ),
                 _buildTileDivider(isDark),
-                _buildSettingsTile(
-                  icon: Icons.policy_outlined,
-                  iconColor: Colors.teal,
-                  title: 'นโยบายความเป็นส่วนตัว (PDPA)',
-                  subtitle: 'เงื่อนไขการเก็บรักษาข้อมูลและ Audit Logs 7 วัน',
+
+                // Shipping Details
+                _buildModernSettingsTile(
+                  icon: Icons.local_shipping_rounded,
+                  iconBgColor: const Color(0xFF5856D6).withValues(alpha: 0.12),
+                  iconColor: const Color(0xFF5856D6),
+                  title: 'ที่อยู่จัดส่งของรางวัล',
+                  subtitle: (user?.shippingAddress != null && user!.shippingAddress!.isNotEmpty)
+                      ? user.shippingAddress!
+                      : 'แตะเพื่อบันทึกที่อยู่จัดส่ง',
                   isDark: isDark,
-                  onTap: () => context.push('/pdpa'),
-                  trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.inkMuted48),
+                  onTap: () => _showShippingAddressModal(context, user),
                 ),
               ],
             ),
 
             const SizedBox(height: 24),
 
-            // 4. Logout Action Button
-            SizedBox(
-              width: double.infinity,
-              height: 50,
-              child: OutlinedButton.icon(
-                onPressed: () => _handleLogout(context),
-                icon: const Icon(Icons.logout_rounded, color: AppColors.error, size: 20),
-                label: const Text(
-                  'ออกจากระบบ (Logout)',
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.error,
+            // ── 3. Settings Group: Security & Active Sessions ────────────
+            _buildSectionHeader('ความปลอดภัยและบัญชี', Icons.shield_rounded, const Color(0xFF007AFF), isDark),
+            const SizedBox(height: 10),
+            _buildSettingsContainer(
+              isDark: isDark,
+              children: [
+                // Change PIN
+                _buildModernSettingsTile(
+                  icon: Icons.lock_outline_rounded,
+                  iconBgColor: const Color(0xFF007AFF).withValues(alpha: 0.12),
+                  iconColor: const Color(0xFF007AFF),
+                  title: 'เปลี่ยนรหัส PIN ความปลอดภัย',
+                  subtitle: 'รหัส 6 หลักสำหรับยืนยันการทำธุรกรรมและการเงิน',
+                  isDark: isDark,
+                  onTap: () => context.push('/pin/setup'),
+                ),
+                _buildTileDivider(isDark),
+
+                // Single Device Active Session Notice
+                _buildModernSettingsTile(
+                  icon: Icons.devices_rounded,
+                  iconBgColor: const Color(0xFF34C759).withValues(alpha: 0.12),
+                  iconColor: const Color(0xFF34C759),
+                  title: 'อุปกรณ์ที่เข้าใช้งานปัจจุบัน',
+                  subtitle: 'เครื่องนี้ (Active Session) • จำกัด 1 เครื่องเพื่อความปลอดภัย',
+                  badge: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 8,
+                        height: 8,
+                        decoration: const BoxDecoration(
+                          color: Color(0xFF34C759),
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: 5),
+                      const Text(
+                        'ออนไลน์',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF34C759),
+                        ),
+                      ),
+                    ],
+                  ),
+                  isDark: isDark,
+                  onTap: () {
+                    AppToast.info(context, 'บัญชีของคุณออนไลน์อยู่บนเครื่องนี้ และได้รับการคุ้มครองความปลอดภัย');
+                  },
+                ),
+                _buildTileDivider(isDark),
+
+                // PDPA & Data Privacy
+                _buildModernSettingsTile(
+                  icon: Icons.policy_outlined,
+                  iconBgColor: Colors.teal.withValues(alpha: 0.12),
+                  iconColor: Colors.teal,
+                  title: 'นโยบายความเป็นส่วนตัว (PDPA)',
+                  subtitle: 'เงื่อนไขการคุ้มครองข้อมูลส่วนบุคคลและ Audit Logs',
+                  isDark: isDark,
+                  onTap: () => context.push('/pdpa'),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 24),
+
+            // ── 4. Settings Group: Preferences & Appearance ──────────────
+            _buildSectionHeader('การตั้งค่าและการแสดงผล', Icons.tune_rounded, const Color(0xFFFF5000), isDark),
+            const SizedBox(height: 10),
+            _buildSettingsContainer(
+              isDark: isDark,
+              children: [
+                // Theme Mode Segmented Switcher
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            width: 38,
+                            height: 38,
+                            decoration: ShapeDecoration(
+                              color: const Color(0xFFFF5000).withValues(alpha: 0.12),
+                              shape: const SmoothRectangleBorder(
+                                borderRadius: SmoothBorderRadius.all(
+                                  SmoothRadius(cornerRadius: 12, cornerSmoothing: 0.8),
+                                ),
+                              ),
+                            ),
+                            child: const Icon(
+                              Icons.palette_outlined,
+                              color: Color(0xFFFF5000),
+                              size: 20,
+                            ),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'ธีมการแสดงผล (Theme)',
+                                  style: TextStyle(
+                                    fontSize: 14.5,
+                                    fontWeight: FontWeight.w700,
+                                    color: isDark ? AppColors.bodyOnDark : AppColors.ink,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  _getThemeLabel(themeMode),
+                                  style: TextStyle(
+                                    fontSize: 11.5,
+                                    color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+                      // Segmented Button Bar
+                      Container(
+                        height: 40,
+                        padding: const EdgeInsets.all(3),
+                        decoration: BoxDecoration(
+                          color: isDark ? AppColors.surfaceTile2 : const Color(0xFFE9ECF0),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          children: [
+                            _buildThemeSegment(
+                              label: 'สว่าง',
+                              icon: Icons.light_mode_rounded,
+                              isSelected: themeMode == ThemeMode.light,
+                              isDark: isDark,
+                              onTap: () {
+                                ref.read(themeModeProvider.notifier).setThemeMode(ThemeMode.light);
+                                HapticFeedback.selectionClick();
+                              },
+                            ),
+                            _buildThemeSegment(
+                              label: 'มืด',
+                              icon: Icons.dark_mode_rounded,
+                              isSelected: themeMode == ThemeMode.dark,
+                              isDark: isDark,
+                              onTap: () {
+                                ref.read(themeModeProvider.notifier).setThemeMode(ThemeMode.dark);
+                                HapticFeedback.selectionClick();
+                              },
+                            ),
+                            _buildThemeSegment(
+                              label: 'ตามระบบ',
+                              icon: Icons.brightness_auto_rounded,
+                              isSelected: themeMode == ThemeMode.system,
+                              isDark: isDark,
+                              onTap: () {
+                                ref.read(themeModeProvider.notifier).setThemeMode(ThemeMode.system);
+                                HapticFeedback.selectionClick();
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                style: OutlinedButton.styleFrom(
-                  side: BorderSide(
-                    color: AppColors.error.withValues(alpha: 0.5),
-                    width: 1.2,
+
+                _buildTileDivider(isDark),
+
+                // Pull Sensitivity Setting
+                _buildModernSettingsTile(
+                  icon: Icons.swipe_down_rounded,
+                  iconBgColor: const Color(0xFFFF5000).withValues(alpha: 0.12),
+                  iconColor: const Color(0xFFFF5000),
+                  title: 'ความไวดึงลงเพื่อสร้างบิล',
+                  subtitle: 'ระยะลากนิ้วจากหน้าหลัก: ${pullSensitivity.label}',
+                  badge: _buildStatusBadge(pullSensitivity.label.split(' ').first, const Color(0xFFFF5000)),
+                  isDark: isDark,
+                  onTap: () => _showSensitivitySheet(context),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 28),
+
+            // ── 5. Logout Action Button ──────────────────────────────────
+            InkWell(
+              onTap: () => _handleLogout(context),
+              borderRadius: BorderRadius.circular(18),
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 15),
+                decoration: ShapeDecoration(
+                  color: isDark ? const Color(0xFF261214) : const Color(0xFFFFF1F1),
+                  shape: SmoothRectangleBorder(
+                    side: BorderSide(
+                      color: const Color(0xFFFF3B30).withValues(alpha: isDark ? 0.35 : 0.25),
+                      width: 1,
+                    ),
+                    borderRadius: const SmoothBorderRadius.all(
+                      SmoothRadius(cornerRadius: 18, cornerSmoothing: 0.8),
+                    ),
                   ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
+                ),
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.logout_rounded,
+                      color: Color(0xFFFF3B30),
+                      size: 20,
+                    ),
+                    SizedBox(width: 8),
+                    Text(
+                      'ออกจากระบบ (Logout)',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFFFF3B30),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
 
-            const SizedBox(height: 16),
-            const Text(
-              'PingPay Version 1.0.0 (Build 2026.08)',
-              style: TextStyle(fontSize: 11, color: AppColors.inkMuted48),
+            const SizedBox(height: 20),
+
+            // ── 6. Footer App Version & Shorebird Info ───────────────────
+            Center(
+              child: Column(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.04),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 6,
+                          height: 6,
+                          decoration: const BoxDecoration(
+                            color: Color(0xFFFF5000),
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          'PingPay v1.0.0 (Production Engine)',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'เพื่อนหารเงินง่าย อัปเดตยอดหนี้แบบเรียลไทม์',
+                    style: TextStyle(
+                      fontSize: 10.5,
+                      color: isDark ? Colors.white30 : AppColors.inkMuted48,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -349,19 +408,382 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
-  Widget _buildSectionTitle(String title, bool isDark) {
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 4.0),
-        child: Text(
-          title,
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.bold,
-            color: isDark ? AppColors.bodyMuted : AppColors.inkMuted80,
+  // ==========================================
+  // HERO PROFILE CARD WIDGET
+  // ==========================================
+  Widget _buildHeroProfileCard(
+    BuildContext context,
+    dynamic user,
+    bool isDark,
+    int friendCount,
+  ) {
+    return Container(
+      decoration: ShapeDecoration(
+        color: isDark ? AppColors.surfaceTile1 : Colors.white,
+        shadows: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.35 : 0.06),
+            blurRadius: 20,
+            offset: const Offset(0, 6),
+          ),
+        ],
+        shape: SmoothRectangleBorder(
+          side: BorderSide(
+            color: isDark ? Colors.white10 : const Color(0xFFEBEFF5),
+            width: 1,
+          ),
+          borderRadius: const SmoothBorderRadius.all(
+            SmoothRadius(cornerRadius: 28, cornerSmoothing: 0.8),
           ),
         ),
+      ),
+      child: Column(
+        children: [
+          // Top Section: Avatar + Name + User Code
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                // Avatar with Glowing Ring
+                Stack(
+                  children: [
+                    Container(
+                      width: 72,
+                      height: 72,
+                      decoration: ShapeDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFFFF7A00), Color(0xFFFF4500)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        shape: const SmoothRectangleBorder(
+                          borderRadius: SmoothBorderRadius.all(
+                            SmoothRadius(cornerRadius: 22, cornerSmoothing: 0.7),
+                          ),
+                        ),
+                      ),
+                      padding: const EdgeInsets.all(2.5),
+                      child: ClipSmoothRect(
+                        radius: const SmoothBorderRadius.all(
+                          SmoothRadius(cornerRadius: 20, cornerSmoothing: 0.7),
+                        ),
+                        child: (user?.avatarUrl != null && user!.avatarUrl!.isNotEmpty)
+                            ? Image.network(
+                                user.avatarUrl!,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => _buildAvatarFallback(user),
+                              )
+                            : _buildAvatarFallback(user),
+                      ),
+                    ),
+                    Positioned(
+                      bottom: -1,
+                      right: -1,
+                      child: Container(
+                        padding: const EdgeInsets.all(3),
+                        decoration: BoxDecoration(
+                          color: isDark ? AppColors.surfaceTile1 : Colors.white,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Container(
+                          padding: const EdgeInsets.all(3),
+                          decoration: const BoxDecoration(
+                            color: Color(0xFF34C759),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.verified_rounded,
+                            color: Colors.white,
+                            size: 11,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(width: 16),
+
+                // Name & Code Badges
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        user?.displayName ?? 'ผู้ใช้งาน PingPay',
+                        style: TextStyle(
+                          fontSize: 19,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -0.4,
+                          color: isDark ? AppColors.bodyOnDark : AppColors.ink,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 3),
+                      if (user?.email != null)
+                        Text(
+                          user!.email!,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      const SizedBox(height: 8),
+
+                      // User Code Capsule with Copy & QR Action
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          InkWell(
+                            onTap: () {
+                              if (user?.userCode != null) {
+                                Clipboard.setData(ClipboardData(text: user!.userCode!));
+                                HapticFeedback.lightImpact();
+                                AppToast.success(context, 'คัดลอกรหัส ${user.userCode} เรียบร้อยแล้ว');
+                              }
+                            },
+                            borderRadius: BorderRadius.circular(10),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFF5000).withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: const Color(0xFFFF5000).withValues(alpha: 0.25),
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    user?.userCode ?? '-',
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w800,
+                                      letterSpacing: 0.5,
+                                      color: Color(0xFFFF5000),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 5),
+                                  const Icon(
+                                    Icons.copy_rounded,
+                                    size: 13,
+                                    color: Color(0xFFFF5000),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Divider
+          Divider(
+            height: 1,
+            thickness: 1,
+            color: isDark ? Colors.white10 : const Color(0xFFF0F2F5),
+          ),
+
+          // Bottom Stats Grid (Revolut/Apple Style 3-Column Highlights)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
+            child: Row(
+              children: [
+                // 1. Coins
+                Expanded(
+                  child: InkWell(
+                    onTap: () => context.push('/rewards'),
+                    borderRadius: BorderRadius.circular(14),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: Column(
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Container(
+                                width: 22,
+                                height: 22,
+                                decoration: const BoxDecoration(
+                                  gradient: LinearGradient(
+                                    colors: [Color(0xFFFFD700), Color(0xFFFFA500)],
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                  ),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(Icons.monetization_on_rounded, color: Colors.white, size: 14),
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                '${user?.rewardPoints ?? 27}',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w800,
+                                  color: isDark ? AppColors.bodyOnDark : AppColors.ink,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'PingPay Coins',
+                            style: TextStyle(
+                              fontSize: 10.5,
+                              color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+
+                Container(
+                  height: 28,
+                  width: 1,
+                  color: isDark ? Colors.white10 : const Color(0xFFEBEFF5),
+                ),
+
+                // 2. Friends Count
+                Expanded(
+                  child: InkWell(
+                    onTap: () => context.push('/friends'),
+                    borderRadius: BorderRadius.circular(14),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: Column(
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(
+                                Icons.people_alt_rounded,
+                                color: Color(0xFFFF5000),
+                                size: 18,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                '$friendCount',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w800,
+                                  color: isDark ? AppColors.bodyOnDark : AppColors.ink,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'เพื่อนทั้งหมด',
+                            style: TextStyle(
+                              fontSize: 10.5,
+                              color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+
+                Container(
+                  height: 28,
+                  width: 1,
+                  color: isDark ? Colors.white10 : const Color(0xFFEBEFF5),
+                ),
+
+                // 3. Verified Status
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Column(
+                      children: [
+                        const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.verified_user_rounded,
+                              color: Color(0xFF34C759),
+                              size: 18,
+                            ),
+                            SizedBox(width: 4),
+                            Text(
+                              'ยืนยันแล้ว',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w800,
+                                color: Color(0xFF34C759),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'สถานะบัญชี',
+                          style: TextStyle(
+                            fontSize: 10.5,
+                            color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAvatarFallback(dynamic user) {
+    return Container(
+      color: const Color(0xFF1E1E24),
+      alignment: Alignment.center,
+      child: Text(
+        (user?.displayName != null && user!.displayName!.isNotEmpty)
+            ? user.displayName![0].toUpperCase()
+            : 'U',
+        style: const TextStyle(
+          fontSize: 28,
+          fontWeight: FontWeight.w800,
+          color: Colors.white,
+        ),
+      ),
+    );
+  }
+
+  // ==========================================
+  // SECTION HEADERS & SETTING CONTAINERS
+  // ==========================================
+  Widget _buildSectionHeader(String title, IconData icon, Color iconColor, bool isDark) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4.0),
+      child: Row(
+        children: [
+          Icon(icon, size: 16, color: iconColor),
+          const SizedBox(width: 8),
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 13.5,
+              fontWeight: FontWeight.w700,
+              letterSpacing: -0.2,
+              color: isDark ? AppColors.bodyMuted : AppColors.inkMuted80,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -375,18 +797,18 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         color: isDark ? AppColors.surfaceTile1 : Colors.white,
         shadows: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
+            color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.04),
+            blurRadius: 14,
+            offset: const Offset(0, 3),
           ),
         ],
         shape: SmoothRectangleBorder(
           side: BorderSide(
-            color: isDark ? Colors.white10 : AppColors.hairline,
+            color: isDark ? Colors.white10 : const Color(0xFFEBEFF5),
             width: 1,
           ),
           borderRadius: const SmoothBorderRadius.all(
-            SmoothRadius(cornerRadius: 20, cornerSmoothing: 1.0),
+            SmoothRadius(cornerRadius: 22, cornerSmoothing: 0.8),
           ),
         ),
       ),
@@ -394,38 +816,41 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
-  Widget _buildSettingsTile({
+  Widget _buildModernSettingsTile({
     required IconData icon,
+    required Color iconBgColor,
     required Color iconColor,
     required String title,
     required String subtitle,
     required bool isDark,
-    Widget? trailing,
+    Widget? badge,
     VoidCallback? onTap,
   }) {
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(22),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           child: Row(
             children: [
+              // Modern Squircle Icon Container
               Container(
-                width: 38,
-                height: 38,
+                width: 40,
+                height: 40,
                 decoration: ShapeDecoration(
-                  color: iconColor.withValues(alpha: 0.12),
+                  color: iconBgColor,
                   shape: const SmoothRectangleBorder(
                     borderRadius: SmoothBorderRadius.all(
-                      SmoothRadius(cornerRadius: 12, cornerSmoothing: 1.0),
+                      SmoothRadius(cornerRadius: 13, cornerSmoothing: 0.8),
                     ),
                   ),
                 ),
                 child: Icon(icon, color: iconColor, size: 20),
               ),
               const SizedBox(width: 14),
+              // Title & Subtitle
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -433,8 +858,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     Text(
                       title,
                       style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
+                        fontSize: 14.5,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: -0.2,
                         color: isDark ? AppColors.bodyOnDark : AppColors.ink,
                       ),
                     ),
@@ -442,14 +868,99 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     Text(
                       subtitle,
                       style: TextStyle(
-                        fontSize: 11,
+                        fontSize: 11.5,
                         color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
                       ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),
               ),
-              if (trailing != null) trailing,
+              const SizedBox(width: 8),
+              if (badge != null) ...[
+                badge,
+                const SizedBox(width: 6),
+              ],
+              Icon(
+                Icons.chevron_right_rounded,
+                size: 20,
+                color: isDark ? Colors.white30 : AppColors.inkMuted48,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatusBadge(String text, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          color: color,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildThemeSegment({
+    required String label,
+    required IconData icon,
+    required bool isSelected,
+    required bool isDark,
+    required VoidCallback onTap,
+  }) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: isSelected
+                ? (isDark ? AppColors.surfaceTile1 : Colors.white)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(9),
+            boxShadow: isSelected
+                ? [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.08),
+                      blurRadius: 4,
+                      offset: const Offset(0, 1.5),
+                    ),
+                  ]
+                : null,
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                icon,
+                size: 14,
+                color: isSelected
+                    ? const Color(0xFFFF5000)
+                    : (isDark ? AppColors.bodyMuted : AppColors.inkMuted48),
+              ),
+              const SizedBox(width: 5),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                  color: isSelected
+                      ? (isDark ? Colors.white : AppColors.ink)
+                      : (isDark ? AppColors.bodyMuted : AppColors.inkMuted48),
+                ),
+              ),
             ],
           ),
         ),
@@ -462,52 +973,132 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       height: 1,
       thickness: 1,
       indent: 68,
-      color: isDark ? Colors.white10 : AppColors.dividerSoft,
-    );
-  }
-
-  Widget _buildProfileMetric({
-    required IconData icon,
-    required Color iconColor,
-    required String label,
-    required String value,
-    required bool isDark,
-  }) {
-    return Row(
-      children: [
-        Icon(icon, color: iconColor, size: 20),
-        const SizedBox(width: 8),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              label,
-              style: const TextStyle(fontSize: 10, color: AppColors.inkMuted48),
-            ),
-            const SizedBox(height: 1),
-            Text(
-              value,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.bold,
-                color: isDark ? AppColors.bodyOnDark : AppColors.ink,
-              ),
-            ),
-          ],
-        ),
-      ],
+      endIndent: 16,
+      color: isDark ? Colors.white10 : const Color(0xFFF0F2F5),
     );
   }
 
   String _getThemeLabel(ThemeMode mode) {
     switch (mode) {
       case ThemeMode.light:
-        return 'สว่าง (Light Mode)';
+        return 'โหมดสว่าง (Light)';
       case ThemeMode.dark:
-        return 'มืด (Dark Mode)';
+        return 'โหมดมืด (Dark)';
       case ThemeMode.system:
         return 'ตามการตั้งค่าระบบ (System)';
     }
+  }
+
+  // ==========================================
+  // MODALS & DIALOGS
+  // ==========================================
+  void _showMyQrCodeModal(BuildContext context, String userCode, String displayName) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.fromLTRB(24, 20, 24, 36),
+        decoration: ShapeDecoration(
+          color: isDark ? AppColors.surfaceBlack : Colors.white,
+          shape: const SmoothRectangleBorder(
+            borderRadius: SmoothBorderRadius.vertical(
+              top: SmoothRadius(cornerRadius: 32, cornerSmoothing: 0.7),
+            ),
+          ),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: isDark ? Colors.white24 : Colors.black12,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              'QR Code เพิ่มเพื่อน',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                letterSpacing: -0.3,
+                color: isDark ? AppColors.bodyOnDark : AppColors.ink,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'ให้เพื่อนสแกนรหัสนี้เพื่อเพิ่มคุณเป็นเพื่อนได้ทันที',
+              style: TextStyle(
+                fontSize: 13,
+                color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
+              ),
+            ),
+            const SizedBox(height: 24),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.08),
+                    blurRadius: 20,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: QrImageView(
+                data: userCode,
+                version: QrVersions.auto,
+                size: 200.0,
+                eyeStyle: const QrEyeStyle(
+                  eyeShape: QrEyeShape.square,
+                  color: Color(0xFFFF5000),
+                ),
+                dataModuleStyle: const QrDataModuleStyle(
+                  dataModuleShape: QrDataModuleShape.square,
+                  color: Color(0xFF1A1A1A),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              decoration: BoxDecoration(
+                color: isDark ? AppColors.surfaceTile2 : const Color(0xFFF4F6F9),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'รหัสผู้ใช้: ',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
+                    ),
+                  ),
+                  Text(
+                    userCode,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.0,
+                      color: Color(0xFFFF5000),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _showSensitivitySheet(BuildContext context) {
@@ -523,8 +1114,76 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             color: isDark ? AppColors.surfaceTile1 : Colors.white,
             shape: const SmoothRectangleBorder(
               borderRadius: SmoothBorderRadius.only(
-                topLeft: SmoothRadius(cornerRadius: 24, cornerSmoothing: 1.0),
-                topRight: SmoothRadius(cornerRadius: 24, cornerSmoothing: 1.0),
+                topLeft: SmoothRadius(cornerRadius: 28, cornerSmoothing: 0.8),
+                topRight: SmoothRadius(cornerRadius: 28, cornerSmoothing: 0.8),
+              ),
+            ),
+          ),
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 36),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: isDark ? Colors.white24 : Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 18),
+              const Text(
+                'ความไวดึงลงเพื่อสร้างบิล',
+                style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                'เลือกระยะการลากนิ้วจากบนลงล่างที่หน้าหลักเพื่อเปิดหน้าสร้างบิลอัตโนมัติ',
+                style: TextStyle(fontSize: 12.5, color: AppColors.inkMuted48),
+              ),
+              const SizedBox(height: 18),
+              ...PullSensitivity.values.map((s) {
+                final isSelected = s == currentSens;
+                return ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(s.label, style: const TextStyle(fontWeight: FontWeight.bold)),
+                  trailing: isSelected
+                      ? const Icon(Icons.check_circle_rounded, color: Color(0xFFFF5000))
+                      : const Icon(Icons.radio_button_unchecked_rounded, color: AppColors.inkMuted48),
+                  onTap: () {
+                    ref.read(pullSensitivityProvider.notifier).setSensitivity(s);
+                    Navigator.pop(ctx);
+                  },
+                );
+              }),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showShippingAddressModal(BuildContext context, dynamic user) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final nameCtrl = TextEditingController(text: user?.shippingRecipientName ?? user?.displayName ?? '');
+    final phoneCtrl = TextEditingController(text: user?.shippingPhone ?? user?.phoneNumber ?? '');
+    final addrCtrl = TextEditingController(text: user?.shippingAddress ?? '');
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+        child: Container(
+          decoration: ShapeDecoration(
+            color: isDark ? AppColors.surfaceTile1 : Colors.white,
+            shape: const SmoothRectangleBorder(
+              borderRadius: SmoothBorderRadius.vertical(
+                top: SmoothRadius(cornerRadius: 28, cornerSmoothing: 0.8),
               ),
             ),
           ),
@@ -543,35 +1202,73 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   ),
                 ),
               ),
-              const SizedBox(height: 16),
-              const Text(
-                'ปรับความไวดึงลงสร้างบิล',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              const SizedBox(height: 18),
+              Text(
+                'ที่อยู่จัดส่งของรางวัล 📦',
+                style: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.bold,
+                  color: isDark ? AppColors.bodyOnDark : AppColors.ink,
+                ),
               ),
               const SizedBox(height: 4),
-              const Text(
-                'เลือกระยะการลากนิ้วจากบนลงล่างที่หน้าหลักเพื่อเข้าสู่หน้าสร้างบิลทันที',
-                style: TextStyle(fontSize: 12, color: AppColors.inkMuted48),
+              Text(
+                'ใช้สำหรับจัดส่งของรางวัลจาก Rewards Store ถึงมือคุณ',
+                style: TextStyle(
+                  fontSize: 12.5,
+                  color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
+                ),
               ),
               const SizedBox(height: 16),
-              ...PullSensitivity.values.map((s) {
-                final isSelected = s == currentSens;
-                return ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(s.label, style: const TextStyle(fontWeight: FontWeight.bold)),
-                  trailing: isSelected
-                      ? const Icon(Icons.check_circle_rounded, color: AppColors.primary)
-                      : const Icon(Icons.radio_button_unchecked_rounded, color: AppColors.inkMuted48),
-                  onTap: () {
-                    ref.read(pullSensitivityProvider.notifier).setSensitivity(s);
+              TextField(
+                controller: nameCtrl,
+                decoration: InputDecoration(
+                  labelText: 'ชื่อ-นามสกุลผู้รับ',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  prefixIcon: const Icon(Icons.person_outline_rounded),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: phoneCtrl,
+                keyboardType: TextInputType.phone,
+                decoration: InputDecoration(
+                  labelText: 'เบอร์โทรศัพท์ติดต่อ',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  prefixIcon: const Icon(Icons.phone_outlined),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: addrCtrl,
+                maxLines: 3,
+                decoration: InputDecoration(
+                  labelText: 'ที่อยู่จัดส่งโดยละเอียด',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  prefixIcon: const Icon(Icons.location_on_outlined),
+                ),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: ElevatedButton(
+                  onPressed: () {
                     Navigator.pop(ctx);
+                    AppToast.success(context, 'บันทึกที่อยู่จัดส่งเรียบร้อยแล้ว');
                   },
-                );
-              }),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFFF5000),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  ),
+                  child: const Text('บันทึกข้อมูล', style: TextStyle(fontWeight: FontWeight.bold)),
+                ),
+              ),
             ],
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 
@@ -715,7 +1412,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   ),
                   child: Column(
                     children: [
-                      const Icon(Icons.qr_code_scanner_rounded, size: 48, color: AppColors.primary),
+                      const Icon(Icons.qr_code_scanner_rounded, size: 48, color: Color(0xFFFF5000)),
                       const SizedBox(height: 12),
                       const Text(
                         'ยังไม่ได้ตั้งค่าเบอร์พร้อมเพย์',
@@ -748,8 +1445,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         icon: const Icon(Icons.edit_outlined, size: 18),
                         label: const Text('แก้ไขข้อมูล'),
                         style: OutlinedButton.styleFrom(
-                          foregroundColor: AppColors.primary,
-                          side: const BorderSide(color: AppColors.primary),
+                          foregroundColor: const Color(0xFFFF5000),
+                          side: const BorderSide(color: Color(0xFFFF5000)),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                           padding: const EdgeInsets.symmetric(vertical: 12),
                         ),
@@ -760,7 +1457,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       child: ElevatedButton(
                         onPressed: () => Navigator.pop(ctx),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
+                          backgroundColor: const Color(0xFFFF5000),
                           foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                           padding: const EdgeInsets.symmetric(vertical: 12),
@@ -781,7 +1478,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     icon: const Icon(Icons.add_card_rounded, size: 20),
                     label: const Text('ตั้งค่าพร้อมเพย์ตอนนี้', style: TextStyle(fontWeight: FontWeight.bold)),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
+                      backgroundColor: const Color(0xFFFF5000),
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                       padding: const EdgeInsets.symmetric(vertical: 12),
