@@ -6,7 +6,7 @@ enum Environment { dev, staging, prod }
 class AppConfig {
   AppConfig._();
 
-  static Environment currentEnvironment = Environment.dev;
+  static Environment currentEnvironment = Environment.prod;
 
   // Resolves suitable localhost/LAN base URL according to the current platform
   static String get baseUrl {
