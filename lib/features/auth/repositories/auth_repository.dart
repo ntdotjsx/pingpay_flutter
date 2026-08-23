@@ -99,10 +99,12 @@ class AuthRepository {
     );
   }
 
-  Future<Map<String, dynamic>> testLineNotification() async {
-    final response = await _client.post('/api/v1/profile/test-line-notification');
+  Future<Map<String, dynamic>> testFcmNotification() async {
+    final response = await _client.post('/api/v1/profile/test-fcm-notification');
     return response.data as Map<String, dynamic>;
   }
+
+  Future<Map<String, dynamic>> testLineNotification() => testFcmNotification();
 
   Future<void> logout() async {
     try {

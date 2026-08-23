@@ -5,8 +5,8 @@ import {
   authIdentities,
 } from "../../db/schema";
 import { eq, and, lte, sql, or, lt } from "drizzle-orm";
+import { NotificationProvider } from "./notification-provider.interface";
 import { defaultFcmNotificationProvider } from "./fcm-notification.provider";
-import { defaultLineNotificationProvider } from "./line-notification.provider";
 import { NotificationTemplateService } from "./notification-template.service";
 
 export interface WorkerProcessResult {

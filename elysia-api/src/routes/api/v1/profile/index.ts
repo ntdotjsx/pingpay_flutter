@@ -106,7 +106,7 @@ export default new Elysia()
     }),
     detail: { tags: ["Profile & Consent"], summary: "Save user profile" }
   })
-  .post("/test-line-notification", async ({ userId, set }) => {
+  .post("/test-fcm-notification", async ({ userId, set }) => {
     try {
       const user = await db.query.users.findFirst({
         where: eq(users.id, userId)
@@ -117,54 +117,51 @@ export default new Elysia()
         return { success: false, error: "User not found" };
       }
 
-      // Look up linked LINE identity
-      const identity = await db.query.authIdentities.findFirst({
-        where: (ai, { and, eq }) => and(eq(ai.userId, userId), eq(ai.provider, "line"))
-      });
-
-      const targetLineId = identity?.providerUserId;
-
-      if (!targetLineId) {
-        set.status = 400;
-        return {
-          success: false,
-          error: "NO_LINE_ACCOUNT: บัญชีนี้ยังไม่ได้ผูกกับ LINE ID หรือไม่ได้เข้าสู่ระบบผ่าน LINE",
-        };
-      }
-
-      const { defaultLineNotificationProvider } = await import("../../../../modules/notifications/line-notification.provider");
+      const { defaultFcmNotificationProvider } = await import("../../../../modules/notifications/fcm-notification.provider");
       
-      const sendResult = await defaultLineNotificationProvider.send(
+      const sendResult = await defaultFcmNotificationProvider.send(
         userId,
-        targetLineId,
+        null,
         {
           title: "🔔 PingPay ข้อความทดสอบ",
-          body: `สวัสดีคุณ ${user.displayName || user.fullName || "ผู้ใช้งาน"}!\n\n🎉 การเชื่อมต่อ LINE Messaging API กับ PingPay สำเร็จเรียบร้อยแล้ว!\nระบบพร้อมส่งการแจ้งเตือนบิลและการชำระเงินให้คุณแบบ Real-time ✨`,
+          body: `สวัสดีคุณ ${user.displayName || user.fullName || "ผู้ใช้งาน"}!\n\n🎉 การเชื่อมต่อ Firebase Cloud Messaging กับ PingPay สำเร็จเรียบร้อยแล้ว!\nระบบพร้อมส่งการแจ้งเตือนบิลและการชำระเงินให้คุณแบบ Real-time ✨`,
           data: { test: true }
         }
       );
 
       if (!sendResult.success) {
         set.status = 400;
-        let userFriendlyError = sendResult.error || "LINE_SEND_FAILED";
-        if (userFriendlyError.includes("Failed to send messages")) {
-          userFriendlyError = "กรุณาเพิ่มเพื่อน LINE Bot (@986qgvvz - น้องปิง) ก่อนทดสอบส่งข้อความ (LINE ไม่อนุญาตให้ Bot ส่งข้อความถึงผู้ใช้ที่ยังไม่ได้เพิ่มเพื่อน)";
-        }
         return {
           success: false,
-          error: userFriendlyError,
+          error: sendResult.error || sendResult.skippedReason || "FCM_SEND_FAILED: ยังไม่พบ Device Token ที่ลงทะเบียนไว้",
         };
       }
 
       return {
         success: true,
-        message: `ส่งข้อความแจ้งเตือนเข้า LINE (${targetLineId}) สำเร็จแล้ว!`,
-        lineUserId: targetLineId,
+        message: "ส่งข้อความแจ้งเตือนเข้า Firebase Cloud Messaging (FCM) สำเร็จแล้ว!",
       };
     } catch (e: any) {
       set.status = 500;
       return { success: false, error: e.message };
     }
   }, {
-    detail: { tags: ["Profile & Consent"], summary: "Send Test LINE Push Notification" }
+    detail: { tags: ["Profile & Consent"], summary: "Send Test FCM Push Notification" }
+  })
+  .post("/test-line-notification", async ({ userId, set }) => {
+    // Backward compatibility alias routing to FCM
+    const { defaultFcmNotificationProvider } = await import("../../../../modules/notifications/fcm-notification.provider");
+    const sendResult = await defaultFcmNotificationProvider.send(
+      userId,
+      null,
+      {
+        title: "🔔 PingPay ข้อความทดสอบ",
+        body: "ทดสอบการส่งการแจ้งเตือนผ่าน Firebase Cloud Messaging สำเร็จเรียบร้อยแล้ว!",
+        data: { test: true }
+      }
+    );
+    return {
+      success: sendResult.success,
+      message: sendResult.success ? "ส่งการแจ้งเตือน FCM สำเร็จแล้ว!" : (sendResult.skippedReason || "ส่งการแจ้งเตือนไม่สำเร็จ"),
+    };
   });

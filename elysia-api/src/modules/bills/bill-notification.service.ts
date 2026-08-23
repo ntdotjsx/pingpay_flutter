@@ -14,7 +14,7 @@ export interface NotificationService {
   notify(message: NotificationMessage): Promise<boolean>;
 }
 
-export class FakeLineNotificationService implements NotificationService {
+export class FakeFcmNotificationService implements NotificationService {
   private sentNotifications: NotificationMessage[] = [];
   private shouldFail = false;
 
@@ -24,11 +24,11 @@ export class FakeLineNotificationService implements NotificationService {
 
   async notify(message: NotificationMessage): Promise<boolean> {
     if (this.shouldFail) {
-      console.warn(`[FakeLineNotificationService] Simulated LINE API delivery failure for user: ${message.userId}`);
+      console.warn(`[FakeFcmNotificationService] Simulated FCM API delivery failure for user: ${message.userId}`);
       return false;
     }
     this.sentNotifications.push(message);
-    console.log(`[FakeLineNotificationService] Sent LINE notification to ${message.userId}:
+    console.log(`[FakeFcmNotificationService] Sent FCM notification to ${message.userId}:
 📋 Bill ${message.type === "write_off" ? "Debt write-off" : "updated"}
 ${message.billTitle}
 Amount: ${message.oldAmount} THB -> ${message.newAmount} THB
@@ -47,4 +47,4 @@ Time: ${message.timestamp.toISOString()}`);
   }
 }
 
-export const defaultNotificationService = new FakeLineNotificationService();
+export const defaultNotificationService = new FakeFcmNotificationService();

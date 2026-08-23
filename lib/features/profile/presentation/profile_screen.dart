@@ -299,12 +299,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 _buildTileDivider(isDark),
                 _buildSettingsTile(
                   icon: Icons.mark_chat_unread_rounded,
-                  iconColor: const Color(0xFF00B900),
-                  title: 'ทดสอบส่งข้อความ LINE (Push Message)',
-                  subtitle: 'ส่งข้อความทดสอบความปลอดภัยเข้า LINE ส่วนตัว',
+                  iconColor: const Color(0xFFFF9500),
+                  title: 'ทดสอบการแจ้งเตือน (Push Notification)',
+                  subtitle: 'ส่งข้อความทดสอบความปลอดภัยผ่าน Firebase (FCM)',
                   isDark: isDark,
-                  onTap: () => _testSendLineMessage(context),
-                  trailing: const Icon(Icons.send_rounded, color: Color(0xFF00B900), size: 18),
+                  onTap: () => _testSendFcmMessage(context),
+                  trailing: const Icon(Icons.send_rounded, color: Color(0xFFFF9500), size: 18),
                 ),
                 _buildTileDivider(isDark),
                 _buildSettingsTile(
@@ -838,14 +838,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     }
   }
 
-  Future<void> _testSendLineMessage(BuildContext context) async {
+  Future<void> _testSendFcmMessage(BuildContext context) async {
     try {
-      AppToast.info(context, 'กำลังส่งข้อความทดสอบเข้า LINE...');
+      AppToast.info(context, 'กำลังส่งข้อความทดสอบผ่าน Firebase (FCM)...');
       final repo = ref.read(authRepositoryProvider);
-      final res = await repo.testLineNotification();
+      final res = await repo.testFcmNotification();
       if (context.mounted) {
         if (res['success'] == true) {
-          AppToast.success(context, res['message'] ?? 'ส่งข้อความเข้า LINE สำเร็จแล้ว!');
+          AppToast.success(context, res['message'] ?? 'ส่งข้อความแจ้งเตือนสำเร็จแล้ว!');
         } else {
           AppToast.error(context, res['error'] ?? 'ไม่สามารถส่งข้อความได้');
         }

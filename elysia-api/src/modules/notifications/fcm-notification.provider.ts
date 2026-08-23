@@ -86,13 +86,16 @@ export class FcmNotificationProvider implements NotificationProvider {
     if (recipientProviderId && !recipientProviderId.startsWith("USR-")) {
       tokens = [recipientProviderId];
     } else {
-      try {
-        const userTokens = await db.query.deviceTokens.findMany({
-          where: eq(deviceTokens.userId, recipientUserId),
-        });
-        tokens = userTokens.map((t) => t.token);
-      } catch (err) {
-        console.warn("[WARN] Failed to query device tokens from DB:", err);
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(recipientUserId);
+      if (isUuid) {
+        try {
+          const userTokens = await db.query.deviceTokens.findMany({
+            where: eq(deviceTokens.userId, recipientUserId),
+          });
+          tokens = userTokens.map((t) => t.token);
+        } catch (err) {
+          console.warn("[WARN] Failed to query device tokens from DB:", err);
+        }
       }
     }
 

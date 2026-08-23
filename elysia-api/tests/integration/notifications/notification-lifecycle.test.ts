@@ -1,7 +1,7 @@
 import { describe, test, expect, beforeEach } from "bun:test";
 import { NotificationOutboxService } from "../../../src/modules/notifications/notification-outbox.service";
 import { NotificationWorkerService } from "../../../src/modules/notifications/notification-worker.service";
-import { LineNotificationProvider } from "../../../src/modules/notifications/line-notification.provider";
+import { FcmNotificationProvider } from "../../../src/modules/notifications/fcm-notification.provider";
 import { DebtReminderSchedulerService } from "../../../src/modules/notifications/debt-reminder-scheduler.service";
 
 // In-Memory Database Simulator for Notification Testing
@@ -9,6 +9,7 @@ function createFakeNotificationDb() {
   const store = {
     users: new Map<string, any>(),
     authIdentities: new Map<string, any>(),
+    deviceTokens: new Map<string, any>(),
     bills: new Map<string, any>(),
     billItems: new Map<string, any>(),
     notificationOutbox: new Map<string, any>(),
@@ -26,6 +27,11 @@ function createFakeNotificationDb() {
       authIdentities: {
         findFirst: async ({ where }: any) => {
           return Array.from(store.authIdentities.values())[0] || null;
+        },
+      },
+      deviceTokens: {
+        findMany: async ({ where }: any) => {
+          return Array.from(store.deviceTokens.values());
         },
       },
       billItems: {
@@ -120,25 +126,25 @@ function createFakeNotificationDb() {
 describe("Integration: Notification Outbox, Worker & Delivery Lifecycle", () => {
   let fakeDb: any;
   let outboxService: NotificationOutboxService;
-  let lineProvider: LineNotificationProvider;
+  let fcmProvider: FcmNotificationProvider;
   let worker: NotificationWorkerService;
 
   beforeEach(() => {
     fakeDb = createFakeNotificationDb();
     outboxService = new NotificationOutboxService(fakeDb);
-    lineProvider = new LineNotificationProvider();
-    worker = new NotificationWorkerService(lineProvider, fakeDb);
+    fcmProvider = new FcmNotificationProvider(true);
+    worker = new NotificationWorkerService(fcmProvider, fakeDb);
 
-    // Setup initial user & LINE identity
+    // Setup initial user & device token
     fakeDb._store.users.set("user-1", {
       id: "user-1",
       displayName: "Nut Thanapon",
     });
-    fakeDb._store.authIdentities.set("auth-1", {
-      id: "auth-1",
+    fakeDb._store.deviceTokens.set("token-1", {
+      id: "token-1",
       userId: "user-1",
-      provider: "line",
-      providerUserId: "line-user-12345",
+      token: "fcm_test_token_123",
+      platform: "android",
     });
   });
 
@@ -173,16 +179,16 @@ describe("Integration: Notification Outbox, Worker & Delivery Lifecycle", () => 
     expect(jobInDb.status).toBe("SENT");
     expect(jobInDb.attempts).toBe(1);
 
-    // 4. Verify LINE provider received message
-    const sentMessages = lineProvider.getSentMessages();
+    // 4. Verify FCM provider received message
+    const sentMessages = fcmProvider.getSentMessages();
     expect(sentMessages.length).toBe(1);
-    expect(sentMessages[0].recipientId).toBe("line-user-12345");
-    expect(sentMessages[0].text).toContain("KBBQ Dinner");
+    expect(sentMessages[0].recipientId).toBe("user-1");
+    expect(sentMessages[0].body).toContain("KBBQ Dinner");
   });
 
-  test("5.30 Retry Strategy: LINE API failure triggers retry backoff, then succeeds on retry", async () => {
-    // Simulate LINE API failure for 1 attempt
-    lineProvider.setSimulateFailure(true, 1);
+  test("5.30 Retry Strategy: FCM API failure triggers retry backoff, then succeeds on retry", async () => {
+    // Simulate FCM API failure for 1 attempt
+    fcmProvider.setSimulateFailure(true, 1);
 
     const created = await outboxService.enqueue({
       eventType: "PAYMENT_CONFIRMED",
@@ -211,7 +217,7 @@ describe("Integration: Notification Outbox, Worker & Delivery Lifecycle", () => 
     let jobInDb = fakeDb._store.notificationOutbox.get(created.id);
     expect(jobInDb.status).toBe("PENDING"); // Pending next retry
     expect(jobInDb.attempts).toBe(1);
-    expect(jobInDb.lastError).toContain("LINE_API_ERROR");
+    expect(jobInDb.lastError).toContain("FCM_API_ERROR");
 
     // 2. Worker attempt 2 -> Succeeds
     const res2 = await worker.processBatch();
@@ -224,7 +230,7 @@ describe("Integration: Notification Outbox, Worker & Delivery Lifecycle", () => 
 
   test("5.56 Maximum Retries: permanently fails after maxAttempts is reached", async () => {
     // Simulate continuous failure
-    lineProvider.setSimulateFailure(true, 10);
+    fcmProvider.setSimulateFailure(true, 10);
 
     const created = await outboxService.enqueue({
       eventType: "PAYMENT_REJECTED",
@@ -255,14 +261,15 @@ describe("Integration: Notification Outbox, Worker & Delivery Lifecycle", () => 
     expect(jobInDb.failedAt).toBeDefined();
   });
 
-  test("5.8 User Without LINE Identity: gracefully marked as SKIPPED without throwing error", async () => {
-    // Clear LINE identity for user
-    fakeDb._store.authIdentities.clear();
+  test("5.8 User Without Device Token: gracefully marked as SKIPPED without throwing error", async () => {
+    // Clear device tokens for user
+    fakeDb._store.deviceTokens.clear();
+    fcmProvider.setMockMode(false);
 
     const created = await outboxService.enqueue({
       eventType: "BILL_CREATED",
       recipientUserId: "user-1",
-      deduplicationKey: "BILL_CREATED:bill-no-line:user-1",
+      deduplicationKey: "BILL_CREATED:bill-no-token:user-1",
       payload: {
         billId: "bill-2",
         billTitle: "Coffee",
@@ -280,6 +287,6 @@ describe("Integration: Notification Outbox, Worker & Delivery Lifecycle", () => 
 
     const jobInDb = fakeDb._store.notificationOutbox.get(created.id);
     expect(jobInDb.status).toBe("SKIPPED");
-    expect(jobInDb.lastError).toContain("NO_LINE_ID");
+    expect(jobInDb.lastError).toContain("NO_FCM_TOKEN");
   });
 });
