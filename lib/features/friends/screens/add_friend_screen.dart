@@ -86,6 +86,82 @@ class _AddFriendScreenState extends ConsumerState<AddFriendScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              // QR Code Scan Hero Card
+              InkWell(
+                onTap: () => context.push('/friends/scan'),
+                borderRadius: BorderRadius.circular(20),
+                child: Container(
+                  padding: const EdgeInsets.all(18),
+                  decoration: ShapeDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFFFF6A00), Color(0xFFFF4500)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    shape: const SmoothRectangleBorder(
+                      borderRadius: SmoothBorderRadius.all(
+                        SmoothRadius(cornerRadius: 20, cornerSmoothing: 0.8),
+                      ),
+                    ),
+                    shadows: [
+                      BoxShadow(
+                        color: const Color(0xFFFF5000).withValues(alpha: 0.3),
+                        blurRadius: 16,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 52,
+                        height: 52,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.2),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.qr_code_scanner_rounded,
+                          color: Colors.white,
+                          size: 28,
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      const Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'สแกน QR Code เพิ่มเพื่อน',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            SizedBox(height: 2),
+                            Text(
+                              'สแกนจากกล้องหรือเลือกรูปจากคลังภาพได้ทันที',
+                              style: TextStyle(
+                                color: Colors.white70,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Icon(
+                        Icons.arrow_forward_ios_rounded,
+                        color: Colors.white,
+                        size: 16,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 20),
+
               // Search Input Box
               Container(
                 padding: const EdgeInsets.all(18),

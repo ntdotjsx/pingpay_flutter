@@ -218,6 +218,12 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
         actions: [
           if (currentUser?.userCode != null)
             IconButton(
+              icon: const Icon(Icons.qr_code_scanner_rounded, size: 22, color: Color(0xFFFF5000)),
+              tooltip: 'สแกน QR เพิ่มเพื่อน',
+              onPressed: () => context.push('/friends/scan'),
+            ),
+          if (currentUser?.userCode != null)
+            IconButton(
               icon: const Icon(Icons.qr_code_rounded, size: 22),
               tooltip: 'QR Code ของฉัน',
               onPressed: () => _showMyQrCodeModal(
@@ -227,8 +233,8 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
               ),
             ),
           IconButton(
-            icon: const Icon(Icons.person_add_alt_1_rounded, size: 22, color: Color(0xFFFF5000)),
-            tooltip: 'เพิ่มเพื่อน',
+            icon: const Icon(Icons.person_add_alt_1_rounded, size: 22),
+            tooltip: 'เพิ่มเพื่อนด้วยรหัส',
             onPressed: () => context.push('/friends/add'),
           ),
           const SizedBox(width: 6),
@@ -298,6 +304,34 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
                         ],
                       ),
                     ),
+                    // Scan QR Button
+                    InkWell(
+                      onTap: () => context.push('/friends/scan'),
+                      borderRadius: BorderRadius.circular(10),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFF5000).withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.qr_code_scanner_rounded, size: 14, color: Color(0xFFFF5000)),
+                            SizedBox(width: 4),
+                            Text(
+                              'สแกน',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFFFF5000),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
                     // Quick Copy Button
                     InkWell(
                       onTap: () {
@@ -309,20 +343,20 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFFF5000).withValues(alpha: 0.1),
+                          color: isDark ? AppColors.surfaceTile2 : const Color(0xFFF0F2F5),
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        child: const Row(
+                        child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.copy_rounded, size: 14, color: Color(0xFFFF5000)),
-                            SizedBox(width: 4),
+                            Icon(Icons.copy_rounded, size: 14, color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48),
+                            const SizedBox(width: 4),
                             Text(
                               'คัดลอก',
                               style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold,
-                                color: Color(0xFFFF5000),
+                                color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
                               ),
                             ),
                           ],

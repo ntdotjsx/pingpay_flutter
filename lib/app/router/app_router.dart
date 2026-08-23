@@ -17,6 +17,7 @@ import '../../features/bills/presentation/my_bills_screen.dart';
 import '../../features/friends/screens/friends_screen.dart';
 import '../../features/friends/screens/add_friend_screen.dart';
 import '../../features/friends/screens/friend_detail_screen.dart';
+import '../../features/friends/screens/qr_scan_friend_screen.dart';
 import '../../features/payments/presentation/payments_screen.dart';
 import '../../features/profile/presentation/profile_screen.dart';
 import '../../features/rewards/presentation/rewards_store_screen.dart';
@@ -128,6 +129,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/friends/add',
         builder: (context, state) => const AddFriendScreen(),
+      ),
+      GoRoute(
+        path: '/friends/scan',
+        builder: (context, state) => const QrScanFriendScreen(),
       ),
       GoRoute(
         path: '/friends/:id',
