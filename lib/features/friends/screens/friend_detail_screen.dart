@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/theme.dart';
+import '../../../../core/widgets/pingpay_loading.dart';
 import '../../../../core/utils/app_toast.dart';
 import '../models/friend_models.dart';
 import '../providers/friends_provider.dart';
@@ -34,7 +35,7 @@ class FriendDetailScreen extends ConsumerWidget {
         ),
       ),
       body: friendAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const PingPayLoadingWidget(size: 120),
         error: (err, _) => Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -152,11 +153,9 @@ class FriendDetailScreen extends ConsumerWidget {
 
                 // Outstanding Debt Status Card
                 removalCheckAsync.when(
-                  loading: () => const Center(
-                    child: Padding(
-                      padding: EdgeInsets.all(16),
-                      child: CircularProgressIndicator(),
-                    ),
+                  loading: () => const Padding(
+                    padding: EdgeInsets.all(16),
+                    child: PingPayLoadingWidget(size: 80),
                   ),
                   error: (_, __) => const SizedBox.shrink(),
                   data: (check) {

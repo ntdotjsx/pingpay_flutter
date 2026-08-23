@@ -8,6 +8,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:thai_promptpay/thai_promptpay.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/pingpay_loading.dart';
 import '../../../../core/utils/app_toast.dart';
 import '../../models/payment_models.dart';
 import '../../providers/payment_providers.dart';
@@ -865,7 +866,7 @@ class _PaymentDetailBottomSheetState
                   }).toList(),
                 );
               },
-              loading: () => const Center(child: CircularProgressIndicator()),
+              loading: () => const PingPayLoadingWidget(size: 80),
               error: (_, __) => const SizedBox.shrink(),
             ),
           ],

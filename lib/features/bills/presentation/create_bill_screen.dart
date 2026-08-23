@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../core/theme/theme.dart';
+import '../../../core/widgets/pingpay_loading.dart';
 import '../../../core/utils/app_toast.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../friends/models/friend_models.dart';
@@ -159,18 +160,18 @@ class _CreateBillScreenState extends ConsumerState<CreateBillScreen>
       barrierDismissible: false,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        content: const Padding(
-          padding: EdgeInsets.symmetric(vertical: 20),
+        content: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 20),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              CircularProgressIndicator(color: AppColors.primary),
-              SizedBox(height: 20),
-              Text(
+              const PingPayLoadingWidget(size: 100),
+              const SizedBox(height: 20),
+              const Text(
                 'กำลังประมวลผล OCR ใบเสร็จ...',
                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
               ),
-              SizedBox(height: 6),
+              const SizedBox(height: 6),
               Text(
                 'ระบบกำลังวิเคราะห์ร้านค้า รายการ และยอดรวม',
                 style: TextStyle(fontSize: 12, color: AppColors.inkMuted48),
@@ -469,9 +470,7 @@ class _CreateBillScreenState extends ConsumerState<CreateBillScreen>
           orElse: () => isDark ? AppColors.surfaceBlack : AppColors.canvas,
         ),
         body: friendsAsync.when(
-          loading: () => const Center(
-            child: CircularProgressIndicator(color: AppColors.primary),
-          ),
+          loading: () => const PingPayLoadingWidget(size: 120),
           error: (err, _) => Center(
             child: Text(
               'เกิดข้อผิดพลาด: $err',
@@ -1444,7 +1443,7 @@ class _CreateBillScreenState extends ConsumerState<CreateBillScreen>
       onRefresh: () => notifier.loadDebts(showLoading: false),
       color: AppColors.primary,
       child: debtsState.isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const PingPayLoadingWidget(size: 120)
           : debtsState.errorMessage != null
           ? Center(
               child: Column(

@@ -25,7 +25,7 @@ class PingPayLoadingWidget extends StatelessWidget {
             width: size,
             height: size,
             child: Lottie.asset(
-              'assets/Olympics_ Table tennis.json',
+              'assets/Olympics_Table.json',
               fit: BoxFit.contain,
               errorBuilder: (_, __, ___) => const Center(
                 child: CircularProgressIndicator(

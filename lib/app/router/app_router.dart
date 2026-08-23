@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../../core/widgets/pingpay_loading.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../features/auth/models/auth_models.dart';
@@ -35,7 +36,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/splash',
         builder: (context, state) =>
-            const Scaffold(body: Center(child: CircularProgressIndicator())),
+            const Scaffold(body: PingPayLoadingWidget()),
       ),
       GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
       GoRoute(path: '/pdpa', builder: (context, state) => const PdpaScreen()),

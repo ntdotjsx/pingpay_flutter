@@ -2,6 +2,7 @@ import 'package:figma_squircle/figma_squircle.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/theme.dart';
+import '../../../core/widgets/pingpay_loading.dart';
 import '../../friends/providers/friends_provider.dart';
 import '../providers/bill_provider.dart';
 
@@ -16,7 +17,7 @@ class FriendParticipantSelector extends ConsumerWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return friendsAsync.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
+      loading: () => const PingPayLoadingWidget(size: 120),
       error: (err, _) =>
           Center(child: Text('โหลดรายชื่อเพื่อนไม่สำเร็จ: $err')),
       data: (friends) {
