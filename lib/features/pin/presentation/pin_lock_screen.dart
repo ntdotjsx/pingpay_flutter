@@ -2,6 +2,7 @@ import 'package:figma_squircle/figma_squircle.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../auth/providers/auth_provider.dart';
 import 'widgets/custom_pin_keypad.dart';
@@ -100,7 +101,10 @@ class _PinLockScreenState extends ConsumerState<PinLockScreen>
 
     try {
       final success = await ref.read(authStateProvider.notifier).verifyPin(pin);
-      if (!success && mounted) {
+      if (success && mounted) {
+        HapticFeedback.lightImpact();
+        context.go('/home');
+      } else if (!success && mounted) {
         await _triggerShakeAndReset('รหัส PIN ไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง');
       }
     } catch (e) {

@@ -90,7 +90,8 @@ export default new Elysia()
       };
     }
 
-    const isValid = await argon2.verify(creds.pinHash, pin);
+    const cleanPin = body.pin.trim();
+    const isValid = await argon2.verify(creds.pinHash, cleanPin);
 
     if (!isValid) {
       const newAttempts = creds.failedAttempts + 1;
@@ -134,8 +135,8 @@ export default new Elysia()
       };
     }
 
-    // Reset failed attempts on success
-    if (creds.failedAttempts > 0) {
+    // Reset failed attempts & unlock on success
+    if (creds.failedAttempts > 0 || creds.lockedUntil !== null) {
       await db.update(userCredentials)
         .set({
           failedAttempts: 0,
@@ -145,7 +146,7 @@ export default new Elysia()
         .where(eq(userCredentials.userId, userId));
     }
 
-    return { success: true };
+    return { success: true, message: "ยืนยันรหัส PIN ถูกต้อง" };
   }, {
     body: t.Object({
       pin: t.String({ minLength: 6, maxLength: 6, pattern: "^[0-9]+$" })
@@ -350,25 +351,32 @@ export default new Elysia()
         return { error: "INVALID_RESET_TOKEN", message: "ลิงก์หรือโทเค็นสำหรับรีเซ็ต PIN ไม่ถูกต้องหรือหมดอายุ" };
       }
 
-      const pinHash = await argon2.hash(newPin);
+      const cleanPin = newPin.trim();
+      const pinHash = await argon2.hash(cleanPin);
 
-      // Update PIN hash & unlock account
-      await db.insert(userCredentials)
-        .values({
+      // Update PIN hash & unlock account unconditionally
+      const existing = await db.query.userCredentials.findFirst({
+        where: eq(userCredentials.userId, decoded.userId)
+      });
+
+      if (existing) {
+        await db.update(userCredentials)
+          .set({
+            pinHash,
+            failedAttempts: 0,
+            lockedUntil: null,
+            updatedAt: new Date()
+          })
+          .where(eq(userCredentials.userId, decoded.userId));
+      } else {
+        await db.insert(userCredentials).values({
           userId: decoded.userId,
           pinHash,
           failedAttempts: 0,
           lockedUntil: null,
-        })
-        .onConflictDoUpdate({
-          target: userCredentials.userId,
-          set: {
-            pinHash,
-            failedAttempts: 0,
-            lockedUntil: null,
-            updatedAt: new Date(),
-          }
+          updatedAt: new Date()
         });
+      }
 
       // Log security event
       await db.insert(securityEvents).values({
