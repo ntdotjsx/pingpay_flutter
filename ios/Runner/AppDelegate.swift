@@ -15,10 +15,7 @@ import UserNotifications
       FirebaseApp.configure()
     }
 
-    // 2. Register Flutter Plugins
-    GeneratedPluginRegistrant.register(with: self)
-
-    // 3. Configure UNUserNotificationCenter delegate and request permission
+    // 2. Configure UNUserNotificationCenter delegate and request permission
     if #available(iOS 10.0, *) {
       UNUserNotificationCenter.current().delegate = self
       let authOptions: UNAuthorizationOptions = [.alert, .badge, .sound]
@@ -34,10 +31,10 @@ import UserNotifications
       )
     }
 
-    // 4. Register for remote notifications on APNs
+    // 3. Register for remote notifications on APNs
     application.registerForRemoteNotifications()
 
-    // 5. Configure Messaging Delegate
+    // 4. Configure Messaging Delegate
     Messaging.messaging().delegate = self
 
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
