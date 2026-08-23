@@ -13,6 +13,9 @@
       | 'disputes'
       | 'audit'
       | 'maintenance'
+      | 'rewards'
+      | 'notifications'
+      | 'security'
       | 'card'
       | 'logout'
       | 'zap'
@@ -20,7 +23,9 @@
       | 'trash'
       | 'info'
       | 'check'
-      | 'close';
+      | 'close'
+      | 'plus'
+      | 'edit';
     class?: string;
     strokeWidth?: number;
   } = $props();
@@ -96,5 +101,22 @@
   {:else if name === 'close'}
     <line x1="18" x2="6" y1="6" y2="18" />
     <line x1="6" x2="18" y1="6" y2="18" />
+  {:else if name === 'rewards'}
+    <rect x="3" y="8" width="18" height="14" rx="2" />
+    <path d="M12 8v14" />
+    <path d="M19 12H5" />
+    <path d="M7.5 8a2.5 2.5 0 0 1 0-5A4.8 8 0 0 1 12 8a4.8 8 0 0 1 4.5-5 2.5 2.5 0 0 1 0 5" />
+  {:else if name === 'notifications'}
+    <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
+    <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+  {:else if name === 'security'}
+    <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
+    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+  {:else if name === 'plus'}
+    <path d="M5 12h14" />
+    <path d="M12 5v14" />
+  {:else if name === 'edit'}
+    <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+    <path d="m15 5 4 4" />
   {/if}
 </svg>

@@ -4,6 +4,8 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:device_info_plus/device_info_plus.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import '../network/dio_client.dart';
 import '../utils/app_toast.dart';
 import '../../features/auth/providers/auth_provider.dart';
@@ -162,16 +164,58 @@ class NotificationService {
     }
   }
 
+  static Future<Map<String, String>> getDeviceMetadata() async {
+    String deviceName = 'Unknown Device';
+    String deviceModel = 'Unknown Model';
+    String deviceBrand = 'Unknown Brand';
+    String osVersion = 'Unknown OS';
+    String appVersion = '1.0.0';
+
+    try {
+      final deviceInfo = DeviceInfoPlugin();
+      if (Platform.isAndroid) {
+        final androidInfo = await deviceInfo.androidInfo;
+        deviceBrand = androidInfo.brand.isNotEmpty ? androidInfo.brand : (androidInfo.manufacturer ?? 'Android');
+        deviceModel = androidInfo.model.isNotEmpty ? androidInfo.model : 'Android Device';
+        deviceName = '${androidInfo.manufacturer} ${androidInfo.model}'.trim();
+        osVersion = 'Android ${androidInfo.version.release} (SDK ${androidInfo.version.sdkInt})';
+      } else if (Platform.isIOS) {
+        final iosInfo = await deviceInfo.iosInfo;
+        deviceBrand = 'Apple';
+        deviceModel = iosInfo.utsname.machine.isNotEmpty ? iosInfo.utsname.machine : iosInfo.model;
+        deviceName = iosInfo.name.isNotEmpty ? iosInfo.name : 'iPhone';
+        osVersion = 'iOS ${iosInfo.systemVersion}';
+      }
+    } catch (e) {
+      debugPrint('Error getting device info: $e');
+    }
+
+    try {
+      final packageInfo = await PackageInfo.fromPlatform();
+      appVersion = '${packageInfo.version}+${packageInfo.buildNumber}';
+    } catch (_) {}
+
+    return {
+      'deviceName': deviceName,
+      'deviceModel': deviceModel,
+      'deviceBrand': deviceBrand,
+      'osVersion': osVersion,
+      'appVersion': appVersion,
+    };
+  }
+
   Future<void> registerTokenWithBackend(String token) async {
     try {
+      final metadata = await getDeviceMetadata();
       await _client.post(
         '/api/v1/notifications/device-token',
         data: {
           'token': token,
           'platform': Platform.isIOS ? 'ios' : 'android',
+          ...metadata,
         },
       );
-      debugPrint('Successfully registered FCM token with backend.');
+      debugPrint('Successfully registered FCM token with backend (${metadata['deviceName']}).');
     } catch (e) {
       debugPrint('Failed to register FCM token with backend: $e');
     }

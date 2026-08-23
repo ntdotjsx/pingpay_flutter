@@ -27,7 +27,6 @@ export const adminRoutes = new Elysia()
       adminUser.id,
       {
         userId: query.userId,
-        groupId: query.groupId,
         type: query.type,
         dateFrom: query.dateFrom,
         dateTo: query.dateTo,
@@ -40,7 +39,6 @@ export const adminRoutes = new Elysia()
     query: t.Object({
       ...PaginationQuery,
       userId: t.Optional(t.String()),
-      groupId: t.Optional(t.String()),
       type: t.Optional(t.String()),
       dateFrom: t.Optional(t.String()),
       dateTo: t.Optional(t.String()),
@@ -48,7 +46,7 @@ export const adminRoutes = new Elysia()
     detail: {
       tags: ["Admin"],
       summary: "List financial transactions",
-      description: "Filterable by user, group, type, date range. Paginated.",
+      description: "Filterable by user, type, date range. Paginated.",
     },
   })
 
@@ -404,5 +402,191 @@ export const adminRoutes = new Elysia()
     detail: {
       tags: ["Admin"],
       summary: "Clear all admin audit logs",
+    },
+  })
+
+  // ── Rewards Catalog & Redemptions ─────────────────────────────────
+  .get("/rewards/items", async ({ adminUser }) => {
+    const items = await adminService.getRewardItems(adminUser.id);
+    return { success: true, data: { items } };
+  }, {
+    detail: {
+      tags: ["Admin"],
+      summary: "Get all reward items (active and inactive)",
+    },
+  })
+
+  .post("/rewards/items", async ({ adminUser, body, set }) => {
+    try {
+      const item = await adminService.createRewardItem(adminUser.id, body);
+      set.status = 201;
+      return { success: true, data: item };
+    } catch (e: any) {
+      set.status = 400;
+      return { success: false, error: e.message };
+    }
+  }, {
+    body: t.Object({
+      title: t.String({ minLength: 1 }),
+      description: t.Optional(t.String()),
+      pointsCost: t.Number({ minimum: 1 }),
+      category: t.Optional(t.String()),
+      imageUrl: t.Optional(t.String()),
+      inStock: t.Number({ minimum: 0 }),
+      isActive: t.Optional(t.Boolean()),
+    }),
+    detail: {
+      tags: ["Admin"],
+      summary: "Create reward item",
+    },
+  })
+
+  .patch("/rewards/items/:id", async ({ adminUser, params: { id }, body, set }) => {
+    try {
+      const item = await adminService.updateRewardItem(adminUser.id, id, body);
+      return { success: true, data: item };
+    } catch (e: any) {
+      set.status = 400;
+      return { success: false, error: e.message };
+    }
+  }, {
+    params: t.Object({ id: t.String({ format: "uuid" }) }),
+    body: t.Object({
+      title: t.Optional(t.String({ minLength: 1 })),
+      description: t.Optional(t.String()),
+      pointsCost: t.Optional(t.Number({ minimum: 1 })),
+      category: t.Optional(t.String()),
+      imageUrl: t.Optional(t.String()),
+      inStock: t.Optional(t.Number({ minimum: 0 })),
+      isActive: t.Optional(t.Boolean()),
+    }),
+    detail: {
+      tags: ["Admin"],
+      summary: "Update reward item",
+    },
+  })
+
+  .delete("/rewards/items/:id", async ({ adminUser, params: { id }, set }) => {
+    try {
+      await adminService.deleteRewardItem(adminUser.id, id);
+      return { success: true, message: "Reward item deleted" };
+    } catch (e: any) {
+      set.status = 400;
+      return { success: false, error: e.message };
+    }
+  }, {
+    params: t.Object({ id: t.String({ format: "uuid" }) }),
+    detail: {
+      tags: ["Admin"],
+      summary: "Delete reward item",
+    },
+  })
+
+  .get("/rewards/redemptions", async ({ adminUser, query }) => {
+    const result = await adminService.getRewardRedemptions(
+      adminUser.id,
+      query.status,
+      query.page,
+      query.limit
+    );
+    return { success: true, data: result };
+  }, {
+    query: t.Object({
+      ...PaginationQuery,
+      status: t.Optional(t.String()),
+    }),
+    detail: {
+      tags: ["Admin"],
+      summary: "List reward redemptions",
+    },
+  })
+
+  .patch("/rewards/redemptions/:id/status", async ({ adminUser, params: { id }, body, set }) => {
+    try {
+      const result = await adminService.updateRedemptionStatus(
+        adminUser.id,
+        id,
+        body.status,
+        body.trackingNumber
+      );
+      return { success: true, data: result };
+    } catch (e: any) {
+      set.status = 400;
+      return { success: false, error: e.message };
+    }
+  }, {
+    params: t.Object({ id: t.String({ format: "uuid" }) }),
+    body: t.Object({
+      status: t.Union([
+        t.Literal("pending_delivery"),
+        t.Literal("shipped"),
+        t.Literal("delivered"),
+        t.Literal("cancelled"),
+      ]),
+      trackingNumber: t.Optional(t.String()),
+    }),
+    detail: {
+      tags: ["Admin"],
+      summary: "Update reward redemption delivery status",
+    },
+  })
+
+  // ── Notification Outbox ───────────────────────────────────────────
+  .get("/notifications/outbox", async ({ adminUser, query }) => {
+    const result = await adminService.getNotificationOutbox(
+      adminUser.id,
+      query.status,
+      query.eventType,
+      query.page,
+      query.limit
+    );
+    return { success: true, data: result };
+  }, {
+    query: t.Object({
+      ...PaginationQuery,
+      status: t.Optional(t.String()),
+      eventType: t.Optional(t.String()),
+    }),
+    detail: {
+      tags: ["Admin"],
+      summary: "List notification outbox records",
+    },
+  })
+
+  .post("/notifications/outbox/:id/retry", async ({ adminUser, params: { id }, set }) => {
+    try {
+      const result = await adminService.retryNotification(adminUser.id, id);
+      return { success: true, data: result };
+    } catch (e: any) {
+      set.status = 400;
+      return { success: false, error: e.message };
+    }
+  }, {
+    params: t.Object({ id: t.String({ format: "uuid" }) }),
+    detail: {
+      tags: ["Admin"],
+      summary: "Retry failed notification outbox item",
+    },
+  })
+
+  // ── Security Events ───────────────────────────────────────────────
+  .get("/security-events", async ({ adminUser, query }) => {
+    const result = await adminService.getSecurityEvents(
+      adminUser.id,
+      query.userId,
+      query.event,
+      query.page,
+      query.limit
+    );
+    return { success: true, data: result };
+  }, {
+    query: t.Object({
+      ...PaginationQuery,
+      userId: t.Optional(t.String()),
+      event: t.Optional(t.String()),
+    }),
+    detail: {
+      tags: ["Admin"],
+      summary: "List security events (e.g. PIN brute-force, suspicious attempts)",
     },
   });

@@ -24,7 +24,6 @@ export class AdminService {
     adminId: string,
     filters: {
       userId?: string;
-      groupId?: string;
       type?: string;
       dateFrom?: string;
       dateTo?: string;
@@ -35,7 +34,6 @@ export class AdminService {
     const result = await this.repo.getTransactions(
       {
         userId: filters.userId,
-        groupId: filters.groupId,
         type: filters.type,
         dateFrom: filters.dateFrom ? new Date(filters.dateFrom) : undefined,
         dateTo: filters.dateTo ? new Date(filters.dateTo) : undefined,
@@ -335,5 +333,117 @@ export class AdminService {
 
   async clearAllAuditLogs() {
     return this.repo.clearAllAdminActionLogs();
+  }
+
+  // ── Rewards Catalog & Redemptions ─────────────────────────────────
+
+  async getRewardItems(adminId: string) {
+    return this.repo.getRewardItems();
+  }
+
+  async createRewardItem(
+    adminId: string,
+    data: {
+      title: string;
+      description?: string;
+      pointsCost: number;
+      category?: string;
+      imageUrl?: string;
+      inStock: number;
+      isActive?: boolean;
+    }
+  ) {
+    const item = await this.repo.createRewardItem(data);
+    await this.repo.logAdminAction({
+      adminId,
+      actionType: "view_logs",
+      metadata: { action: "create_reward_item", itemId: item.id },
+    });
+    return item;
+  }
+
+  async updateRewardItem(
+    adminId: string,
+    id: string,
+    data: Partial<{
+      title: string;
+      description: string;
+      pointsCost: number;
+      category: string;
+      imageUrl: string;
+      inStock: number;
+      isActive: boolean;
+    }>
+  ) {
+    const item = await this.repo.updateRewardItem(id, data);
+    await this.repo.logAdminAction({
+      adminId,
+      actionType: "view_logs",
+      metadata: { action: "update_reward_item", itemId: id },
+    });
+    return item;
+  }
+
+  async deleteRewardItem(adminId: string, id: string) {
+    const result = await this.repo.deleteRewardItem(id);
+    await this.repo.logAdminAction({
+      adminId,
+      actionType: "view_logs",
+      metadata: { action: "delete_reward_item", itemId: id },
+    });
+    return result;
+  }
+
+  async getRewardRedemptions(adminId: string, status?: string, page = 1, limit = 20) {
+    return this.repo.getRewardRedemptions({ page, limit }, status);
+  }
+
+  async updateRedemptionStatus(
+    adminId: string,
+    id: string,
+    status: "pending_delivery" | "shipped" | "delivered" | "cancelled",
+    trackingNumber?: string
+  ) {
+    const result = await this.repo.updateRedemptionStatus(id, status, trackingNumber);
+    await this.repo.logAdminAction({
+      adminId,
+      actionType: "view_logs",
+      metadata: { action: "update_redemption_status", redemptionId: id, status, trackingNumber },
+    });
+    return result;
+  }
+
+  // ── Notification Outbox ───────────────────────────────────────────
+
+  async getNotificationOutbox(
+    adminId: string,
+    status?: string,
+    eventType?: string,
+    page = 1,
+    limit = 20
+  ) {
+    return this.repo.getNotificationOutbox({ page, limit }, status, eventType);
+  }
+
+  async retryNotification(adminId: string, id: string) {
+    const result = await this.repo.retryNotification(id);
+    await this.repo.logAdminAction({
+      adminId,
+      actionType: "view_logs",
+      metadata: { action: "retry_notification", notificationId: id },
+    });
+    return result;
+  }
+
+  // ── Security Events ───────────────────────────────────────────────
+
+  async getSecurityEvents(
+    adminId: string,
+    userId?: string,
+    event?: string,
+    page = 1,
+    limit = 20
+  ) {
+    return this.repo.getSecurityEvents({ page, limit }, userId, event);
   }
 }

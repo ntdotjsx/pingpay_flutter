@@ -10,9 +10,13 @@ import {
   billItems,
   payments,
   editLogs,
-  groups,
+  rewardItems,
+  rewardRedemptions,
+  notificationOutbox,
+  notificationDeliveries,
+  securityEvents,
 } from "../../db/schema";
-import { eq, and, gte, lte, desc, sql, ilike, or, inArray, asc } from "drizzle-orm";
+import { eq, and, gte, lte, desc, sql, ilike, or, asc } from "drizzle-orm";
 
 export interface PaginationParams {
   page: number;
@@ -21,7 +25,6 @@ export interface PaginationParams {
 
 export interface TransactionFilters {
   userId?: string;
-  groupId?: string;
   type?: string;
   dateFrom?: Date;
   dateTo?: Date;
@@ -61,9 +64,6 @@ export class AdminRepository {
 
     if (filters.userId) {
       conditions.push(eq(financialTransactions.createdById, filters.userId));
-    }
-    if (filters.groupId) {
-      conditions.push(eq(bills.groupId, filters.groupId));
     }
     if (filters.type) {
       conditions.push(eq(financialTransactions.type, filters.type as any));
@@ -105,48 +105,6 @@ export class AdminRepository {
         .select({ count: sql<number>`count(*)::int` })
         .from(financialTransactions)
         .leftJoin(bills, eq(financialTransactions.billId, bills.id))
-        .where(where),
-    ]);
-
-    return { rows, total: countResult[0]?.count ?? 0 };
-  }
-
-  // Filter transactions by groupId (bills that belong to a group)
-  async getTransactionsByGroup(groupId: string, pagination: PaginationParams) {
-    const groupBills = db
-      .select({ id: bills.id })
-      .from(bills)
-      .where(eq(bills.groupId, groupId));
-
-    const where = inArray(financialTransactions.billId, groupBills);
-
-    const [rows, countResult] = await Promise.all([
-      db
-        .select({
-          id: financialTransactions.id,
-          billId: financialTransactions.billId,
-          billItemId: financialTransactions.billItemId,
-          type: financialTransactions.type,
-          amount: financialTransactions.amount,
-          currency: financialTransactions.currency,
-          referenceId: financialTransactions.referenceId,
-          createdById: financialTransactions.createdById,
-          createdAt: financialTransactions.createdAt,
-          metadata: financialTransactions.metadata,
-          creatorName: users.displayName,
-          creatorCode: users.userCode,
-          billTitle: bills.title,
-        })
-        .from(financialTransactions)
-        .leftJoin(users, eq(financialTransactions.createdById, users.id))
-        .leftJoin(bills, eq(financialTransactions.billId, bills.id))
-        .where(where)
-        .orderBy(desc(financialTransactions.createdAt))
-        .limit(pagination.limit)
-        .offset((pagination.page - 1) * pagination.limit),
-      db
-        .select({ count: sql<number>`count(*)::int` })
-        .from(financialTransactions)
         .where(where),
     ]);
 
@@ -497,6 +455,168 @@ export class AdminRepository {
     });
   }
 
+  // ── Rewards Catalog & Redemptions ─────────────────────────────────
+
+  async getRewardItems() {
+    return db.query.rewardItems.findMany({
+      orderBy: [desc(rewardItems.createdAt)],
+    });
+  }
+
+  async getRewardItemById(id: string) {
+    return db.query.rewardItems.findFirst({
+      where: eq(rewardItems.id, id),
+    });
+  }
+
+  async createRewardItem(data: {
+    title: string;
+    description?: string;
+    pointsCost: number;
+    category?: string;
+    imageUrl?: string;
+    inStock: number;
+    isActive?: boolean;
+  }) {
+    const [item] = await db.insert(rewardItems).values(data).returning();
+    return item;
+  }
+
+  async updateRewardItem(id: string, data: Partial<{
+    title: string;
+    description: string;
+    pointsCost: number;
+    category: string;
+    imageUrl: string;
+    inStock: number;
+    isActive: boolean;
+  }>) {
+    const [item] = await db
+      .update(rewardItems)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(rewardItems.id, id))
+      .returning();
+    return item;
+  }
+
+  async deleteRewardItem(id: string) {
+    return db.delete(rewardItems).where(eq(rewardItems.id, id));
+  }
+
+  async getRewardRedemptions(pagination: PaginationParams, status?: string) {
+    const where = status ? eq(rewardRedemptions.status, status as any) : undefined;
+
+    const [rows, countResult] = await Promise.all([
+      db.query.rewardRedemptions.findMany({
+        where,
+        with: {
+          user: true,
+          rewardItem: true,
+        },
+        orderBy: [desc(rewardRedemptions.createdAt)],
+        limit: pagination.limit,
+        offset: (pagination.page - 1) * pagination.limit,
+      }),
+      db.select({ count: sql<number>`count(*)::int` }).from(rewardRedemptions).where(where),
+    ]);
+
+    return { rows, total: countResult[0]?.count ?? 0 };
+  }
+
+  async updateRedemptionStatus(
+    id: string,
+    status: "pending_delivery" | "shipped" | "delivered" | "cancelled",
+    trackingNumber?: string
+  ) {
+    const [updated] = await db
+      .update(rewardRedemptions)
+      .set({
+        status,
+        trackingNumber: trackingNumber ?? null,
+        updatedAt: new Date(),
+      })
+      .where(eq(rewardRedemptions.id, id))
+      .returning();
+    return updated;
+  }
+
+  // ── Notifications Outbox ──────────────────────────────────────────
+
+  async getNotificationOutbox(
+    pagination: PaginationParams,
+    status?: string,
+    eventType?: string
+  ) {
+    const conditions: any[] = [];
+    if (status) conditions.push(eq(notificationOutbox.status, status));
+    if (eventType) conditions.push(eq(notificationOutbox.eventType, eventType));
+
+    const where = conditions.length > 0 ? and(...conditions) : undefined;
+
+    const [rows, countResult] = await Promise.all([
+      db.query.notificationOutbox.findMany({
+        where,
+        with: {
+          recipient: true,
+          deliveries: true,
+        },
+        orderBy: [desc(notificationOutbox.createdAt)],
+        limit: pagination.limit,
+        offset: (pagination.page - 1) * pagination.limit,
+      }),
+      db.select({ count: sql<number>`count(*)::int` }).from(notificationOutbox).where(where),
+    ]);
+
+    return { rows, total: countResult[0]?.count ?? 0 };
+  }
+
+  async retryNotification(id: string) {
+    const [updated] = await db
+      .update(notificationOutbox)
+      .set({
+        status: "PENDING",
+        attempts: 0,
+        availableAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(notificationOutbox.id, id))
+      .returning();
+    return updated;
+  }
+
+  // ── Security Events ───────────────────────────────────────────────
+
+  async getSecurityEvents(pagination: PaginationParams, userId?: string, event?: string) {
+    const conditions: any[] = [];
+    if (userId) conditions.push(eq(securityEvents.userId, userId));
+    if (event) conditions.push(eq(securityEvents.event, event));
+
+    const where = conditions.length > 0 ? and(...conditions) : undefined;
+
+    const [rows, countResult] = await Promise.all([
+      db
+        .select({
+          id: securityEvents.id,
+          userId: securityEvents.userId,
+          event: securityEvents.event,
+          ipAddress: securityEvents.ipAddress,
+          metadata: securityEvents.metadata,
+          createdAt: securityEvents.createdAt,
+          userName: users.displayName,
+          userCode: users.userCode,
+        })
+        .from(securityEvents)
+        .leftJoin(users, eq(securityEvents.userId, users.id))
+        .where(where)
+        .orderBy(desc(securityEvents.createdAt))
+        .limit(pagination.limit)
+        .offset((pagination.page - 1) * pagination.limit),
+      db.select({ count: sql<number>`count(*)::int` }).from(securityEvents).where(where),
+    ]);
+
+    return { rows, total: countResult[0]?.count ?? 0 };
+  }
+
   // ── Dashboard stats ───────────────────────────────────────────────
 
   async getDashboardStats() {
@@ -508,6 +628,10 @@ export class AdminRepository {
       openDisputesResult,
       totalTransactionsResult,
       suspiciousLogsResult,
+      totalRewardItemsResult,
+      pendingRedemptionsResult,
+      pendingNotificationsResult,
+      securityEventsResult,
     ] = await Promise.all([
       db.select({ count: sql<number>`count(*)::int` }).from(users),
       db.select({ count: sql<number>`count(*)::int` }).from(users).where(eq(users.accountStatus, "active")),
@@ -516,6 +640,10 @@ export class AdminRepository {
       db.select({ count: sql<number>`count(*)::int` }).from(disputes).where(or(eq(disputes.status, "open"), eq(disputes.status, "under_review"))),
       db.select({ count: sql<number>`count(*)::int` }).from(financialTransactions),
       db.select({ count: sql<number>`count(*)::int` }).from(suspiciousActivityLogs),
+      db.select({ count: sql<number>`count(*)::int` }).from(rewardItems),
+      db.select({ count: sql<number>`count(*)::int` }).from(rewardRedemptions).where(eq(rewardRedemptions.status, "pending_delivery")),
+      db.select({ count: sql<number>`count(*)::int` }).from(notificationOutbox).where(eq(notificationOutbox.status, "PENDING")),
+      db.select({ count: sql<number>`count(*)::int` }).from(securityEvents),
     ]);
 
     return {
@@ -526,6 +654,10 @@ export class AdminRepository {
       openDisputes: openDisputesResult[0]?.count ?? 0,
       totalTransactions: totalTransactionsResult[0]?.count ?? 0,
       suspiciousLogs: suspiciousLogsResult[0]?.count ?? 0,
+      totalRewardItems: totalRewardItemsResult[0]?.count ?? 0,
+      pendingRedemptions: pendingRedemptionsResult[0]?.count ?? 0,
+      pendingNotifications: pendingNotificationsResult[0]?.count ?? 0,
+      securityEventsCount: securityEventsResult[0]?.count ?? 0,
     };
   }
 }

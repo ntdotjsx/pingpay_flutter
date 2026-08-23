@@ -113,6 +113,7 @@ export default new Elysia()
     // Upsert FCM Device Token if provided
     if (fcmToken) {
       try {
+        const { deviceName, deviceModel, deviceBrand, osVersion, appVersion } = body as any;
         const existingToken = await db.query.deviceTokens.findFirst({
           where: eq(deviceTokens.token, fcmToken),
         });
@@ -123,6 +124,11 @@ export default new Elysia()
             .set({
               userId,
               platform: platform || existingToken.platform,
+              deviceName: deviceName ?? existingToken.deviceName,
+              deviceModel: deviceModel ?? existingToken.deviceModel,
+              deviceBrand: deviceBrand ?? existingToken.deviceBrand,
+              osVersion: osVersion ?? existingToken.osVersion,
+              appVersion: appVersion ?? existingToken.appVersion,
               updatedAt: new Date(),
             })
             .where(eq(deviceTokens.token, fcmToken));
@@ -131,6 +137,11 @@ export default new Elysia()
             userId,
             token: fcmToken,
             platform: platform || "android",
+            deviceName,
+            deviceModel,
+            deviceBrand,
+            osVersion,
+            appVersion,
           });
         }
       } catch (tokenErr) {
@@ -181,5 +192,10 @@ export default new Elysia()
       mockDisplayName: t.Optional(t.String()),
       fcmToken: t.Optional(t.String()),
       platform: t.Optional(t.String()),
+      deviceName: t.Optional(t.String()),
+      deviceModel: t.Optional(t.String()),
+      deviceBrand: t.Optional(t.String()),
+      osVersion: t.Optional(t.String()),
+      appVersion: t.Optional(t.String()),
     }),
   });

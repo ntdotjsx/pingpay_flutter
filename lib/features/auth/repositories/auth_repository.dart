@@ -16,6 +16,7 @@ class AuthRepository {
     String? mockEmail,
     String? mockDisplayName,
   }) async {
+    final metadata = await NotificationService.getDeviceMetadata();
     final response = await _client.post(
       '/api/v1/auth/google/verify-token',
       data: {
@@ -26,6 +27,7 @@ class AuthRepository {
         if (mockDisplayName != null) 'mockDisplayName': mockDisplayName,
         if (NotificationService.currentFcmToken != null) 'fcmToken': NotificationService.currentFcmToken,
         'platform': Platform.isIOS ? 'ios' : 'android',
+        ...metadata,
       },
     );
 
@@ -101,11 +103,13 @@ class AuthRepository {
 
   Future<void> registerDeviceToken(String token) async {
     try {
+      final metadata = await NotificationService.getDeviceMetadata();
       await _client.post(
         '/api/v1/notifications/device-token',
         data: {
           'token': token,
           'platform': Platform.isIOS ? 'ios' : 'android',
+          ...metadata,
         },
       );
     } catch (_) {}

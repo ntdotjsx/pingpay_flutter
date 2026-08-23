@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { setToken, verifyLineToken, AUTH_BASE } from '$lib/api/client';
+  import { setToken, verifyGoogleToken, AUTH_BASE } from '$lib/api/client';
   import { goto } from '$app/navigation';
   import { page } from '$app/stores';
   import { onMount } from 'svelte';
@@ -11,8 +11,9 @@
   let showAdvanced = $state(false);
 
   let mockDevUser = $state({
-    mockLineUserId: 'line_admin_dev_001',
+    mockGoogleId: 'google_admin_dev_001',
     mockDisplayName: 'Admin Developer',
+    mockEmail: 'admin.dev@pingpay.app',
   });
 
   onMount(async () => {
@@ -27,19 +28,14 @@
     }
   });
 
-  function handleLineOAuthRedirect() {
-    const origin = typeof window !== 'undefined' ? window.location.origin : '';
-    const redirectParam = origin ? `?redirect_to=${encodeURIComponent(origin)}` : '';
-    window.location.href = `${AUTH_BASE}/line${redirectParam}`;
-  }
-
-  async function handleMockLineLogin() {
+  async function handleMockGoogleLogin() {
     loading = true;
     error = '';
     try {
-      const res = await verifyLineToken({
-        mockLineUserId: mockDevUser.mockLineUserId,
+      const res = await verifyGoogleToken({
+        mockGoogleId: mockDevUser.mockGoogleId,
         mockDisplayName: mockDevUser.mockDisplayName,
+        mockEmail: mockDevUser.mockEmail,
       });
       if (res.accessToken) {
         goto('/');
@@ -81,32 +77,37 @@
     {/if}
 
     <div class="space-y-3.5">
-      <!-- Primary LINE Login Button -->
+      <!-- Dev Google Login Button -->
       <button
-        onclick={handleLineOAuthRedirect}
+        onclick={handleMockGoogleLogin}
         disabled={loading}
-        class="flex w-full items-center justify-center gap-2.5 rounded-full bg-[#06C755] px-5 py-3 text-sm font-bold text-white shadow-sm transition-all hover:bg-[#05B34C] active:scale-[0.99] disabled:opacity-50"
+        class="flex w-full items-center justify-center gap-2.5 rounded-full bg-[#0075de] px-5 py-3 text-sm font-bold text-white shadow-sm transition-all hover:bg-[#005bab] active:scale-[0.99] disabled:opacity-50"
       >
-        <svg class="h-5 w-5 fill-current" viewBox="0 0 24 24">
-          <path d="M24 10.304c0-5.369-5.383-9.738-12-9.738-6.616 0-12 4.369-12 9.738 0 4.814 4.269 8.846 10.019 9.587.39.084.922.258 1.057.592.121.303.079.778.039 1.085l-.171 1.027c-.053.303-.242 1.186 1.039.647 1.281-.54 6.911-4.069 9.428-6.967 1.739-1.907 2.589-3.844 2.589-5.971z"/>
-        </svg>
-        <span>Log in with LINE</span>
+        <Icon name="zap" class="h-4 w-4 text-white" />
+        <span>Developer Quick Sign-In</span>
       </button>
 
-      <!-- Mock LINE Dev Login -->
-      <div class="relative my-3">
-        <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-[#e6e6e6]"></div></div>
-        <div class="relative flex justify-center text-[10px] uppercase"><span class="bg-white px-2 text-[#a39e98] font-mono">Dev Mode</span></div>
+      <!-- Mock Google Dev Config -->
+      <div class="rounded-lg bg-[#fbfbfa] p-3 border border-[#e6e6e6] space-y-2 text-left">
+        <div>
+          <label for="mock-user-id" class="block text-[10px] font-medium text-[#615d59] uppercase tracking-wider">Mock Developer Google ID</label>
+          <input
+            id="mock-user-id"
+            type="text"
+            bind:value={mockDevUser.mockGoogleId}
+            class="mt-0.5 block w-full rounded-[4px] border border-[#e6e6e6] bg-white px-2 py-1 text-xs font-mono text-[#000000] focus:border-[#0075de] focus:outline-none"
+          />
+        </div>
+        <div>
+          <label for="mock-user-name" class="block text-[10px] font-medium text-[#615d59] uppercase tracking-wider">Display Name</label>
+          <input
+            id="mock-user-name"
+            type="text"
+            bind:value={mockDevUser.mockDisplayName}
+            class="mt-0.5 block w-full rounded-[4px] border border-[#e6e6e6] bg-white px-2 py-1 text-xs text-[#000000] focus:border-[#0075de] focus:outline-none"
+          />
+        </div>
       </div>
-
-      <button
-        onclick={handleMockLineLogin}
-        disabled={loading}
-        class="flex w-full items-center justify-center gap-2 rounded-md border border-[#e6e6e6] bg-white px-4 py-2.5 text-xs font-semibold text-[#31302e] shadow-sm hover:bg-[#f6f5f4] active:scale-[0.99] disabled:opacity-50 transition-colors"
-      >
-        <Icon name="zap" class="h-3.5 w-3.5 text-[#dd5b00]" />
-        <span>Mock LINE Developer Login</span>
-      </button>
 
       <!-- Advanced JWT Token Input Toggle -->
       <div class="pt-2 text-center">

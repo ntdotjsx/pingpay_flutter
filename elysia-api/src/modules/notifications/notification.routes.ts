@@ -73,9 +73,17 @@ export const notificationRoutes = new Elysia()
         return { error: "UNAUTHORIZED", message: "User is not authenticated" };
       }
 
-      const { token, platform } = body;
-
       try {
+        const {
+          token,
+          platform,
+          deviceName,
+          deviceModel,
+          deviceBrand,
+          osVersion,
+          appVersion,
+        } = body;
+
         const existing = await db.query.deviceTokens.findFirst({
           where: eq(deviceTokens.token, token),
         });
@@ -86,6 +94,11 @@ export const notificationRoutes = new Elysia()
             .set({
               userId,
               platform: platform || existing.platform,
+              deviceName: deviceName ?? existing.deviceName,
+              deviceModel: deviceModel ?? existing.deviceModel,
+              deviceBrand: deviceBrand ?? existing.deviceBrand,
+              osVersion: osVersion ?? existing.osVersion,
+              appVersion: appVersion ?? existing.appVersion,
               updatedAt: new Date(),
             })
             .where(eq(deviceTokens.token, token));
@@ -94,6 +107,11 @@ export const notificationRoutes = new Elysia()
             userId,
             token,
             platform: platform || "android",
+            deviceName,
+            deviceModel,
+            deviceBrand,
+            osVersion,
+            appVersion,
           });
         }
 
@@ -113,6 +131,11 @@ export const notificationRoutes = new Elysia()
       body: t.Object({
         token: t.String(),
         platform: t.Optional(t.String()),
+        deviceName: t.Optional(t.String()),
+        deviceModel: t.Optional(t.String()),
+        deviceBrand: t.Optional(t.String()),
+        osVersion: t.Optional(t.String()),
+        appVersion: t.Optional(t.String()),
       }),
       detail: {
         summary: "Register / Update FCM Device Token for Push Notifications",

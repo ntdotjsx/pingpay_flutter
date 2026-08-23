@@ -77,7 +77,6 @@ export async function getDashboard() {
 
 export async function getTransactions(filters: {
 	userId?: string;
-	groupId?: string;
 	type?: string;
 	dateFrom?: string;
 	dateTo?: string;
@@ -253,16 +252,114 @@ export async function clearAllAuditLogs() {
 	});
 }
 
-// ── Auth & LINE Login ───────────────────────────────────────────
+// ── Rewards Catalog & Redemptions ───────────────────────────────
 
+export async function getRewardItems() {
+	return request<{ success: boolean; data: { items: any[] } }>('/rewards/items');
+}
 
-export async function verifyLineToken(data: {
+export async function createRewardItem(data: {
+	title: string;
+	description?: string;
+	pointsCost: number;
+	category?: string;
+	imageUrl?: string;
+	inStock: number;
+	isActive?: boolean;
+}) {
+	return request<{ success: boolean; data: any }>('/rewards/items', {
+		method: 'POST',
+		body: JSON.stringify(data),
+	});
+}
+
+export async function updateRewardItem(
+	id: string,
+	data: Partial<{
+		title: string;
+		description: string;
+		pointsCost: number;
+		category: string;
+		imageUrl: string;
+		inStock: number;
+		isActive: boolean;
+	}>
+) {
+	return request<{ success: boolean; data: any }>(`/rewards/items/${id}`, {
+		method: 'PATCH',
+		body: JSON.stringify(data),
+	});
+}
+
+export async function deleteRewardItem(id: string) {
+	return request<{ success: boolean; message: string }>(`/rewards/items/${id}`, {
+		method: 'DELETE',
+	});
+}
+
+export async function getRewardRedemptions(filters: {
+	status?: string;
+	page?: number;
+	limit?: number;
+} = {}) {
+	return request<{ success: boolean; data: { rows: any[]; total: number } }>(
+		`/rewards/redemptions${buildQuery(filters)}`
+	);
+}
+
+export async function updateRedemptionStatus(
+	id: string,
+	status: 'pending_delivery' | 'shipped' | 'delivered' | 'cancelled',
+	trackingNumber?: string
+) {
+	return request<{ success: boolean; data: any }>(`/rewards/redemptions/${id}/status`, {
+		method: 'PATCH',
+		body: JSON.stringify({ status, trackingNumber }),
+	});
+}
+
+// ── Notification Outbox ─────────────────────────────────────────
+
+export async function getNotificationOutbox(filters: {
+	status?: string;
+	eventType?: string;
+	page?: number;
+	limit?: number;
+} = {}) {
+	return request<{ success: boolean; data: { rows: any[]; total: number } }>(
+		`/notifications/outbox${buildQuery(filters)}`
+	);
+}
+
+export async function retryNotification(id: string) {
+	return request<{ success: boolean; data: any }>(`/notifications/outbox/${id}/retry`, {
+		method: 'POST',
+	});
+}
+
+// ── Security Events ─────────────────────────────────────────────
+
+export async function getSecurityEvents(filters: {
+	userId?: string;
+	event?: string;
+	page?: number;
+	limit?: number;
+} = {}) {
+	return request<{ success: boolean; data: { rows: any[]; total: number } }>(
+		`/security-events${buildQuery(filters)}`
+	);
+}
+
+// ── Auth & Google Login ─────────────────────────────────────────
+
+export async function verifyGoogleToken(data: {
 	idToken?: string;
 	accessToken?: string;
-	mockLineUserId?: string;
+	mockGoogleId?: string;
 	mockDisplayName?: string;
+	mockEmail?: string;
 }) {
-	const res = await fetch(`${AUTH_BASE}/line/verify-token`, {
+	const res = await fetch(`${AUTH_BASE}/google/verify-token`, {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
 		body: JSON.stringify(data),
@@ -270,7 +367,7 @@ export async function verifyLineToken(data: {
 
 	const json = await res.json();
 	if (!res.ok) {
-		throw new Error(json.error || `LINE login failed: ${res.status}`);
+		throw new Error(json.error || `Google login failed: ${res.status}`);
 	}
 
 	if (json.user && json.user.role !== 'developer') {
@@ -283,6 +380,9 @@ export async function verifyLineToken(data: {
 
 	return json;
 }
+
+// Alias for backwards compatibility
+export const verifyLineToken = verifyGoogleToken;
 
 export async function getMe() {
 	const token = getToken();
