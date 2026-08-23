@@ -37,6 +37,8 @@ import UserNotifications
     // 4. Configure Messaging Delegate
     Messaging.messaging().delegate = self
 
+    GeneratedPluginRegistrant.register(with: self)
+
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
 
