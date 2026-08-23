@@ -3,6 +3,8 @@ import 'dart:ui';
 import 'package:figma_squircle/figma_squircle.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/animations/animated_list_item.dart';
+import '../../../../core/animations/animated_pressable.dart';
 import '../../../../core/theme/theme.dart';
 import '../../../bills/models/bill_models.dart';
 import '../../../payments/models/payment_models.dart';
@@ -174,7 +176,10 @@ class DailyTimelineSection extends StatelessWidget {
                     separatorBuilder: (_, __) => const SizedBox(height: 8),
                     itemBuilder: (context, index) {
                       final debt = debts[index];
-                      return _buildDebtItemTile(context, debt, isDark);
+                      return AnimatedListItem(
+                        index: index,
+                        child: _buildDebtItemTile(context, debt, isDark),
+                      );
                     },
                   ),
                   const SizedBox(height: 14),
@@ -212,7 +217,10 @@ class DailyTimelineSection extends StatelessWidget {
                     separatorBuilder: (_, __) => const SizedBox(height: 10),
                     itemBuilder: (context, index) {
                       final bill = bills[index];
-                      return _buildBillItemTile(context, bill, isDark);
+                      return AnimatedListItem(
+                        index: index,
+                        child: _buildBillItemTile(context, bill, isDark),
+                      );
                     },
                   ),
                 ],
@@ -469,9 +477,6 @@ class DailyTimelineSection extends StatelessWidget {
       decoration: ShapeDecoration(
         color: isDark ? AppColors.surfaceTile1 : AppColors.canvas,
         shape: SmoothRectangleBorder(
-          side: BorderSide(
-            color: isDark ? Colors.white10 : AppColors.hairline,
-          ),
           borderRadius: const SmoothBorderRadius.all(
             SmoothRadius(cornerRadius: 20, cornerSmoothing: 1.0),
           ),

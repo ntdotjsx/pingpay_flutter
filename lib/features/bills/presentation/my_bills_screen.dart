@@ -2,6 +2,9 @@ import 'package:figma_squircle/figma_squircle.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/animations/animated_counter_text.dart';
+import '../../../core/animations/animated_list_item.dart';
+import '../../../core/animations/animated_pressable.dart';
 import '../../../core/theme/theme.dart';
 import '../../../core/widgets/app_skeleton.dart';
 import '../../auth/providers/auth_provider.dart';
@@ -318,8 +321,9 @@ class MyBillsScreen extends ConsumerWidget {
                             ],
                           ),
                           const SizedBox(height: 10),
-                          Text(
-                            '฿${totalBillAmount.toStringAsFixed(2)}',
+                          AnimatedCounterText(
+                            value: totalBillAmount,
+                            prefix: '฿',
                             style: const TextStyle(
                               fontSize: 28,
                               fontWeight: FontWeight.w800,
@@ -445,9 +449,12 @@ class MyBillsScreen extends ConsumerWidget {
                       delegate: SliverChildBuilderDelegate(
                         (context, index) {
                           final bill = filteredBills[index];
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 12),
-                            child: _buildBillCard(context, bill, isDark),
+                          return AnimatedListItem(
+                            index: index,
+                            child: Padding(
+                              padding: const EdgeInsets.only(bottom: 12),
+                              child: _buildBillCard(context, bill, isDark),
+                            ),
                           );
                         },
                         childCount: filteredBills.length,
@@ -540,179 +547,174 @@ class MyBillsScreen extends ConsumerWidget {
         ? DebtAgeCalculator.formatThaiDate(bill.createdAt!)
         : 'วันนี้';
 
-    return Container(
-      decoration: ShapeDecoration(
-        color: isDark ? AppColors.surfaceTile1 : AppColors.canvas,
-        shadows: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
-            blurRadius: 12,
-            offset: const Offset(0, 3),
-          ),
-        ],
-        shape: SmoothRectangleBorder(
-          side: BorderSide(
-            color: isDark ? Colors.white10 : AppColors.hairline,
-            width: 1,
-          ),
-          borderRadius: const SmoothBorderRadius.all(
-            SmoothRadius(cornerRadius: 20, cornerSmoothing: 1.0),
+    return AnimatedPressable(
+      onTap: () => context.push('/bills/${bill.id}'),
+      scaleDown: 0.985,
+      child: Container(
+        decoration: ShapeDecoration(
+          color: isDark ? AppColors.surfaceTile1 : AppColors.canvas,
+          shadows: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
+              blurRadius: 12,
+              offset: const Offset(0, 3),
+            ),
+          ],
+          shape: SmoothRectangleBorder(
+            side: BorderSide(
+              color: isDark ? Colors.white10 : AppColors.hairline,
+              width: 1,
+            ),
+            borderRadius: const SmoothBorderRadius.all(
+              SmoothRadius(cornerRadius: 20, cornerSmoothing: 1.0),
+            ),
           ),
         ),
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(20),
-          onTap: () => context.push('/bills/${bill.id}'),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Top Row: Bill Icon & Title + Status Badge
+            Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Top Row: Bill Icon & Title + Status Badge
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      width: 40,
-                      height: 40,
-                      decoration: ShapeDecoration(
-                        color: AppColors.primary.withValues(alpha: 0.1),
-                        shape: const SmoothRectangleBorder(
-                          borderRadius: SmoothBorderRadius.all(
-                            SmoothRadius(cornerRadius: 12, cornerSmoothing: 1.0),
-                          ),
-                        ),
-                      ),
-                      alignment: Alignment.center,
-                      child: const Icon(
-                        Icons.receipt_long_rounded,
-                        color: AppColors.primary,
-                        size: 22,
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: ShapeDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.1),
+                    shape: const SmoothRectangleBorder(
+                      borderRadius: SmoothBorderRadius.all(
+                        SmoothRadius(cornerRadius: 12, cornerSmoothing: 1.0),
                       ),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            (bill.title != null && bill.title!.trim().isNotEmpty)
-                                ? bill.title!
-                                : 'บิลค่าใช้จ่าย',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: -0.2,
-                              color: isDark ? AppColors.bodyOnDark : AppColors.ink,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          const SizedBox(height: 2),
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.calendar_today_rounded,
-                                size: 12,
-                                color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                dateStr,
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                              if (bill.items.isNotEmpty) ...[
-                                const SizedBox(width: 8),
-                                Text(
-                                  '•  ${bill.items.length} ผู้ร่วมหาร',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
-                                  ),
-                                ),
-                              ],
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                    _buildStatusBadge(bill.status),
-                  ],
+                  ),
+                  alignment: Alignment.center,
+                  child: const Icon(
+                    Icons.receipt_long_rounded,
+                    color: AppColors.primary,
+                    size: 22,
+                  ),
                 ),
-
-                const SizedBox(height: 12),
-                Divider(
-                  height: 1,
-                  thickness: 1,
-                  color: isDark ? Colors.white10 : AppColors.dividerSoft,
-                ),
-                const SizedBox(height: 12),
-
-                // Bottom Row: Debtor Avatars Stack + Amount & Arrow
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    // Debtor avatars preview
-                    if (bill.items.isNotEmpty)
-                      _buildDebtorsPreview(bill.items, isDark)
-                    else
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                       Text(
-                        'ไม่มีผู้หารเพิ่มเติม',
+                        (bill.title != null && bill.title!.trim().isNotEmpty)
+                            ? bill.title!
+                            : 'บิลค่าใช้จ่าย',
                         style: TextStyle(
-                          fontSize: 12,
-                          color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: -0.2,
+                          color: isDark ? AppColors.bodyOnDark : AppColors.ink,
                         ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-
-                    // Amount display
-                    Row(
-                      children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            Text(
-                              bill.totalOutstandingAmount > 0
-                                  ? 'คงค้างรอเก็บ (บิล ฿${bill.totalAmount.toStringAsFixed(0)})'
-                                  : 'ยอดรวมบิล',
-                              style: TextStyle(
-                                fontSize: 10,
-                                color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
-                              ),
+                      const SizedBox(height: 2),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.calendar_today_rounded,
+                            size: 12,
+                            color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            dateStr,
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
+                              fontWeight: FontWeight.w500,
                             ),
+                          ),
+                          if (bill.items.isNotEmpty) ...[
+                            const SizedBox(width: 8),
                             Text(
-                              bill.totalOutstandingAmount > 0
-                                  ? '฿${bill.totalOutstandingAmount.toStringAsFixed(2)}'
-                                  : '฿${bill.totalAmount.toStringAsFixed(2)}',
+                              '•  ${bill.items.length} ผู้ร่วมหาร',
                               style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w800,
-                                color: bill.totalOutstandingAmount > 0
-                                    ? AppColors.primary
-                                    : AppColors.success,
-                                letterSpacing: -0.2,
+                                fontSize: 11,
+                                color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
                               ),
                             ),
                           ],
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                _buildStatusBadge(bill.status),
+              ],
+            ),
+
+            const SizedBox(height: 12),
+            Divider(
+              height: 1,
+              thickness: 1,
+              color: isDark ? Colors.white10 : AppColors.dividerSoft,
+            ),
+            const SizedBox(height: 12),
+
+            // Bottom Row: Debtor Avatars Stack + Amount & Arrow
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                // Debtor avatars preview
+                if (bill.items.isNotEmpty)
+                  _buildDebtorsPreview(bill.items, isDark)
+                else
+                  Text(
+                    'ไม่มีผู้หารเพิ่มเติม',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
+                    ),
+                  ),
+
+                // Amount display
+                Row(
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          bill.totalOutstandingAmount > 0
+                              ? 'คงค้างรอเก็บ (บิล ฿${bill.totalAmount.toStringAsFixed(0)})'
+                              : 'ยอดรวมบิล',
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
+                          ),
                         ),
-                        const SizedBox(width: 6),
-                        Icon(
-                          Icons.chevron_right_rounded,
-                          size: 20,
-                          color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
+                        Text(
+                          bill.totalOutstandingAmount > 0
+                              ? '฿${bill.totalOutstandingAmount.toStringAsFixed(2)}'
+                              : '฿${bill.totalAmount.toStringAsFixed(2)}',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                            color: bill.totalOutstandingAmount > 0
+                                ? AppColors.primary
+                                : AppColors.success,
+                            letterSpacing: -0.2,
+                          ),
                         ),
                       ],
+                    ),
+                    const SizedBox(width: 6),
+                    Icon(
+                      Icons.chevron_right_rounded,
+                      size: 20,
+                      color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
                     ),
                   ],
                 ),
               ],
             ),
-          ),
+          ],
         ),
       ),
     );

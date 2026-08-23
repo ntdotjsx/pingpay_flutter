@@ -1,6 +1,7 @@
 import 'package:figma_squircle/figma_squircle.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/animations/animated_list_item.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_skeleton.dart';
 import '../providers/payment_providers.dart';
@@ -89,12 +90,15 @@ class ReceivablesScreenBody extends ConsumerWidget {
                 if (filteredFriends.isEmpty)
                   _buildEmptyState(isDark)
                 else
-                  ...filteredFriends.map(
-                    (friend) => ReceivableFriendCard(
-                      friend: friend,
-                      onTap: () => FriendReceivableDetailBottomSheet.show(
-                        context,
-                        friend,
+                  ...filteredFriends.asMap().entries.map(
+                    (entry) => AnimatedListItem(
+                      index: entry.key,
+                      child: ReceivableFriendCard(
+                        friend: entry.value,
+                        onTap: () => FriendReceivableDetailBottomSheet.show(
+                          context,
+                          entry.value,
+                        ),
                       ),
                     ),
                   ),

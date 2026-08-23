@@ -2,6 +2,7 @@ import 'package:figma_squircle/figma_squircle.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/animations/animated_list_item.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_skeleton.dart';
 import '../providers/payment_providers.dart';
@@ -383,16 +384,19 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
         if (filteredDebts.isEmpty)
           _buildEmptyState(context, state.currentFilter)
         else
-          ...filteredDebts.map(
-            (debt) => DebtCard(
-              debt: debt,
-              onPayTap: () {
-                if (!debt.isAcknowledged) {
-                  DebtAcknowledgementDetailSheet.show(context, debt);
-                } else {
-                  PaymentDetailBottomSheet.show(context, debt);
-                }
-              },
+          ...filteredDebts.asMap().entries.map(
+            (entry) => AnimatedListItem(
+              index: entry.key,
+              child: DebtCard(
+                debt: entry.value,
+                onPayTap: () {
+                  if (!entry.value.isAcknowledged) {
+                    DebtAcknowledgementDetailSheet.show(context, entry.value);
+                  } else {
+                    PaymentDetailBottomSheet.show(context, entry.value);
+                  }
+                },
+              ),
             ),
           ),
       ],

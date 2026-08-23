@@ -866,10 +866,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         decoration: ShapeDecoration(
                           color: Colors.white.withValues(alpha: isDark ? 0.15 : 0.22),
                           shape: SmoothRectangleBorder(
-                            side: BorderSide(
-                              color: Colors.white.withValues(alpha: isDark ? 0.2 : 0.35),
-                              width: 1,
-                            ),
                             borderRadius: const SmoothBorderRadius.all(
                               SmoothRadius(
                                 cornerRadius: 21,
@@ -888,7 +884,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             ),
                             const SizedBox(width: 8),
                             Text(
-                              'ค้นหาเพื่อน หรือ รายการบิล...',
+                              'ค้นหาเพื่อน หรือ รายการบิล',
                               style: TextStyle(
                                 color: Colors.white.withValues(alpha: 0.95),
                                 fontSize: 13.5,
@@ -1351,4 +1347,3 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
 }
-

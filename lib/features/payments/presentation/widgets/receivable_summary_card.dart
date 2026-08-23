@@ -1,5 +1,6 @@
 import 'package:figma_squircle/figma_squircle.dart';
 import 'package:flutter/material.dart';
+import '../../../../core/animations/animated_counter_text.dart';
 import '../../../../core/theme/app_colors.dart';
 
 class ReceivableSummaryCard extends StatelessWidget {
@@ -101,33 +102,17 @@ class ReceivableSummaryCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.baseline,
-            textBaseline: TextBaseline.alphabetic,
-            children: [
-              Text(
-                '฿',
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color: totalOutstandingAmount > 0
-                      ? (isDark ? Colors.white : AppColors.ink)
-                      : AppColors.inkMuted48,
-                ),
-              ),
-              const SizedBox(width: 4),
-              Text(
-                totalOutstandingAmount.toStringAsFixed(2),
-                style: TextStyle(
-                  fontSize: 32,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: -0.8,
-                  color: totalOutstandingAmount > 0
-                      ? (isDark ? Colors.white : AppColors.ink)
-                      : AppColors.inkMuted48,
-                ),
-              ),
-            ],
+          AnimatedCounterText(
+            value: totalOutstandingAmount,
+            prefix: '฿',
+            style: TextStyle(
+              fontSize: 32,
+              fontWeight: FontWeight.bold,
+              letterSpacing: -0.8,
+              color: totalOutstandingAmount > 0
+                  ? (isDark ? Colors.white : AppColors.ink)
+                  : AppColors.inkMuted48,
+            ),
           ),
           const SizedBox(height: 2),
           Text(

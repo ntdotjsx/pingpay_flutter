@@ -1,5 +1,6 @@
 import 'package:figma_squircle/figma_squircle.dart';
 import 'package:flutter/material.dart';
+import '../../../../core/animations/animated_counter_text.dart';
 import '../../../../core/theme/app_colors.dart';
 
 class PaymentSummaryCard extends StatelessWidget {
@@ -102,8 +103,9 @@ class PaymentSummaryCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 14),
-          Text(
-            '฿${totalOutstandingAmount.toStringAsFixed(2)}',
+          AnimatedCounterText(
+            value: totalOutstandingAmount,
+            prefix: '฿',
             style: TextStyle(
               fontSize: 32,
               fontWeight: FontWeight.w800,

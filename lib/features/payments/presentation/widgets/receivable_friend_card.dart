@@ -1,5 +1,6 @@
 import 'package:figma_squircle/figma_squircle.dart';
 import 'package:flutter/material.dart';
+import '../../../../core/animations/animated_pressable.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../models/payment_models.dart';
 import '../../services/debt_age_calculator.dart';
@@ -20,35 +21,32 @@ class ReceivableFriendCard extends StatelessWidget {
       friend.oldestDebtStartDate,
     );
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: ShapeDecoration(
-        color: isDark ? AppColors.surfaceTile1 : AppColors.canvas,
-        shadows: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 3),
-          ),
-        ],
-        shape: SmoothRectangleBorder(
-          side: BorderSide(
-            color: isDark ? Colors.white10 : AppColors.hairline,
-            width: 1,
-          ),
-          borderRadius: const SmoothBorderRadius.all(
-            SmoothRadius(cornerRadius: 18, cornerSmoothing: 1.0),
+    return AnimatedPressable(
+      onTap: onTap,
+      scaleDown: 0.985,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        decoration: ShapeDecoration(
+          color: isDark ? AppColors.surfaceTile1 : AppColors.canvas,
+          shadows: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
+              blurRadius: 10,
+              offset: const Offset(0, 3),
+            ),
+          ],
+          shape: SmoothRectangleBorder(
+            side: BorderSide(
+              color: isDark ? Colors.white10 : AppColors.hairline,
+              width: 1,
+            ),
+            borderRadius: const SmoothBorderRadius.all(
+              SmoothRadius(cornerRadius: 18, cornerSmoothing: 1.0),
+            ),
           ),
         ),
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(18),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
+        padding: const EdgeInsets.all(16),
+        child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Header: Debtor Avatar + Name + Count of outstanding bills
@@ -223,9 +221,7 @@ class ReceivableFriendCard extends StatelessWidget {
               ],
             ),
           ),
-        ),
-      ),
-    );
+        );
   }
 
   Widget _buildAvatar(bool isDark) {

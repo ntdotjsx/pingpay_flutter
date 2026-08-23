@@ -4,6 +4,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import '../../../../core/animations/animated_list_item.dart';
+import '../../../../core/animations/animated_pressable.dart';
 import '../../../../core/theme/theme.dart';
 import '../../../../core/utils/app_toast.dart';
 import '../../../../core/widgets/pingpay_loading.dart';
