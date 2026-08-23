@@ -1,6 +1,6 @@
 import { Elysia, t } from "elysia";
 import { db } from "../../../../../db";
-import { authIdentities, users } from "../../../../../db/schema";
+import { authIdentities, users, deviceTokens } from "../../../../../db/schema";
 import { env } from "../../../../../config/env";
 import { eq, and } from "drizzle-orm";
 import jwt from "jsonwebtoken";
@@ -9,7 +9,7 @@ import crypto from "crypto";
 export default new Elysia()
   // ── 1. Google Token Verification (Mobile App & Web) ──────────────────
   .post("/verify-token", async ({ body, set, cookie: { access_token, refresh_token } }) => {
-    const { idToken, accessToken: googleAccessToken, mockGoogleId, mockEmail, mockDisplayName } = body;
+    const { idToken, accessToken: googleAccessToken, mockGoogleId, mockEmail, mockDisplayName, fcmToken, platform } = body;
 
     let googleUserId: string | null = null;
     let email: string | null = null;
@@ -110,6 +110,34 @@ export default new Elysia()
       }
     }
 
+    // Upsert FCM Device Token if provided
+    if (fcmToken) {
+      try {
+        const existingToken = await db.query.deviceTokens.findFirst({
+          where: eq(deviceTokens.token, fcmToken),
+        });
+
+        if (existingToken) {
+          await db
+            .update(deviceTokens)
+            .set({
+              userId,
+              platform: platform || existingToken.platform,
+              updatedAt: new Date(),
+            })
+            .where(eq(deviceTokens.token, fcmToken));
+        } else {
+          await db.insert(deviceTokens).values({
+            userId,
+            token: fcmToken,
+            platform: platform || "android",
+          });
+        }
+      } catch (tokenErr) {
+        console.warn("[WARN] Could not upsert FCM device token on login:", tokenErr);
+      }
+    }
+
     const jwtAccessToken = jwt.sign({ userId }, env.JWT_ACCESS_SECRET, { expiresIn: "15m" });
     const jwtRefreshToken = jwt.sign({ userId }, env.JWT_REFRESH_SECRET, { expiresIn: "7d" });
 
@@ -151,5 +179,7 @@ export default new Elysia()
       mockGoogleId: t.Optional(t.String()),
       mockEmail: t.Optional(t.String()),
       mockDisplayName: t.Optional(t.String()),
+      fcmToken: t.Optional(t.String()),
+      platform: t.Optional(t.String()),
     }),
   });

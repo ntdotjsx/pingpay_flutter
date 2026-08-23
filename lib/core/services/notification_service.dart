@@ -21,6 +21,7 @@ final notificationServiceProvider = Provider<NotificationService>((ref) {
 
 class NotificationService {
   final DioClient _client;
+  static String? currentFcmToken;
   String? _fcmToken;
 
   NotificationService(this._client);
@@ -47,6 +48,7 @@ class NotificationService {
 
       // Get initial FCM token
       _fcmToken = await messaging.getToken();
+      currentFcmToken = _fcmToken;
       debugPrint('FCM Device Token: $_fcmToken');
 
       if (_fcmToken != null) {
@@ -56,6 +58,7 @@ class NotificationService {
       // Listen for token refreshes
       messaging.onTokenRefresh.listen((newToken) {
         _fcmToken = newToken;
+        currentFcmToken = newToken;
         registerTokenWithBackend(newToken);
       });
 

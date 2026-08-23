@@ -1,5 +1,7 @@
+import 'dart:io';
 import 'package:dio/dio.dart';
 import '../../../core/network/dio_client.dart';
+import '../../../core/services/notification_service.dart';
 import '../models/auth_models.dart';
 
 class AuthRepository {
@@ -22,6 +24,8 @@ class AuthRepository {
         if (mockGoogleId != null) 'mockGoogleId': mockGoogleId,
         if (mockEmail != null) 'mockEmail': mockEmail,
         if (mockDisplayName != null) 'mockDisplayName': mockDisplayName,
+        if (NotificationService.currentFcmToken != null) 'fcmToken': NotificationService.currentFcmToken,
+        'platform': Platform.isIOS ? 'ios' : 'android',
       },
     );
 
