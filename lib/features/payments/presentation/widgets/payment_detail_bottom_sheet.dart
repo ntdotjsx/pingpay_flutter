@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:figma_squircle/figma_squircle.dart';
@@ -48,6 +49,7 @@ class _PaymentDetailBottomSheetState
     extends ConsumerState<PaymentDetailBottomSheet> {
   final _amountController = TextEditingController();
   final _picker = ImagePicker();
+  Timer? _debounceQrTimer;
 
   bool _isFullPayment = true;
   File? _selectedSlipFile;
@@ -78,7 +80,10 @@ class _PaymentDetailBottomSheetState
 
   Future<void> _fetchEasySlipQr() async {
     final creditor = widget.debt.creditor;
-    final enteredAmount = double.tryParse(_amountController.text.trim()) ?? widget.debt.outstandingAmount;
+    final rawAmount = double.tryParse(_amountController.text.trim());
+    final enteredAmount = (rawAmount != null && rawAmount > 0)
+        ? rawAmount
+        : widget.debt.outstandingAmount;
 
     String? targetNumber;
     String type = 'PROMPTPAY';
@@ -113,11 +118,13 @@ class _PaymentDetailBottomSheetState
 
   @override
   void dispose() {
+    _debounceQrTimer?.cancel();
     _amountController.dispose();
     super.dispose();
   }
 
   void _selectFullPayment() {
+    _debounceQrTimer?.cancel();
     setState(() {
       _isFullPayment = true;
       _amountController.text = widget.debt.outstandingAmount.toStringAsFixed(2);
@@ -126,6 +133,7 @@ class _PaymentDetailBottomSheetState
   }
 
   void _selectPartialPayment() {
+    _debounceQrTimer?.cancel();
     setState(() {
       _isFullPayment = false;
     });
@@ -777,6 +785,16 @@ class _PaymentDetailBottomSheetState
                                     const TextInputType.numberWithOptions(
                                   decimal: true,
                                 ),
+                                textInputAction: TextInputAction.done,
+                                onSubmitted: (_) {
+                                  FocusScope.of(context).unfocus();
+                                  _debounceQrTimer?.cancel();
+                                  final rawAmount = double.tryParse(_amountController.text.trim());
+                                  if (rawAmount != null && rawAmount > widget.debt.outstandingAmount) {
+                                    AppToast.warning(context, 'ยอดชำระบางส่วนต้องไม่เกินยอดค้างชำระ (฿${widget.debt.outstandingAmount.toStringAsFixed(2)})');
+                                  }
+                                  _fetchEasySlipQr();
+                                },
                                 style: const TextStyle(
                                   fontSize: 26,
                                   fontWeight: FontWeight.w800,
@@ -803,8 +821,11 @@ class _PaymentDetailBottomSheetState
                                   ),
                                 ),
                                 onChanged: (_) {
-                                  setState(
-                                      () {}); // Re-generate dynamic QR on amount edit
+                                  _debounceQrTimer?.cancel();
+                                  _debounceQrTimer = Timer(const Duration(milliseconds: 500), () {
+                                    _fetchEasySlipQr();
+                                  });
+                                  setState(() {}); // Re-generate dynamic label immediately
                                 },
                               ),
                             ),
@@ -823,6 +844,49 @@ class _PaymentDetailBottomSheetState
                                     fontSize: 11,
                                     fontWeight: FontWeight.w700,
                                     color: Color(0xFFFF5000),
+                                  ),
+                                ),
+                              )
+                            else
+                              InkWell(
+                                onTap: () {
+                                  FocusScope.of(context).unfocus();
+                                  _debounceQrTimer?.cancel();
+                                  final rawAmount = double.tryParse(_amountController.text.trim());
+                                  if (rawAmount != null && rawAmount > widget.debt.outstandingAmount) {
+                                    AppToast.warning(context, 'ยอดชำระบางส่วนต้องไม่เกินยอดค้างชำระ (฿${widget.debt.outstandingAmount.toStringAsFixed(2)})');
+                                  }
+                                  _fetchEasySlipQr();
+                                },
+                                borderRadius: BorderRadius.circular(8),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 10, vertical: 6),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFFF5000),
+                                    borderRadius: BorderRadius.circular(8),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: const Color(0xFFFF5000).withValues(alpha: 0.28),
+                                        blurRadius: 4,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
+                                  ),
+                                  child: const Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(Icons.refresh_rounded, size: 14, color: Colors.white),
+                                      SizedBox(width: 4),
+                                      Text(
+                                        'อัปเดต QR',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w700,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
                               ),
