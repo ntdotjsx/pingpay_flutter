@@ -1,6 +1,7 @@
 import { Elysia, t } from "elysia";
 import { db } from "../../../../db";
 import { users } from "../../../../db/schema";
+import { logActivity } from "../../../../modules/activity/activity.service";
 import { eq } from "drizzle-orm";
 import jwt from "jsonwebtoken";
 import { env } from "../../../../config/env";
@@ -73,6 +74,12 @@ export default new Elysia()
       .set(updateData)
       .where(eq(users.id, userId))
       .returning();
+
+    logActivity(userId, "profile_updated", {
+      hasPromptPay: !!updatedUser.promptPayId,
+      hasBank: !!updatedUser.bankAccountNumber,
+      hasShipping: !!updatedUser.shippingAddress,
+    });
 
     return {
       success: true,

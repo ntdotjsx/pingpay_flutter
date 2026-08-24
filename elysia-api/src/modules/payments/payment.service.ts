@@ -25,6 +25,7 @@ import {
   defaultNotificationOutboxService,
 } from "../notifications/notification-outbox.service";
 import { realtimeService } from "../../realtime/realtime.service";
+import { logActivity } from "../activity/activity.service";
 
 export interface CreatePaymentDTO {
   participantId: string; // bill_items.id
@@ -373,6 +374,13 @@ export class PaymentService {
     if (dto.idempotencyKey) {
       this.processedIdempotencyKeys.set(dto.idempotencyKey, result);
     }
+
+    logActivity(payerId, "slip_uploaded", {
+      billId: bill.id,
+      paymentId: newPayment.id,
+      amount: dto.amount,
+      channel: dto.channel || "promptpay_qr",
+    });
 
     realtimeService.sendToUsers(
       [bill.ownerId, payerId],
@@ -732,6 +740,11 @@ export class PaymentService {
       this.processedIdempotencyKeys.set(dto.idempotencyKey, responseData);
     }
 
+    logActivity(userId, "payment_confirmed", {
+      paymentId,
+      confirmedResult,
+    });
+
     return responseData;
   }
 
@@ -878,6 +891,11 @@ export class PaymentService {
     if (dto.idempotencyKey) {
       this.processedIdempotencyKeys.set(dto.idempotencyKey, responseData);
     }
+
+    logActivity(userId, "payment_rejected", {
+      paymentId,
+      reason: dto.reason,
+    });
 
     return responseData;
   }
@@ -1227,6 +1245,12 @@ export class PaymentService {
         { resourceId: item.billId }
       )
     );
+
+    logActivity(debtorId, "debt_acknowledged", {
+      billId: item.billId,
+      billItemId: item.id,
+      amount: item.currentAmount,
+    });
 
     return updated;
   }

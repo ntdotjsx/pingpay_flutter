@@ -9,6 +9,7 @@ import { BillAdjustmentService, AdjustmentRequestDTO } from "./bill-adjustment.s
 import { defaultOCRService, OCRService } from "./ocr.service";
 import { defaultNotificationOutboxService } from "../notifications/notification-outbox.service";
 import { realtimeService } from "../../realtime/realtime.service";
+import { logActivity } from "../activity/activity.service";
 
 export interface CreateBillDTO {
   title?: string;
@@ -154,6 +155,15 @@ export class BillService {
       console.error("[BillService] Failed to enqueue BILL_CREATED notification:", err);
     }
 
+    try {
+      logActivity(ownerId, "bill_created", {
+        billId: fullCreatedBill.id,
+        title: fullCreatedBill.title,
+        totalAmount: fullCreatedBill.totalAmount,
+        participantCount: (fullCreatedBill.items || []).length,
+      });
+    } catch {}
+
     return fullCreatedBill;
   }
 
@@ -204,6 +214,12 @@ export class BillService {
         { resourceId: id }
       )
     );
+
+    logActivity(userId, "bill_updated", {
+      billId: id,
+      title: dto.title,
+      totalAmount: dto.totalAmount,
+    });
 
     return fullBill ?? updated;
   }
@@ -323,6 +339,12 @@ export class BillService {
       )
     );
 
+    logActivity(userId, "bill_updated", {
+      billId,
+      participantId,
+      newAmount,
+    });
+
     return updatedBill;
   }
 
@@ -362,6 +384,11 @@ export class BillService {
     try {
       const canceller = await this.repo.getUserById(userId);
       const cancellerName = canceller?.displayName || canceller?.fullName || "เจ้าของบิล";
+
+      logActivity(userId, "bill_cancelled", {
+        billId,
+        reason,
+      });
 
       for (const item of (bill.items || [])) {
         if (item.debtorId && item.debtorId !== userId) {

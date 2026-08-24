@@ -1,6 +1,7 @@
 import { Elysia, t } from "elysia";
 import { db } from "../../../../../db";
 import { userCredentials, securityEvents, users, authIdentities, otpVerifications, authSessions } from "../../../../../db/schema";
+import { logActivity } from "../../../../../modules/activity/activity.service";
 import { eq, and } from "drizzle-orm";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
@@ -72,6 +73,8 @@ export default new Elysia()
         set: { pinHash }
       });
 
+    logActivity(userId, "pin_setup");
+
     return { success: true, message: "PIN created successfully." };
   }, {
     body: t.Object({
@@ -124,6 +127,8 @@ export default new Elysia()
       event: "pin_changed",
       metadata: { changedAt: new Date() }
     }).catch(() => {});
+
+    logActivity(userId, "pin_setup", { action: "pin_changed" });
 
     return { success: true, message: "เปลี่ยนรหัส PIN สำเร็จเรียบร้อยแล้ว" };
   }, {
@@ -214,6 +219,8 @@ export default new Elysia()
         })
         .where(eq(userCredentials.userId, userId));
     }
+
+    logActivity(userId, "pin_verified");
 
     return { success: true, message: "ยืนยันรหัส PIN ถูกต้อง" };
   }, {

@@ -2,6 +2,7 @@ import { Elysia, t } from "elysia";
 import { db } from "../../../../../db";
 import { authIdentities, users, deviceTokens, authSessions } from "../../../../../db/schema";
 import { env } from "../../../../../config/env";
+import { logActivity } from "../../../../../modules/activity/activity.service";
 import { eq, and } from "drizzle-orm";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
@@ -195,6 +196,12 @@ export default new Elysia()
       httpOnly: true,
       path: "/",
       maxAge: 7 * 24 * 60 * 60,
+    });
+
+    logActivity(userId, identity ? "user_login" : "user_registered", {
+      platform,
+      provider: "google",
+      deviceInfo: deviceDescription,
     });
 
     return {

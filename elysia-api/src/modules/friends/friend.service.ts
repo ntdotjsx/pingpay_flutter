@@ -5,6 +5,7 @@ import type { RelationshipState } from "./friend.types";
 import { DebtRelationshipService } from "../debt/debt-relationship.service";
 import { defaultNotificationOutboxService } from "../notifications/notification-outbox.service";
 import { realtimeService } from "../../realtime/realtime.service";
+import { logActivity } from "../activity/activity.service";
 
 export class FriendService {
   /**
@@ -176,6 +177,11 @@ export class FriendService {
       { resourceId: request.id }
     ));
     console.log(`[Realtime] Friend request event sent requestId=${request.id} receiverId=${target.id}`);
+
+    logActivity(currentUserId, "friend_request_sent", {
+      targetUserId: target.id,
+      targetUserCode,
+    });
 
     return request;
   }
