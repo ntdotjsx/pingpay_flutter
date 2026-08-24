@@ -18,6 +18,7 @@ enum MyBillsFilter {
   unpaid,
   partiallyPaid,
   paid,
+  writtenOff,
 }
 
 final myBillsFilterProvider = StateProvider<MyBillsFilter>((ref) => MyBillsFilter.all);
@@ -244,7 +245,9 @@ class MyBillsScreen extends ConsumerWidget {
                         case MyBillsFilter.partiallyPaid:
                           return (b.status == 'partially_paid' || b.status == 'partially_written_off') && !b.isFullyWrittenOff;
                         case MyBillsFilter.paid:
-                          return (b.status == 'paid' || b.status == 'fully_paid') && !b.isFullyWrittenOff;
+                          return (b.status == 'paid' || b.status == 'fully_paid' || b.isFullyPaid) && !b.isFullyWrittenOff;
+                        case MyBillsFilter.writtenOff:
+                          return b.isFullyWrittenOff || b.status == 'written_off' || b.status == 'fully_written_off';
                         case MyBillsFilter.all:
                           return true;
                       }
@@ -289,8 +292,16 @@ class MyBillsScreen extends ConsumerWidget {
                                 const SizedBox(width: 6),
                                 _buildFilterChip(
                                   ref: ref,
-                                  label: 'ครบแล้ว (${bills.where((b) => (b.status == 'paid' || b.status == 'fully_paid') && !b.isFullyWrittenOff).length})',
+                                  label: 'ครบแล้ว (${bills.where((b) => (b.status == 'paid' || b.status == 'fully_paid' || b.isFullyPaid) && !b.isFullyWrittenOff).length})',
                                   filter: MyBillsFilter.paid,
+                                  current: selectedFilter,
+                                  isDark: isDark,
+                                ),
+                                const SizedBox(width: 6),
+                                _buildFilterChip(
+                                  ref: ref,
+                                  label: 'ยกหนี้แล้ว (${bills.where((b) => b.isFullyWrittenOff || b.status == 'written_off' || b.status == 'fully_written_off').length})',
+                                  filter: MyBillsFilter.writtenOff,
                                   current: selectedFilter,
                                   isDark: isDark,
                                 ),
@@ -682,6 +693,8 @@ class MyBillsScreen extends ConsumerWidget {
         return 'บิลที่ชำระแล้วบางส่วน';
       case MyBillsFilter.paid:
         return 'บิลที่ชำระครบแล้ว';
+      case MyBillsFilter.writtenOff:
+        return 'บิลที่ยกหนี้ให้แล้ว';
     }
   }
 
@@ -754,7 +767,7 @@ class MyBillsScreen extends ConsumerWidget {
                               ),
                             ),
                             const SizedBox(width: 6),
-                            _buildStatusBadge(bill.status, isDark),
+                            _buildStatusBadge(bill, isDark),
                           ],
                         ),
                         const SizedBox(height: 3),
@@ -802,15 +815,19 @@ class MyBillsScreen extends ConsumerWidget {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
-                            bill.totalOutstandingAmount > 0
-                                ? '฿${bill.totalOutstandingAmount.toStringAsFixed(2)}'
-                                : '฿${bill.totalAmount.toStringAsFixed(2)}',
+                            bill.isFullyWrittenOff
+                                ? '฿0.00'
+                                : (bill.totalOutstandingAmount > 0
+                                    ? '฿${bill.totalOutstandingAmount.toStringAsFixed(2)}'
+                                    : '฿${bill.totalAmount.toStringAsFixed(2)}'),
                             style: TextStyle(
                               fontSize: 15.5,
                               fontWeight: FontWeight.w700,
-                              color: bill.totalOutstandingAmount > 0
-                                  ? const Color(0xFFFF5000)
-                                  : const Color(0xFF34C759),
+                              color: bill.isFullyWrittenOff
+                                  ? (isDark ? AppColors.bodyMuted : AppColors.inkMuted48)
+                                  : (bill.totalOutstandingAmount > 0
+                                      ? const Color(0xFFFF5000)
+                                      : const Color(0xFF34C759)),
                               letterSpacing: -0.3,
                             ),
                           ),
@@ -822,7 +839,17 @@ class MyBillsScreen extends ConsumerWidget {
                           ),
                         ],
                       ),
-                      if (bill.totalOutstandingAmount > 0)
+                      if (bill.isFullyWrittenOff)
+                        Text(
+                          'ยกหนี้ ฿${bill.totalAmount.toStringAsFixed(0)}',
+                          style: TextStyle(
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w500,
+                            color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
+                            decoration: TextDecoration.lineThrough,
+                          ),
+                        )
+                      else if (bill.totalOutstandingAmount > 0)
                         Text(
                           'บิลเต็ม ฿${bill.totalAmount.toStringAsFixed(0)}',
                           style: TextStyle(
@@ -945,38 +972,31 @@ class MyBillsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildStatusBadge(String status, bool isDark) {
+  Widget _buildStatusBadge(BillModel bill, bool isDark) {
     Color bg;
     Color fg;
     String label;
 
-    switch (status) {
-      case 'paid':
-      case 'fully_paid':
-        bg = const Color(0xFF34C759).withValues(alpha: 0.12);
-        fg = const Color(0xFF34C759);
-        label = 'ชำระครบ';
-        break;
-      case 'partially_paid':
-        bg = const Color(0xFFFF9500).withValues(alpha: 0.12);
-        fg = const Color(0xFFFF9500);
-        label = 'ชำระบางส่วน';
-        break;
-      case 'fully_written_off':
-        bg = isDark ? Colors.white12 : const Color(0xFFE5E7EB);
-        fg = isDark ? Colors.white70 : AppColors.inkMuted80;
-        label = 'ยกหนี้แล้ว';
-        break;
-      case 'cancelled':
-        bg = AppColors.error.withValues(alpha: 0.1);
-        fg = AppColors.error;
-        label = 'ยกเลิกแล้ว';
-        break;
-      default:
-        bg = const Color(0xFFFF3B30).withValues(alpha: 0.1);
-        fg = const Color(0xFFFF3B30);
-        label = 'ยังไม่ชำระ';
-        break;
+    if (bill.isFullyWrittenOff || bill.status == 'fully_written_off' || bill.status == 'written_off') {
+      bg = isDark ? Colors.white12 : const Color(0xFFE5E7EB);
+      fg = isDark ? Colors.white70 : AppColors.inkMuted80;
+      label = 'ยกหนี้แล้ว';
+    } else if (bill.isCancelled) {
+      bg = AppColors.error.withValues(alpha: 0.1);
+      fg = AppColors.error;
+      label = 'ยกเลิกแล้ว';
+    } else if (bill.isFullyPaid || bill.status == 'paid' || bill.status == 'fully_paid') {
+      bg = const Color(0xFF34C759).withValues(alpha: 0.12);
+      fg = const Color(0xFF34C759);
+      label = 'ชำระครบ';
+    } else if (bill.status == 'partially_paid' || bill.status == 'partially_written_off') {
+      bg = const Color(0xFFFF9500).withValues(alpha: 0.12);
+      fg = const Color(0xFFFF9500);
+      label = 'ชำระบางส่วน';
+    } else {
+      bg = const Color(0xFFFF3B30).withValues(alpha: 0.1);
+      fg = const Color(0xFFFF3B30);
+      label = 'ยังไม่ชำระ';
     }
 
     return Container(
