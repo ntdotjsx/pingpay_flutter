@@ -86,20 +86,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   isDark: isDark,
                   onTap: () => context.go('/rewards'),
                 ),
-                _buildTileDivider(isDark),
-
-                // Shipping Details
-                _buildModernSettingsTile(
-                  icon: Icons.local_shipping_rounded,
-                  iconBgColor: const Color(0xFF5856D6).withValues(alpha: 0.12),
-                  iconColor: const Color(0xFF5856D6),
-                  title: 'ที่อยู่จัดส่งของรางวัล',
-                  subtitle: (user?.shippingAddress != null && user!.shippingAddress!.isNotEmpty)
-                      ? user.shippingAddress!
-                      : 'แตะเพื่อบันทึกที่อยู่จัดส่ง',
-                  isDark: isDark,
-                  onTap: () => _showShippingAddressModal(context, user),
-                ),
 
                 const SizedBox(height: 20),
 
@@ -1031,87 +1017,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   void _showPromptPayQRModal(BuildContext context) {
     SetupPaymentChannelSheet.show(context);
-  }
-
-  void _showShippingAddressModal(BuildContext context, dynamic user) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final addressCtrl = TextEditingController(text: user?.shippingAddress ?? '');
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
-        child: Container(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
-          decoration: ShapeDecoration(
-            color: isDark ? AppColors.surfaceTile1 : Colors.white,
-            shape: const SmoothRectangleBorder(
-              borderRadius: SmoothBorderRadius.vertical(
-                top: SmoothRadius(cornerRadius: 24, cornerSmoothing: 0.8),
-              ),
-            ),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Center(
-                child: Container(
-                  width: 36,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: isDark ? Colors.white24 : const Color(0xFFE5E7EB),
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'ที่อยู่จัดส่งของรางวัล',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: isDark ? AppColors.bodyOnDark : AppColors.ink,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'ใช้สำหรับจัดส่งของรางวัลที่คุณแลกจากร้านค้า PingPay Coins',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
-                ),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: addressCtrl,
-                maxLines: 3,
-                decoration: const InputDecoration(
-                  hintText: 'บ้านเลขที่ ซอย ถนน แขวง/ตำบล เขต/อำเภอ จังหวัด รหัสไปรษณีย์',
-                  labelText: 'ที่อยู่จัดส่ง',
-                ),
-              ),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(ctx);
-                  AppToast.success(context, 'บันทึกที่อยู่จัดส่งแล้ว');
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFFF5000),
-                  foregroundColor: Colors.white,
-                  minimumSize: const Size(double.infinity, 44),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-                child: const Text('บันทึกที่อยู่', style: TextStyle(fontWeight: FontWeight.w600)),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
   }
 
   void _showPdpaPolicyBottomSheet(BuildContext context) {
