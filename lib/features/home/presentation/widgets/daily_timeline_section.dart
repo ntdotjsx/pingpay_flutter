@@ -534,9 +534,6 @@ class DailyTimelineSection extends StatelessWidget {
       decoration: ShapeDecoration(
         color: isDark ? AppColors.surfaceTile1 : AppColors.canvas,
         shape: SmoothRectangleBorder(
-          side: BorderSide(
-            color: isDark ? Colors.white10 : AppColors.hairline,
-          ),
           borderRadius: const SmoothBorderRadius.all(
             SmoothRadius(cornerRadius: 18, cornerSmoothing: 1.0),
           ),
