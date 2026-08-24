@@ -96,6 +96,9 @@ class RealtimeController {
       case 'bill.transaction.deleted':
       case 'bill.payment.updated':
       case 'bill.status.updated':
+      case 'debt.acknowledged':
+      case 'debt.updated':
+      case 'DEBT_ACKNOWLEDGED':
         _refreshBillState(event);
         break;
       case 'notification.created':

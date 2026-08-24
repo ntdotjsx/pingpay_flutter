@@ -19,6 +19,17 @@ int? _asOptionalInt(dynamic val) {
   return null;
 }
 
+bool _asBool(dynamic val) {
+  if (val == null) return false;
+  if (val is bool) return val;
+  if (val is num) return val == 1;
+  if (val is String) {
+    final s = val.toLowerCase().trim();
+    return s == 'true' || s == '1' || s == 't';
+  }
+  return false;
+}
+
 class CreditorUserModel {
   final String id;
   final String userCode;
@@ -125,12 +136,12 @@ class DebtItemModel {
       amountWrittenOff: _asDouble(json['amountWrittenOff']),
       outstandingAmount: _asDouble(json['outstandingAmount']),
       status: json['status'] as String? ?? 'unpaid',
-      isAcknowledged: json['isAcknowledged'] as bool? ?? false,
+      isAcknowledged: _asBool(json['isAcknowledged'] ?? json['is_acknowledged']),
       acknowledgedAt: json['acknowledgedAt'] != null
           ? DateTime.tryParse(json['acknowledgedAt'].toString())
           : null,
-      isLocked: json['isLocked'] as bool? ?? false,
-      isOutstanding: json['isOutstanding'] as bool? ?? true,
+      isLocked: _asBool(json['isLocked'] ?? json['is_locked']),
+      isOutstanding: _asBool(json['isOutstanding'] ?? json['is_outstanding'] ?? true),
       debtStartDate: json['debtStartDate'] != null
           ? DateTime.tryParse(json['debtStartDate'].toString()) ??
                 DateTime.now()

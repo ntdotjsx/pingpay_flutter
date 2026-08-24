@@ -5,6 +5,17 @@ double _asDouble(dynamic val) {
   return 0.0;
 }
 
+bool _asBool(dynamic val) {
+  if (val == null) return false;
+  if (val is bool) return val;
+  if (val is num) return val == 1;
+  if (val is String) {
+    final s = val.toLowerCase().trim();
+    return s == 'true' || s == '1' || s == 't';
+  }
+  return false;
+}
+
 class BillItemParticipantModel {
   final String id;
   final String billId;
@@ -57,8 +68,8 @@ class BillItemParticipantModel {
       amountPaid: _asDouble(json['amountPaid']),
       amountWrittenOff: _asDouble(json['amountWrittenOff']),
       status: json['status'] as String? ?? 'unpaid',
-      isLocked: json['isLocked'] as bool? ?? false,
-      isAcknowledged: json['isAcknowledged'] as bool? ?? false,
+      isLocked: _asBool(json['isLocked'] ?? json['is_locked']),
+      isAcknowledged: _asBool(json['isAcknowledged'] ?? json['is_acknowledged']),
       createdAt: json['createdAt'] != null
           ? DateTime.tryParse(json['createdAt'].toString())?.toLocal()
           : null,

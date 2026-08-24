@@ -1213,6 +1213,20 @@ export class PaymentService {
       )
     );
 
+    realtimeService.sendToBill(
+      item.billId,
+      realtimeService.makeEvent(
+        "bill.updated",
+        {
+          billId: item.billId,
+          billItemId: item.id,
+          debtorId,
+          acknowledged: true,
+        },
+        { resourceId: item.billId }
+      )
+    );
+
     return updated;
   }
 }
