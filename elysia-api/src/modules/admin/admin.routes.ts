@@ -641,4 +641,109 @@ export const adminRoutes = new Elysia()
       tags: ["Admin"],
       summary: "List security events (e.g. PIN brute-force, suspicious attempts)",
     },
+  })
+
+  // ── Bills Explorer ────────────────────────────────────────────────
+  .get("/bills", async ({ adminUser, query }) => {
+    const result = await adminService.getBills(
+      adminUser.id,
+      {
+        ownerId: query.ownerId,
+        status: query.status,
+        search: query.search,
+        dateFrom: query.dateFrom,
+        dateTo: query.dateTo,
+      },
+      query.page,
+      query.limit
+    );
+    return { success: true, data: result };
+  }, {
+    query: t.Object({
+      ...PaginationQuery,
+      ownerId: t.Optional(t.String()),
+      status: t.Optional(t.String()),
+      search: t.Optional(t.String()),
+      dateFrom: t.Optional(t.String()),
+      dateTo: t.Optional(t.String()),
+    }),
+    detail: {
+      tags: ["Admin"],
+      summary: "List all bills with split items & debtor status",
+    },
+  })
+
+  .get("/bills/:id", async ({ adminUser, params: { id }, set }) => {
+    try {
+      const bill = await adminService.getBillDetail(adminUser.id, id);
+      return { success: true, data: bill };
+    } catch (e: any) {
+      set.status = 404;
+      return { success: false, error: e.message };
+    }
+  }, {
+    params: t.Object({ id: t.String({ format: "uuid" }) }),
+    detail: {
+      tags: ["Admin"],
+      summary: "Get detailed bill information including OCR raw data and debtor breakdowns",
+    },
+  })
+
+  // ── Payments Explorer ─────────────────────────────────────────────
+  .get("/payments", async ({ adminUser, query }) => {
+    const result = await adminService.getPayments(
+      adminUser.id,
+      {
+        payerId: query.payerId,
+        status: query.status,
+        channel: query.channel,
+        method: query.method,
+        dateFrom: query.dateFrom,
+        dateTo: query.dateTo,
+      },
+      query.page,
+      query.limit
+    );
+    return { success: true, data: result };
+  }, {
+    query: t.Object({
+      ...PaginationQuery,
+      payerId: t.Optional(t.String()),
+      status: t.Optional(t.String()),
+      channel: t.Optional(t.String()),
+      method: t.Optional(t.String()),
+      dateFrom: t.Optional(t.String()),
+      dateTo: t.Optional(t.String()),
+    }),
+    detail: {
+      tags: ["Admin"],
+      summary: "List all payment transactions, slips, and verification statuses",
+    },
+  })
+
+  .get("/payments/:id", async ({ adminUser, params: { id }, set }) => {
+    try {
+      const payment = await adminService.getPaymentDetail(adminUser.id, id);
+      return { success: true, data: payment };
+    } catch (e: any) {
+      set.status = 404;
+      return { success: false, error: e.message };
+    }
+  }, {
+    params: t.Object({ id: t.String({ format: "uuid" }) }),
+    detail: {
+      tags: ["Admin"],
+      summary: "Get detailed payment information including EasySlip/SlipOK verification payload",
+    },
+  })
+
+  // ── Database Table Live Counts & Health ───────────────────────────
+  .get("/maintenance/db-stats", async ({ adminUser }) => {
+    const stats = await adminService.getDatabaseStats(adminUser.id);
+    return { success: true, data: stats };
+  }, {
+    detail: {
+      tags: ["Admin"],
+      summary: "Get live row counts for all database tables",
+    },
   });

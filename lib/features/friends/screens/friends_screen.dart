@@ -11,6 +11,7 @@ import '../../../../core/utils/app_toast.dart';
 import '../../../../core/widgets/pingpay_loading.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../models/friend_models.dart';
+import '../providers/friend_nickname_provider.dart';
 import '../providers/friends_provider.dart';
 
 class FriendsScreen extends ConsumerStatefulWidget {
@@ -643,40 +644,70 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
                 ),
                 const SizedBox(width: 14),
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        friend.user.displayName,
-                        style: TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 15,
-                          letterSpacing: -0.2,
-                          color: isDark ? AppColors.bodyOnDark : AppColors.ink,
-                        ),
-                      ),
-                      const SizedBox(height: 3),
-                      Row(
+                  child: Builder(
+                    builder: (context) {
+                      final friendKey = (friend.user.id != null && friend.user.id!.isNotEmpty)
+                          ? friend.user.id!
+                          : friend.user.userCode;
+                      final nicknamesMap = ref.watch(friendNicknameProvider);
+                      final nickname = nicknamesMap[friendKey];
+                      final hasNickname = nickname != null && nickname.trim().isNotEmpty;
+                      final effectiveName = hasNickname ? nickname : friend.user.displayName;
+
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: isDark ? Colors.white10 : const Color(0xFFEFF1F5),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Text(
-                              'รหัส: ${friend.user.userCode}',
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                                color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
-                                letterSpacing: 0.3,
+                          Row(
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  effectiveName,
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 15,
+                                    letterSpacing: -0.2,
+                                    color: isDark ? AppColors.bodyOnDark : AppColors.ink,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                               ),
-                            ),
+                              if (hasNickname) ...[
+                                const SizedBox(width: 5),
+                                Text(
+                                  '(${friend.user.displayName})',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                          const SizedBox(height: 3),
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: isDark ? Colors.white10 : const Color(0xFFEFF1F5),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  'รหัส: ${friend.user.userCode}',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
+                                    letterSpacing: 0.3,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ],
-                      ),
-                    ],
+                      );
+                    },
                   ),
                 ),
                 Icon(

@@ -380,6 +380,78 @@ export async function getSecurityEvents(filters: {
 	);
 }
 
+// ── Bills ───────────────────────────────────────────────────────
+
+export async function getBills(filters: {
+	ownerId?: string;
+	status?: string;
+	search?: string;
+	dateFrom?: string;
+	dateTo?: string;
+	page?: number;
+	limit?: number;
+} = {}) {
+	return request<{ success: boolean; data: { rows: any[]; total: number } }>(
+		`/bills${buildQuery(filters)}`
+	);
+}
+
+export async function getBillDetail(id: string) {
+	return request<{ success: boolean; data: any }>(`/bills/${id}`);
+}
+
+// ── Payments ────────────────────────────────────────────────────
+
+export async function getPayments(filters: {
+	payerId?: string;
+	status?: string;
+	channel?: string;
+	method?: string;
+	dateFrom?: string;
+	dateTo?: string;
+	page?: number;
+	limit?: number;
+} = {}) {
+	return request<{ success: boolean; data: { rows: any[]; total: number } }>(
+		`/payments${buildQuery(filters)}`
+	);
+}
+
+export async function getPaymentDetail(id: string) {
+	return request<{ success: boolean; data: any }>(`/payments/${id}`);
+}
+
+// ── Maintenance & Live DB Stats ─────────────────────────────────
+
+export async function getDbStats() {
+	return request<{
+		success: boolean;
+		data: {
+			users: number;
+			bills: number;
+			billItems: number;
+			payments: number;
+			paymentVerifications: number;
+			financialTransactions: number;
+			disputes: number;
+			friendships: number;
+			editLogs: number;
+			activityLogs: number;
+			suspiciousActivityLogs: number;
+			adminActionLogs: number;
+			notificationOutbox: number;
+			notificationDeliveries: number;
+			deviceTokens: number;
+			securityEvents: number;
+			rewardItems: number;
+			rewardRedemptions: number;
+			consentRecords: number;
+			authIdentities: number;
+			authSessions: number;
+		};
+	}>('/maintenance/db-stats');
+}
+
 // ── Auth & Google Login ─────────────────────────────────────────
 
 export async function verifyGoogleToken(data: {

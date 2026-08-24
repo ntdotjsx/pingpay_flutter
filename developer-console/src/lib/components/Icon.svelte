@@ -6,6 +6,8 @@
   }: {
     name:
       | 'dashboard'
+      | 'bills'
+      | 'payments'
       | 'transactions'
       | 'activity'
       | 'suspicious'
