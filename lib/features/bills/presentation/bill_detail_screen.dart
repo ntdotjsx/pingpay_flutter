@@ -1,7 +1,7 @@
 import 'dart:convert';
-import 'dart:ui';
 import 'package:figma_squircle/figma_squircle.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -31,33 +31,7 @@ class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: isDark ? AppColors.surfaceBlack : const Color(0xFFF6F7F9),
-      appBar: AppBar(
-        title: const Text(
-          'รายละเอียดบิล',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-        ),
-        centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
-          onPressed: () => context.pop(),
-        ),
-        actions: [
-          billAsync.maybeWhen(
-            data: (bill) {
-              final currentUserId = ref.read(authStateProvider).user?.id;
-              if (bill.status == 'cancelled') return const SizedBox.shrink();
-              if (currentUserId != bill.ownerId) return const SizedBox.shrink();
-              return IconButton(
-                icon: const Icon(Icons.delete_outline_rounded, color: AppColors.error),
-                tooltip: 'ยกเลิกบิล',
-                onPressed: () => _handleCancelBill(context, bill),
-              );
-            },
-            orElse: () => const SizedBox.shrink(),
-          ),
-        ],
-      ),
+      backgroundColor: isDark ? AppColors.surfaceBlack : Colors.white,
       body: billAsync.when(
         loading: () => const BillDetailSkeleton(),
         error: (err, _) => Center(
@@ -100,7 +74,7 @@ class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
                   icon: const Icon(Icons.refresh_rounded, size: 18),
                   label: const Text('ลองใหม่'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
+                    backgroundColor: const Color(0xFFFF5000),
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -112,63 +86,388 @@ class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
           ),
         ),
         data: (bill) {
-          return SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 40),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Section 1: Hero Bill Overview Card
-                Container(
-                  decoration: ShapeDecoration(
-                    color: isDark ? AppColors.surfaceTile1 : AppColors.canvas,
-                    shadows: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.05),
-                        blurRadius: 16,
-                        offset: const Offset(0, 4),
-                      ),
+          final currentUserId = ref.read(authStateProvider).user?.id;
+          final isOwner = currentUserId == bill.ownerId;
+          final dateStr = bill.createdAt != null
+              ? DateFormat('dd MMM yyyy • HH:mm', 'th').format(bill.createdAt!)
+              : '';
+
+          return Column(
+            children: [
+              // 1. Signature PingPay Executive Gradient Header
+              Container(
+                width: double.infinity,
+                decoration: const ShapeDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Color(0xFFFF5000),
+                      Color(0xFFFF6A00),
+                      Color(0xFFFF8500),
                     ],
-                    shape: SmoothRectangleBorder(
-                      side: BorderSide(
-                        color: isDark ? Colors.white10 : AppColors.hairline,
-                        width: 1,
-                      ),
-                      borderRadius: const SmoothBorderRadius.all(
-                        SmoothRadius(cornerRadius: 24, cornerSmoothing: 1.0),
-                      ),
+                  ),
+                  shape: SmoothRectangleBorder(
+                    borderRadius: SmoothBorderRadius.only(
+                      bottomLeft: SmoothRadius(cornerRadius: 24, cornerSmoothing: 0.8),
+                      bottomRight: SmoothRadius(cornerRadius: 24, cornerSmoothing: 0.8),
                     ),
                   ),
-                  padding: const EdgeInsets.all(20),
+                ),
+                child: SafeArea(
+                  bottom: false,
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Header: Icon + Title + Status Badge
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Header Icon or Receipt Thumbnail (if available)
-                          GestureDetector(
-                            onTap: (bill.receiptImageUrl != null && bill.receiptImageUrl!.isNotEmpty)
-                                ? () => _showFullReceiptDialog(context, bill.receiptImageUrl!)
-                                : null,
-                            child: Container(
-                              width: 48,
-                              height: 48,
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 4.0),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Container(
+                              width: 38,
+                              height: 38,
                               decoration: ShapeDecoration(
-                                color: AppColors.primary.withValues(alpha: 0.12),
+                                color: Colors.white.withValues(alpha: 0.18),
                                 shape: const SmoothRectangleBorder(
                                   borderRadius: SmoothBorderRadius.all(
-                                    SmoothRadius(cornerRadius: 14, cornerSmoothing: 0.6),
+                                    SmoothRadius(cornerRadius: 19, cornerSmoothing: 1.0),
                                   ),
                                 ),
                               ),
-                              child: ClipSmoothRect(
-                                radius: const SmoothBorderRadius.all(
-                                  SmoothRadius(cornerRadius: 14, cornerSmoothing: 0.6),
+                              child: IconButton(
+                                icon: const Icon(
+                                  Icons.arrow_back_ios_new_rounded,
+                                  color: Colors.white,
+                                  size: 18,
                                 ),
-                                child: (bill.receiptImageUrl != null && bill.receiptImageUrl!.isNotEmpty)
-                                    ? (bill.receiptImageUrl!.startsWith('data:image')
+                                onPressed: () => context.pop(),
+                              ),
+                            ),
+                            const Text(
+                              'รายละเอียดบิล',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: -0.3,
+                              ),
+                            ),
+                            if (isOwner && bill.status != 'cancelled')
+                              Container(
+                                width: 38,
+                                height: 38,
+                                decoration: ShapeDecoration(
+                                  color: Colors.white.withValues(alpha: 0.18),
+                                  shape: const SmoothRectangleBorder(
+                                    borderRadius: SmoothBorderRadius.all(
+                                      SmoothRadius(cornerRadius: 19, cornerSmoothing: 1.0),
+                                    ),
+                                  ),
+                                ),
+                                child: IconButton(
+                                  icon: const Icon(
+                                    Icons.delete_outline_rounded,
+                                    color: Colors.white,
+                                    size: 20,
+                                  ),
+                                  tooltip: 'ยกเลิกบิล',
+                                  onPressed: () => _handleCancelBill(context, bill),
+                                ),
+                              )
+                            else
+                              const SizedBox(width: 38),
+                          ],
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 2, 20, 16),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              dateStr,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.white.withValues(alpha: 0.9),
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            _buildStatusBadge(bill.status, inHeader: true),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              // 2. Middle Scrollable Area (Clean Inset-Grouped Lists)
+              Expanded(
+                child: SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(
+                    parent: BouncingScrollPhysics(),
+                  ),
+                  padding: const EdgeInsets.fromLTRB(16, 14, 16, 32),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // Group 1: Bill Overview & Accounting Grid (Clean Inset Card)
+                      Container(
+                        decoration: ShapeDecoration(
+                          color: isDark ? AppColors.surfaceTile2 : const Color(0xFFF9FAFB),
+                          shape: SmoothRectangleBorder(
+                            side: BorderSide(
+                              color: isDark ? Colors.white10 : const Color(0xFFE5E7EB),
+                              width: 0.8,
+                            ),
+                            borderRadius: const SmoothBorderRadius.all(
+                              SmoothRadius(cornerRadius: 18, cornerSmoothing: 0.8),
+                            ),
+                          ),
+                        ),
+                        child: Column(
+                          children: [
+                            // Row 1: Bill Name & Thumbnail
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+                              child: Row(
+                                children: [
+                                  GestureDetector(
+                                    onTap: (bill.receiptImageUrl != null && bill.receiptImageUrl!.isNotEmpty)
+                                        ? () => _showFullReceiptDialog(context, bill.receiptImageUrl!)
+                                        : null,
+                                    child: Container(
+                                      width: 40,
+                                      height: 40,
+                                      decoration: const ShapeDecoration(
+                                        color: Color(0x1FFF5000),
+                                        shape: SmoothRectangleBorder(
+                                          borderRadius: SmoothBorderRadius.all(
+                                            SmoothRadius(cornerRadius: 11, cornerSmoothing: 0.8),
+                                          ),
+                                        ),
+                                      ),
+                                      child: ClipSmoothRect(
+                                        radius: const SmoothBorderRadius.all(
+                                          SmoothRadius(cornerRadius: 11, cornerSmoothing: 0.8),
+                                        ),
+                                        child: (bill.receiptImageUrl != null && bill.receiptImageUrl!.isNotEmpty)
+                                            ? (bill.receiptImageUrl!.startsWith('data:image')
+                                                ? Image.memory(
+                                                    base64Decode(
+                                                      bill.receiptImageUrl!.replaceFirst(
+                                                        RegExp(r'data:image/[^;]+;base64,'),
+                                                        '',
+                                                      ),
+                                                    ),
+                                                    fit: BoxFit.cover,
+                                                    errorBuilder: (_, __, ___) => const Icon(
+                                                      Icons.receipt_long_rounded,
+                                                      color: Color(0xFFFF5000),
+                                                      size: 20,
+                                                    ),
+                                                  )
+                                                : Image.network(
+                                                    bill.receiptImageUrl!,
+                                                    fit: BoxFit.cover,
+                                                    errorBuilder: (_, __, ___) => const Icon(
+                                                      Icons.receipt_long_rounded,
+                                                      color: Color(0xFFFF5000),
+                                                      size: 20,
+                                                    ),
+                                                  ))
+                                            : const Icon(
+                                                Icons.receipt_long_rounded,
+                                                color: Color(0xFFFF5000),
+                                                size: 20,
+                                              ),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          bill.title ?? 'บิลค่าใช้จ่าย',
+                                          style: TextStyle(
+                                            fontSize: 15,
+                                            fontWeight: FontWeight.w700,
+                                            letterSpacing: -0.2,
+                                            color: isDark ? AppColors.bodyOnDark : AppColors.ink,
+                                          ),
+                                        ),
+                                        if (bill.description != null && bill.description!.isNotEmpty) ...[
+                                          const SizedBox(height: 1),
+                                          Text(
+                                            bill.description!,
+                                            style: TextStyle(
+                                              fontSize: 11.5,
+                                              color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
+                                            ),
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                  ),
+                                  Text(
+                                    '฿${bill.totalAmount.toStringAsFixed(2)}',
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w800,
+                                      color: Color(0xFFFF5000),
+                                      letterSpacing: -0.3,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+
+                            Divider(
+                              height: 1,
+                              thickness: 0.6,
+                              color: isDark ? Colors.white10 : const Color(0xFFE5E7EB),
+                            ),
+
+                            // Row 2: Multi-Metric Accounting Inset Grid
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                                children: [
+                                  _buildAccountingColumn(
+                                    'ยอดเต็มบิล',
+                                    '฿${bill.totalAmount.toStringAsFixed(2)}',
+                                    isDark ? AppColors.bodyOnDark : AppColors.ink,
+                                  ),
+                                  if (bill.hasMyShare) ...[
+                                    Container(width: 0.6, height: 26, color: isDark ? Colors.white10 : const Color(0xFFE5E7EB)),
+                                    _buildAccountingColumn(
+                                      'ส่วนของฉัน',
+                                      '฿${bill.myShare.toStringAsFixed(2)}',
+                                      const Color(0xFFFF5000),
+                                    ),
+                                  ],
+                                  Container(width: 0.6, height: 26, color: isDark ? Colors.white10 : const Color(0xFFE5E7EB)),
+                                  _buildAccountingColumn(
+                                    'ชำระแล้ว',
+                                    '฿${bill.totalPaidAmount.toStringAsFixed(2)}',
+                                    const Color(0xFF34C759),
+                                  ),
+                                  if (bill.totalWrittenOffAmount > 0) ...[
+                                    Container(width: 0.6, height: 26, color: isDark ? Colors.white10 : const Color(0xFFE5E7EB)),
+                                    _buildAccountingColumn(
+                                      'ยกหนี้ให้',
+                                      '฿${bill.totalWrittenOffAmount.toStringAsFixed(2)}',
+                                      isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
+                                    ),
+                                  ],
+                                  Container(width: 0.6, height: 26, color: isDark ? Colors.white10 : const Color(0xFFE5E7EB)),
+                                  _buildAccountingColumn(
+                                    'คงค้างที่ต้องเก็บ',
+                                    '฿${bill.totalOutstandingAmount.toStringAsFixed(2)}',
+                                    bill.totalOutstandingAmount > 0 ? const Color(0xFFFF5000) : const Color(0xFF34C759),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+
+                      // Group 2: Receipt Image (Clean Inset Card)
+                      if (bill.receiptImageUrl != null && bill.receiptImageUrl!.isNotEmpty) ...[
+                        Container(
+                          decoration: ShapeDecoration(
+                            color: isDark ? AppColors.surfaceTile2 : const Color(0xFFF9FAFB),
+                            shape: SmoothRectangleBorder(
+                              side: BorderSide(
+                                color: isDark ? Colors.white10 : const Color(0xFFE5E7EB),
+                                width: 0.8,
+                              ),
+                              borderRadius: const SmoothBorderRadius.all(
+                                SmoothRadius(cornerRadius: 18, cornerSmoothing: 0.8),
+                              ),
+                            ),
+                          ),
+                          padding: const EdgeInsets.all(12),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Container(
+                                    width: 32,
+                                    height: 32,
+                                    decoration: const ShapeDecoration(
+                                      color: Color(0x1FFF5000),
+                                      shape: SmoothRectangleBorder(
+                                        borderRadius: SmoothBorderRadius.all(
+                                          SmoothRadius(cornerRadius: 9, cornerSmoothing: 0.8),
+                                        ),
+                                      ),
+                                    ),
+                                    child: const Icon(
+                                      Icons.receipt_rounded,
+                                      color: Color(0xFFFF5000),
+                                      size: 16,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'รูปภาพใบเสร็จ / หลักฐาน',
+                                          style: TextStyle(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w700,
+                                            color: isDark ? AppColors.bodyOnDark : AppColors.ink,
+                                          ),
+                                        ),
+                                        Text(
+                                          'แตะที่รูปเพื่อดูภาพขนาดเต็ม',
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  GestureDetector(
+                                    onTap: () => _showFullReceiptDialog(context, bill.receiptImageUrl!),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFFF5000).withValues(alpha: 0.1),
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: const Text(
+                                        'ดูรูปเต็ม',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w700,
+                                          color: Color(0xFFFF5000),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 10),
+                              GestureDetector(
+                                onTap: () => _showFullReceiptDialog(context, bill.receiptImageUrl!),
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: Container(
+                                    constraints: const BoxConstraints(maxHeight: 200),
+                                    width: double.infinity,
+                                    color: Colors.black12,
+                                    child: bill.receiptImageUrl!.startsWith('data:image')
                                         ? Image.memory(
                                             base64Decode(
                                               bill.receiptImageUrl!.replaceFirst(
@@ -177,760 +476,436 @@ class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
                                               ),
                                             ),
                                             fit: BoxFit.cover,
-                                            errorBuilder: (_, __, ___) => const Icon(
-                                              Icons.receipt_long_rounded,
-                                              color: AppColors.primary,
-                                              size: 24,
+                                            errorBuilder: (ctx, _, __) => const Center(
+                                              child: Icon(Icons.broken_image_rounded, size: 36, color: Colors.grey),
                                             ),
                                           )
                                         : Image.network(
                                             bill.receiptImageUrl!,
                                             fit: BoxFit.cover,
-                                            errorBuilder: (_, __, ___) => const Icon(
-                                              Icons.receipt_long_rounded,
-                                              color: AppColors.primary,
-                                              size: 24,
+                                            errorBuilder: (ctx, _, __) => const Center(
+                                              child: Icon(Icons.broken_image_rounded, size: 36, color: Colors.grey),
                                             ),
-                                          ))
-                                    : const Icon(
-                                        Icons.receipt_long_rounded,
-                                        color: AppColors.primary,
-                                        size: 24,
-                                      ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  bill.title ?? 'บิลค่าใช้จ่าย',
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.w800,
-                                    letterSpacing: -0.3,
-                                    color: isDark ? AppColors.bodyOnDark : AppColors.ink,
+                                          ),
                                   ),
                                 ),
-                                if (bill.description != null &&
-                                    bill.description!.isNotEmpty) ...[
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    bill.description!,
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
-                                    ),
-                                  ),
-                                ],
-                              ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                      ],
+
+                      // Group 3: Participants List (Unified Inset-Grouped List)
+                      Container(
+                        decoration: ShapeDecoration(
+                          color: isDark ? AppColors.surfaceTile2 : const Color(0xFFF9FAFB),
+                          shape: SmoothRectangleBorder(
+                            side: BorderSide(
+                              color: isDark ? Colors.white10 : const Color(0xFFE5E7EB),
+                              width: 0.8,
+                            ),
+                            borderRadius: const SmoothBorderRadius.all(
+                              SmoothRadius(cornerRadius: 18, cornerSmoothing: 0.8),
                             ),
                           ),
-                          _buildStatusBadge(bill.status),
-                        ],
-                      ),
-
-                      const SizedBox(height: 18),
-                      Divider(
-                        height: 1,
-                        thickness: 1,
-                        color: isDark ? Colors.white10 : AppColors.dividerSoft,
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Multi-Metric Accounting Grid
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                        decoration: BoxDecoration(
-                          color: isDark ? AppColors.surfaceTile2 : AppColors.canvasParchment,
-                          borderRadius: BorderRadius.circular(16),
                         ),
                         child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                _buildAccountingColumn(
-                                  'จ่ายสำรอง (บิล)',
-                                  '฿${bill.totalAmount.toStringAsFixed(2)}',
-                                  isDark ? AppColors.bodyOnDark : AppColors.ink,
-                                ),
-                                if (bill.hasMyShare) ...[
-                                  Container(width: 1, height: 28, color: isDark ? Colors.white10 : AppColors.dividerSoft),
-                                  _buildAccountingColumn(
-                                    'ส่วนของฉัน',
-                                    '฿${bill.myShare.toStringAsFixed(2)}',
-                                    AppColors.primary,
-                                  ),
-                                ],
-                                Container(width: 1, height: 28, color: isDark ? Colors.white10 : AppColors.dividerSoft),
-                                _buildAccountingColumn(
-                                  'ชำระแล้ว',
-                                  '฿${bill.totalPaidAmount.toStringAsFixed(2)}',
-                                  AppColors.success,
-                                ),
-                                if (bill.totalWrittenOffAmount > 0) ...[
-                                  Container(width: 1, height: 28, color: isDark ? Colors.white10 : AppColors.dividerSoft),
-                                  _buildAccountingColumn(
-                                    'ยกหนี้ให้',
-                                    '฿${bill.totalWrittenOffAmount.toStringAsFixed(2)}',
-                                    isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
-                                  ),
-                                ],
-                                Container(width: 1, height: 28, color: isDark ? Colors.white10 : AppColors.dividerSoft),
-                                _buildAccountingColumn(
-                                  'คงค้างที่ต้องเก็บ',
-                                  '฿${bill.totalOutstandingAmount.toStringAsFixed(2)}',
-                                  const Color(0xFFFF5000),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                if (bill.receiptImageUrl != null &&
-                    bill.receiptImageUrl!.isNotEmpty) ...[
-                  const SizedBox(height: 16),
-                  Container(
-                    width: double.infinity,
-                    decoration: ShapeDecoration(
-                      color: isDark
-                          ? AppColors.surfaceTile1
-                          : AppColors.canvas,
-                      shape: const SmoothRectangleBorder(
-                        borderRadius: SmoothBorderRadius.all(
-                          SmoothRadius(cornerRadius: 20, cornerSmoothing: 1.0),
-                        ),
-                      ),
-                    ),
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: const [
-                            Icon(Icons.receipt_rounded, size: 18, color: AppColors.primary),
-                            SizedBox(width: 8),
-                            Text(
-                              'รูปภาพใบเสร็จ / หลักฐาน (Receipt Photo)',
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(14),
-                          child: bill.receiptImageUrl!.startsWith('data:image')
-                              ? Image.memory(
-                                  base64Decode(
-                                    bill.receiptImageUrl!.replaceFirst(
-                                      RegExp(r'data:image/[^;]+;base64,'),
-                                      '',
-                                    ),
-                                  ),
-                                  fit: BoxFit.cover,
-                                  width: double.infinity,
-                                  errorBuilder: (ctx, _, __) => const Center(
-                                    child: Icon(Icons.broken_image_rounded, size: 40, color: Colors.grey),
-                                  ),
-                                )
-                              : Image.network(
-                                  bill.receiptImageUrl!,
-                                  fit: BoxFit.cover,
-                                  width: double.infinity,
-                                  errorBuilder: (ctx, _, __) => const Center(
-                                    child: Icon(Icons.broken_image_rounded, size: 40, color: Colors.grey),
-                                  ),
-                                ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-
-                const SizedBox(height: 24),
-
-                // Section 2: Participants Portion Details Title
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'รายการลูกหนี้ / ผู้ร่วมหาร',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: isDark ? AppColors.bodyOnDark : AppColors.ink,
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: AppColors.primary.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Text(
-                        '${bill.items.length} คน',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.primary,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-
-                // Participants List
-                ListView.separated(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: bill.items.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 12),
-                  itemBuilder: (ctx, idx) {
-                    final item = bill.items[idx];
-                    final debtorName = item.debtor?.displayName ?? 'เพื่อน';
-                    final isPaidLocked = item.isFullyPaid || item.isLocked;
-
-                    return Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: ShapeDecoration(
-                        color: isDark ? AppColors.surfaceTile1 : AppColors.canvas,
-                        shadows: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
-                            blurRadius: 10,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                        shape: SmoothRectangleBorder(
-                          side: BorderSide(
-                            color: isDark ? Colors.white10 : AppColors.hairline,
-                            width: 1,
-                          ),
-                          borderRadius: const SmoothBorderRadius.all(
-                            SmoothRadius(
-                              cornerRadius: 20,
-                              cornerSmoothing: 1.0,
-                            ),
-                          ),
-                        ),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          // Debtor Header: Avatar + Name + ID + Status Pill
-                          Row(
-                            children: [
-                              // Debtor Squircle Avatar
-                              Container(
-                                width: 40,
-                                height: 40,
-                                decoration: ShapeDecoration(
-                                  color: AppColors.primary.withValues(alpha: 0.15),
-                                  shape: const SmoothRectangleBorder(
-                                    borderRadius: SmoothBorderRadius.all(
-                                      SmoothRadius(cornerRadius: 13, cornerSmoothing: 0.6),
-                                    ),
-                                  ),
-                                ),
-                                child: ClipSmoothRect(
-                                  radius: const SmoothBorderRadius.all(
-                                    SmoothRadius(cornerRadius: 13, cornerSmoothing: 0.6),
-                                  ),
-                                  child: Stack(
-                                    fit: StackFit.expand,
+                            // Header
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(14, 11, 14, 11),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Row(
                                     children: [
-                                      item.debtor?.avatarUrl != null && item.debtor!.avatarUrl!.isNotEmpty
-                                          ? Image.network(
-                                              item.debtor!.avatarUrl!,
-                                              fit: BoxFit.cover,
-                                              errorBuilder: (_, __, ___) => Center(
-                                                child: Text(
-                                                  debtorName.isNotEmpty
-                                                      ? debtorName[0].toUpperCase()
-                                                      : 'U',
-                                                  style: const TextStyle(
-                                                    fontWeight: FontWeight.bold,
-                                                    fontSize: 15,
-                                                    color: AppColors.primary,
-                                                  ),
-                                                ),
-                                              ),
-                                            )
-                                          : Center(
-                                              child: Text(
-                                                debtorName.isNotEmpty
-                                                    ? debtorName[0].toUpperCase()
-                                                    : 'U',
-                                                style: const TextStyle(
-                                                  fontWeight: FontWeight.bold,
-                                                  fontSize: 15,
-                                                  color: AppColors.primary,
-                                                ),
-                                              ),
-                                            ),
-                                      if (!item.isAcknowledged && !item.isFullyPaid && !item.isFullyWrittenOff)
-                                        Positioned.fill(
-                                          child: BackdropFilter(
-                                            filter: ImageFilter.blur(sigmaX: 3.5, sigmaY: 3.5),
-                                            child: Container(
-                                              color: Colors.black.withValues(alpha: 0.25),
-                                              alignment: Alignment.center,
-                                              child: const Icon(
-                                                Icons.hourglass_top_rounded,
-                                                color: Colors.white,
-                                                size: 16,
-                                              ),
+                                      Container(
+                                        width: 28,
+                                        height: 28,
+                                        decoration: const ShapeDecoration(
+                                          color: Color(0x1FFF5000),
+                                          shape: SmoothRectangleBorder(
+                                            borderRadius: SmoothBorderRadius.all(
+                                              SmoothRadius(cornerRadius: 8, cornerSmoothing: 0.8),
                                             ),
                                           ),
                                         ),
+                                        child: const Icon(
+                                          Icons.group_rounded,
+                                          color: Color(0xFFFF5000),
+                                          size: 16,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        'ผู้ร่วมหารบิล',
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w700,
+                                          color: isDark ? AppColors.bodyOnDark : AppColors.ink,
+                                        ),
+                                      ),
                                     ],
                                   ),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      debtorName,
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 15,
-                                        color: isDark ? AppColors.bodyOnDark : AppColors.ink,
-                                      ),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFFF5000).withValues(alpha: 0.12),
+                                      borderRadius: BorderRadius.circular(6),
                                     ),
-                                    const SizedBox(height: 1),
-                                    Text(
-                                      'รหัส: ${item.debtor?.userCode ?? "-"}',
-                                      style: TextStyle(
+                                    child: Text(
+                                      '${bill.items.length} คน',
+                                      style: const TextStyle(
                                         fontSize: 11,
-                                        color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFFFF5000),
                                       ),
                                     ),
-                                  ],
-                                ),
-                              ),
-                              _buildItemStatusBadge(item),
-                            ],
-                          ),
-
-                          const SizedBox(height: 12),
-                          Divider(
-                            height: 1,
-                            thickness: 1,
-                            color: isDark ? Colors.white10 : AppColors.dividerSoft,
-                          ),
-                          const SizedBox(height: 12),
-
-                          // Portions Row Details
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                'ยอดส่วนแบ่ง',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: isDark ? AppColors.bodyMuted : AppColors.inkMuted80,
-                                ),
-                              ),
-                              Text(
-                                '฿${item.currentAmount.toStringAsFixed(2)}',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                  color: isDark ? AppColors.bodyOnDark : AppColors.ink,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 4),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                'จ่ายแล้ว',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: isDark ? AppColors.bodyMuted : AppColors.inkMuted80,
-                                ),
-                              ),
-                              Text(
-                                '฿${item.amountPaid.toStringAsFixed(2)}',
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w700,
-                                  color: AppColors.success,
-                                ),
-                              ),
-                            ],
-                          ),
-                          if (item.amountWrittenOff > 0 || item.isFullyWrittenOff) ...[
-                            const SizedBox(height: 4),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  'ยกหนี้ให้ (Write-off)',
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
                                   ),
-                                ),
-                                Text(
-                                  '฿${item.amountWrittenOff.toStringAsFixed(2)}',
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
-                            Builder(
-                              builder: (context) {
-                                final reason = bill.getWriteOffReasonForParticipant(item.id);
-                                if (reason == null || reason.isEmpty) return const SizedBox.shrink();
-                                return Container(
-                                  margin: const EdgeInsets.only(top: 6),
-                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-                                  decoration: BoxDecoration(
-                                    color: isDark
-                                        ? AppColors.surfaceTile2
-                                        : const Color(0xFFF1F5F9),
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(
-                                      color: isDark ? Colors.white10 : const Color(0xFFE2E8F0),
-                                    ),
-                                  ),
-                                  child: Row(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+
+                            Divider(
+                              height: 1,
+                              thickness: 0.6,
+                              color: isDark ? Colors.white10 : const Color(0xFFE5E7EB),
+                            ),
+
+                            // List of participants inside the card
+                            ListView.separated(
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              itemCount: bill.items.length,
+                              separatorBuilder: (_, __) => Divider(
+                                height: 1,
+                                thickness: 0.6,
+                                indent: 54,
+                                color: isDark ? Colors.white10 : const Color(0xFFE5E7EB),
+                              ),
+                              itemBuilder: (ctx, idx) {
+                                final item = bill.items[idx];
+                                final debtorName = item.debtor?.displayName ?? 'เพื่อน';
+                                final avatarUrl = item.debtor?.avatarUrl;
+                                final isPaidLocked = item.isFullyPaid || item.isLocked;
+
+                                return Padding(
+                                  padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
+                                  child: Column(
                                     children: [
-                                      const Icon(
-                                        Icons.format_quote_rounded,
-                                        size: 14,
-                                        color: AppColors.primary,
+                                      Row(
+                                        children: [
+                                          // Real Debtor Avatar
+                                          _buildUserAvatar(
+                                            avatarUrl: avatarUrl,
+                                            displayName: debtorName,
+                                            isDark: isDark,
+                                          ),
+                                          const SizedBox(width: 10),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Row(
+                                                  children: [
+                                                    Flexible(
+                                                      child: Text(
+                                                        debtorName,
+                                                        style: TextStyle(
+                                                          fontWeight: FontWeight.w700,
+                                                          fontSize: 13.5,
+                                                          color: isDark ? AppColors.bodyOnDark : AppColors.ink,
+                                                        ),
+                                                        maxLines: 1,
+                                                        overflow: TextOverflow.ellipsis,
+                                                      ),
+                                                    ),
+                                                    const SizedBox(width: 6),
+                                                    _buildItemStatusBadge(item),
+                                                  ],
+                                                ),
+                                                const SizedBox(height: 2),
+                                                Text(
+                                                  'ยอด ฿${item.currentAmount.toStringAsFixed(2)} • จ่ายแล้ว ฿${item.amountPaid.toStringAsFixed(2)}',
+                                                  style: TextStyle(
+                                                    fontSize: 11,
+                                                    color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                          Column(
+                                            crossAxisAlignment: CrossAxisAlignment.end,
+                                            children: [
+                                              Text(
+                                                '฿${item.outstandingAmount.toStringAsFixed(2)}',
+                                                style: TextStyle(
+                                                  fontSize: 14.5,
+                                                  fontWeight: FontWeight.w800,
+                                                  color: item.outstandingAmount > 0
+                                                      ? const Color(0xFFFF5000)
+                                                      : const Color(0xFF34C759),
+                                                ),
+                                              ),
+                                              Text(
+                                                item.outstandingAmount > 0 ? 'คงค้าง' : 'ครบแล้ว',
+                                                style: TextStyle(
+                                                  fontSize: 10,
+                                                  color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
                                       ),
-                                      const SizedBox(width: 6),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
+
+                                      // Actions row for owner if not fully paid
+                                      if (isOwner && !isPaidLocked && item.outstandingAmount > 0) ...[
+                                        const SizedBox(height: 8),
+                                        Row(
+                                          mainAxisAlignment: MainAxisAlignment.end,
                                           children: [
-                                            Text(
-                                              'เหตุผลที่ยกหนี้ให้:',
-                                              style: TextStyle(
-                                                fontSize: 10,
-                                                fontWeight: FontWeight.bold,
-                                                color: isDark ? AppColors.bodyMuted : AppColors.inkMuted80,
+                                            GestureDetector(
+                                              onTap: () => _showEditAmountDialog(item),
+                                              child: Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                                decoration: BoxDecoration(
+                                                  color: const Color(0xFFFF5000).withValues(alpha: 0.1),
+                                                  borderRadius: BorderRadius.circular(6),
+                                                ),
+                                                child: const Row(
+                                                  mainAxisSize: MainAxisSize.min,
+                                                  children: [
+                                                    Icon(Icons.edit_outlined, size: 12, color: Color(0xFFFF5000)),
+                                                    SizedBox(width: 3),
+                                                    Text(
+                                                      'แก้ไขยอด',
+                                                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFFFF5000)),
+                                                    ),
+                                                  ],
+                                                ),
                                               ),
                                             ),
-                                            const SizedBox(height: 1),
-                                            Text(
-                                              reason,
-                                              style: TextStyle(
-                                                fontSize: 12,
-                                                fontWeight: FontWeight.w500,
-                                                color: isDark ? AppColors.bodyOnDark : AppColors.ink,
+                                            const SizedBox(width: 8),
+                                            GestureDetector(
+                                              onTap: () => _showWriteOffDialog(item),
+                                              child: Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                                decoration: BoxDecoration(
+                                                  color: AppColors.error.withValues(alpha: 0.1),
+                                                  borderRadius: BorderRadius.circular(6),
+                                                ),
+                                                child: const Row(
+                                                  mainAxisSize: MainAxisSize.min,
+                                                  children: [
+                                                    Icon(Icons.money_off_rounded, size: 12, color: AppColors.error),
+                                                    SizedBox(width: 3),
+                                                    Text(
+                                                      'ยกหนี้ให้',
+                                                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.error),
+                                                    ),
+                                                  ],
+                                                ),
                                               ),
                                             ),
                                           ],
                                         ),
-                                      ),
+                                      ],
                                     ],
                                   ),
                                 );
                               },
                             ),
                           ],
-                          const SizedBox(height: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: AppColors.primary.withValues(alpha: 0.08),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                const Text(
-                                  'ยอดคงค้างสุทธิ',
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w700,
-                                    color: AppColors.primary,
-                                  ),
-                                ),
-                                Text(
-                                  '฿${item.outstandingAmount.toStringAsFixed(2)}',
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w800,
-                                    color: AppColors.primary,
-                                  ),
-                                ),
-                              ],
+                        ),
+                      ),
+
+                      // Group 4: Audit & Activity Logs (if editLogs present)
+                      if (bill.editLogs.isNotEmpty) ...[
+                        const SizedBox(height: 10),
+                        Container(
+                          decoration: ShapeDecoration(
+                            color: isDark ? AppColors.surfaceTile2 : const Color(0xFFF9FAFB),
+                            shape: SmoothRectangleBorder(
+                              side: BorderSide(
+                                color: isDark ? Colors.white10 : const Color(0xFFE5E7EB),
+                                width: 0.8,
+                              ),
+                              borderRadius: const SmoothBorderRadius.all(
+                                SmoothRadius(cornerRadius: 18, cornerSmoothing: 0.8),
+                              ),
                             ),
                           ),
-
-                          const SizedBox(height: 12),
-
-                          // Actions: Edit / Write-Off / Lock Indicator
-                          if (isPaidLocked)
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 10,
-                                vertical: 8,
-                              ),
-                              decoration: BoxDecoration(
-                                color: isDark ? AppColors.surfaceTile2 : AppColors.canvasParchment,
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
+                          padding: const EdgeInsets.all(14),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
                                 children: [
-                                  Icon(
-                                    Icons.lock_outline_rounded,
-                                    size: 14,
-                                    color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
-                                  ),
-                                  const SizedBox(width: 6),
+                                  const Icon(Icons.history_rounded, size: 16, color: Color(0xFFFF5000)),
+                                  const SizedBox(width: 8),
                                   Text(
-                                    'ยอดชำระแล้วถูกล็อค (Paid amount locked)',
+                                    'ประวัติการแก้ไขและยกหนี้',
                                     style: TextStyle(
-                                      fontSize: 11,
-                                      color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
-                                      fontWeight: FontWeight.w600,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w700,
+                                      color: isDark ? AppColors.bodyOnDark : AppColors.ink,
                                     ),
                                   ),
                                 ],
                               ),
-                            )
-                          else if (ref.read(authStateProvider).user?.id == bill.ownerId)
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: OutlinedButton.icon(
-                                    onPressed: () =>
-                                        _showEditAmountDialog(item),
-                                    icon: const Icon(
-                                      Icons.edit_outlined,
-                                      size: 15,
-                                      color: AppColors.primary,
-                                    ),
-                                    label: const Text(
-                                      'แก้ไขยอด',
-                                      style: TextStyle(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.bold,
-                                        color: AppColors.primary,
-                                      ),
-                                    ),
-                                    style: OutlinedButton.styleFrom(
-                                      padding: const EdgeInsets.symmetric(vertical: 10),
-                                      side: const BorderSide(color: AppColors.primary, width: 1.2),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                    ),
-                                  ),
+                              const SizedBox(height: 10),
+                              ListView.separated(
+                                shrinkWrap: true,
+                                physics: const NeverScrollableScrollPhysics(),
+                                itemCount: bill.editLogs.length,
+                                separatorBuilder: (_, __) => Divider(
+                                  height: 12,
+                                  thickness: 0.5,
+                                  color: isDark ? Colors.white10 : const Color(0xFFE5E7EB),
                                 ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: OutlinedButton.icon(
-                                    onPressed: () => _showWriteOffDialog(item),
-                                    icon: const Icon(
-                                      Icons.money_off_rounded,
-                                      size: 15,
-                                      color: AppColors.error,
-                                    ),
-                                    label: const Text(
-                                      'ยกหนี้ให้',
-                                      style: TextStyle(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.bold,
-                                        color: AppColors.error,
-                                      ),
-                                    ),
-                                    style: OutlinedButton.styleFrom(
-                                      padding: const EdgeInsets.symmetric(vertical: 10),
-                                      side: BorderSide(
-                                        color: AppColors.error.withValues(alpha: 0.6),
-                                        width: 1.2,
-                                      ),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
+                                itemBuilder: (ctx, idx) {
+                                  final log = bill.editLogs[idx];
+                                  final isWriteOff = log.action == 'debt_written_off' || log.action == 'write_off';
+                                  final isCancel = log.action == 'bill_cancelled';
+                                  final actionLabel = isWriteOff
+                                      ? 'ยกหนี้ให้'
+                                      : (isCancel ? 'ยกเลิกบิล' : 'แก้ไขข้อมูลบิล');
+                                  final logColor = isCancel
+                                      ? AppColors.error
+                                      : (isWriteOff ? const Color(0xFFFF9500) : const Color(0xFFFF5000));
+                                  final performerName = log.performedBy?.displayName ?? 'เจ้าของบิล';
 
-                // Audit & Activity Logs Section (if editLogs present)
-                if (bill.editLogs.isNotEmpty) ...[
-                  const SizedBox(height: 24),
-                  Row(
-                    children: [
-                      const Icon(Icons.history_rounded, size: 18, color: AppColors.primary),
-                      const SizedBox(width: 8),
-                      Text(
-                        'ประวัติการแก้ไขและยกหนี้',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: isDark ? AppColors.bodyOnDark : AppColors.ink,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: ShapeDecoration(
-                      color: isDark ? AppColors.surfaceTile1 : AppColors.canvas,
-                      shape: SmoothRectangleBorder(
-                        side: BorderSide(
-                          color: isDark ? Colors.white10 : AppColors.hairline,
-                          width: 1,
-                        ),
-                        borderRadius: const SmoothBorderRadius.all(
-                          SmoothRadius(cornerRadius: 18, cornerSmoothing: 1.0),
-                        ),
-                      ),
-                    ),
-                    child: ListView.separated(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: bill.editLogs.length,
-                      separatorBuilder: (_, __) => Divider(
-                        height: 16,
-                        thickness: 1,
-                        color: isDark ? Colors.white10 : AppColors.hairline,
-                      ),
-                      itemBuilder: (ctx, idx) {
-                        final log = bill.editLogs[idx];
-                        final isWriteOff = log.action == 'debt_written_off' || log.action == 'write_off';
-                        final isCancel = log.action == 'bill_cancelled';
-                        final actionLabel = isWriteOff
-                            ? 'ยกหนี้ให้'
-                            : (isCancel ? 'ยกเลิกบิล' : 'แก้ไขข้อมูลบิล');
-                        final logColor = isCancel
-                            ? AppColors.error
-                            : (isWriteOff ? const Color(0xFFFF9500) : AppColors.primary);
-                        final logIcon = isCancel
-                            ? Icons.cancel_rounded
-                            : (isWriteOff ? Icons.money_off_rounded : Icons.edit_note_rounded);
-                        final performerName = log.performedBy?.displayName ?? 'เจ้าของบิล';
-
-                        return Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(6),
-                              decoration: BoxDecoration(
-                                color: logColor.withValues(alpha: 0.12),
-                                shape: BoxShape.circle,
-                              ),
-                              child: Icon(logIcon, size: 14, color: logColor),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  return Row(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      Text(
-                                        actionLabel,
-                                        style: TextStyle(
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.bold,
-                                          color: isDark ? AppColors.bodyOnDark : AppColors.ink,
+                                      Container(
+                                        padding: const EdgeInsets.all(5),
+                                        decoration: BoxDecoration(
+                                          color: logColor.withValues(alpha: 0.12),
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: Icon(
+                                          isCancel
+                                              ? Icons.cancel_rounded
+                                              : (isWriteOff ? Icons.money_off_rounded : Icons.edit_note_rounded),
+                                          size: 12,
+                                          color: logColor,
                                         ),
                                       ),
-                                      if (log.createdAt != null)
-                                        Text(
-                                          DateFormat('dd/MM/yy HH:mm').format(log.createdAt!),
-                                          style: const TextStyle(
-                                            fontSize: 10,
-                                            color: AppColors.inkMuted48,
-                                          ),
-                                        ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    'ดำเนินการโดย $performerName',
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
-                                    ),
-                                  ),
-                                  if (log.note != null && log.note!.trim().isNotEmpty) ...[
-                                    const SizedBox(height: 4),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                      decoration: BoxDecoration(
-                                        color: isDark ? AppColors.surfaceTile2 : const Color(0xFFF8FAFC),
-                                        borderRadius: BorderRadius.circular(6),
-                                        border: Border.all(
-                                          color: isDark ? Colors.white10 : const Color(0xFFE2E8F0),
-                                        ),
-                                      ),
-                                      child: Row(
-                                        children: [
-                                          const Text(
-                                            'เหตุผล: ',
-                                            style: TextStyle(
-                                              fontSize: 11,
-                                              fontWeight: FontWeight.bold,
-                                              color: AppColors.primary,
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Row(
+                                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                              children: [
+                                                Text(
+                                                  actionLabel,
+                                                  style: TextStyle(
+                                                    fontSize: 12.5,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: isDark ? AppColors.bodyOnDark : AppColors.ink,
+                                                  ),
+                                                ),
+                                                if (log.createdAt != null)
+                                                  Text(
+                                                    DateFormat('dd/MM/yy HH:mm').format(log.createdAt!),
+                                                    style: const TextStyle(
+                                                      fontSize: 10,
+                                                      color: AppColors.inkMuted48,
+                                                    ),
+                                                  ),
+                                              ],
                                             ),
-                                          ),
-                                          Expanded(
-                                            child: Text(
-                                              log.note!.trim(),
+                                            Text(
+                                              'ดำเนินการโดย $performerName',
                                               style: TextStyle(
                                                 fontSize: 11,
-                                                fontStyle: FontStyle.italic,
-                                                color: isDark ? AppColors.bodyOnDark : AppColors.ink,
+                                                color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
                                               ),
                                             ),
-                                          ),
-                                        ],
+                                            if (log.note != null && log.note!.trim().isNotEmpty)
+                                              Text(
+                                                'เหตุผล: ${log.note!.trim()}',
+                                                style: const TextStyle(
+                                                  fontSize: 11,
+                                                  fontStyle: FontStyle.italic,
+                                                  color: Color(0xFFFF5000),
+                                                ),
+                                              ),
+                                          ],
+                                        ),
                                       ),
-                                    ),
-                                  ],
-                                ],
+                                    ],
+                                  );
+                                },
                               ),
-                            ),
-                          ],
-                        );
-                      },
-                    ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
-                ],
-              ],
-            ),
+                ),
+              ),
+            ],
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildUserAvatar({
+    required String? avatarUrl,
+    required String displayName,
+    required bool isDark,
+  }) {
+    final initial = displayName.trim().isNotEmpty
+        ? displayName.trim()[0].toUpperCase()
+        : 'U';
+
+    return Container(
+      width: 32,
+      height: 32,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: const Color(0xFFFF5000).withValues(alpha: 0.15),
+        border: Border.all(
+          color: isDark ? AppColors.surfaceTile1 : Colors.white,
+          width: 1.2,
+        ),
+      ),
+      child: ClipOval(
+        child: (avatarUrl != null && avatarUrl.trim().isNotEmpty)
+            ? Image.network(
+                avatarUrl,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => Center(
+                  child: Text(
+                    initial,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFFFF5000),
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+              )
+            : Center(
+                child: Text(
+                  initial,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFFFF5000),
+                    fontSize: 12,
+                  ),
+                ),
+              ),
       ),
     );
   }
@@ -941,13 +916,17 @@ class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
       children: [
         Text(
           title,
-          style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w500, color: AppColors.inkMuted48),
+          style: const TextStyle(
+            fontSize: 10,
+            fontWeight: FontWeight.w500,
+            color: AppColors.inkMuted48,
+          ),
         ),
-        const SizedBox(height: 3),
+        const SizedBox(height: 2),
         Text(
           value,
           style: TextStyle(
-            fontSize: 13,
+            fontSize: 12.5,
             fontWeight: FontWeight.w800,
             color: valueColor,
             letterSpacing: -0.2,
@@ -957,99 +936,46 @@ class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
     );
   }
 
-  Widget _buildStatusBadge(String status) {
+  Widget _buildStatusBadge(String status, {bool inHeader = false}) {
     String text = 'ยังไม่ชำระ';
-    Color bg = AppColors.primary.withValues(alpha: 0.12);
-    Color fg = AppColors.primary;
+    Color bg = inHeader ? Colors.white.withValues(alpha: 0.22) : const Color(0xFFFF5000).withValues(alpha: 0.12);
+    Color fg = inHeader ? Colors.white : const Color(0xFFFF5000);
     IconData icon = Icons.schedule_rounded;
 
     switch (status) {
       case 'fully_paid':
       case 'paid':
         text = 'ชำระครบแล้ว';
-        bg = AppColors.success.withValues(alpha: 0.12);
-        fg = AppColors.success;
+        bg = inHeader ? Colors.white.withValues(alpha: 0.25) : const Color(0xFF34C759).withValues(alpha: 0.12);
+        fg = inHeader ? Colors.white : const Color(0xFF34C759);
         icon = Icons.check_circle_rounded;
         break;
       case 'partially_paid':
         text = 'ชำระบางส่วน';
-        bg = AppColors.warning.withValues(alpha: 0.12);
-        fg = AppColors.warning;
+        bg = inHeader ? Colors.white.withValues(alpha: 0.25) : const Color(0xFFFF9500).withValues(alpha: 0.12);
+        fg = inHeader ? Colors.white : const Color(0xFFFF9500);
         icon = Icons.hourglass_top_rounded;
         break;
       case 'fully_written_off':
-        text = 'ยกหนี้ครบทั้งหมด';
-        bg = AppColors.inkMuted48.withValues(alpha: 0.12);
-        fg = AppColors.inkMuted48;
-        icon = Icons.money_off_rounded;
-        break;
-      case 'partially_written_off':
-        text = 'ยกหนี้บางส่วน';
-        bg = AppColors.inkMuted48.withValues(alpha: 0.12);
-        fg = AppColors.inkMuted48;
+        text = 'ยกหนี้ครบ';
+        bg = inHeader ? Colors.white.withValues(alpha: 0.22) : AppColors.inkMuted48.withValues(alpha: 0.12);
+        fg = inHeader ? Colors.white : AppColors.inkMuted48;
         icon = Icons.money_off_rounded;
         break;
       case 'cancelled':
         text = 'ยกเลิกแล้ว';
-        bg = AppColors.error.withValues(alpha: 0.12);
-        fg = AppColors.error;
+        bg = inHeader ? Colors.white.withValues(alpha: 0.22) : AppColors.error.withValues(alpha: 0.12);
+        fg = inHeader ? Colors.white : AppColors.error;
         icon = Icons.cancel_rounded;
         break;
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
         color: bg,
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 12, color: fg),
-          const SizedBox(width: 4),
-          Text(
-            text,
-            style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: fg),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildItemStatusBadge(BillItemParticipantModel item) {
-    String text = 'ยังไม่ชำระ';
-    Color bg = AppColors.primary.withValues(alpha: 0.12);
-    Color fg = AppColors.primary;
-    IconData icon = Icons.schedule_rounded;
-
-    if (item.status == 'paid') {
-      text = 'ชำระแล้ว';
-      bg = AppColors.success.withValues(alpha: 0.12);
-      fg = AppColors.success;
-      icon = Icons.check_circle_rounded;
-    } else if (item.status == 'partially_paid') {
-      text = 'ชำระบางส่วน';
-      bg = AppColors.warning.withValues(alpha: 0.12);
-      fg = AppColors.warning;
-      icon = Icons.hourglass_top_rounded;
-    } else if (item.status == 'written_off') {
-      text = 'ยกหนี้ให้';
-      bg = AppColors.inkMuted48.withValues(alpha: 0.12);
-      fg = AppColors.inkMuted48;
-      icon = Icons.money_off_rounded;
-    } else if (!item.isAcknowledged) {
-      text = 'รอการยอมรับ';
-      bg = const Color(0xFFFF9500).withValues(alpha: 0.12);
-      fg = const Color(0xFFFF9500);
-      icon = Icons.hourglass_top_rounded;
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(8),
+        border: inHeader ? Border.all(color: Colors.white.withValues(alpha: 0.35)) : null,
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -1058,9 +984,45 @@ class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
           const SizedBox(width: 4),
           Text(
             text,
-            style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: fg),
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: fg,
+            ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildItemStatusBadge(BillItemParticipantModel item) {
+    String text = 'ยังไม่ชำระ';
+    Color bg = const Color(0xFFFF5000).withValues(alpha: 0.12);
+    Color fg = const Color(0xFFFF5000);
+
+    if (item.status == 'paid') {
+      text = 'ชำระแล้ว';
+      bg = const Color(0xFF34C759).withValues(alpha: 0.12);
+      fg = const Color(0xFF34C759);
+    } else if (item.status == 'partially_paid') {
+      text = 'ชำระบางส่วน';
+      bg = const Color(0xFFFF9500).withValues(alpha: 0.12);
+      fg = const Color(0xFFFF9500);
+    } else if (item.status == 'written_off') {
+      text = 'ยกหนี้ให้';
+      bg = AppColors.inkMuted48.withValues(alpha: 0.12);
+      fg = AppColors.inkMuted48;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.bold, color: fg),
       ),
     );
   }
@@ -1160,7 +1122,7 @@ class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
         title: Text(
-          'ยกหนี้ให้ ${item.debtor?.displayName ?? "ผู้ใช้"} (Write-off)',
+          'ยกหนี้ให้ ${item.debtor?.displayName ?? "ผู้ใช้"}',
         ),
         content: SingleChildScrollView(
           child: Column(
