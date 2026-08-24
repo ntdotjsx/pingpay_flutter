@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -46,6 +47,23 @@ class NotificationService {
   NotificationService(this._client);
 
   String? get fcmToken => _fcmToken;
+
+  static Future<Uint8List?> _downloadImageBytes(String url) async {
+    try {
+      final uri = Uri.tryParse(url);
+      if (uri == null || (!uri.isScheme('http') && !uri.isScheme('https'))) return null;
+      final client = HttpClient();
+      client.connectionTimeout = const Duration(seconds: 4);
+      final request = await client.getUrl(uri);
+      final response = await request.close();
+      if (response.statusCode == 200) {
+        return await consolidateHttpClientResponseBytes(response);
+      }
+    } catch (e) {
+      debugPrint('Could not download notification image: $e');
+    }
+    return null;
+  }
 
   Future<void> initialize() async {
     try {
@@ -135,14 +153,49 @@ class NotificationService {
       });
 
       // 4. Foreground message listener
-      FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      FirebaseMessaging.onMessage.listen((RemoteMessage message) async {
         debugPrint('Got a foreground message: ${message.notification?.title} - ${message.notification?.body}');
         _pushStreamController.add(message);
         final notification = message.notification;
         final title = notification?.title ?? message.data['title'] ?? 'การแจ้งเตือนใหม่';
         final body = notification?.body ?? message.data['body'] ?? '';
 
-        // Display system heads-up notification banner
+        final rawImageUrl = message.notification?.android?.imageUrl ??
+            message.notification?.apple?.imageUrl ??
+            message.data['imageUrl'] ??
+            message.data['image'] ??
+            message.data['bannerUrl'] ??
+            message.data['picture'] ??
+            message.data['mediaUrl'];
+
+        ByteArrayAndroidBitmap? androidLargeIcon;
+        BigPictureStyleInformation? bigPictureStyle;
+        List<DarwinNotificationAttachment>? iosAttachments;
+
+        if (rawImageUrl != null && rawImageUrl.toString().trim().isNotEmpty) {
+          final imageBytes = await _downloadImageBytes(rawImageUrl.toString().trim());
+          if (imageBytes != null && imageBytes.isNotEmpty) {
+            final bitmap = ByteArrayAndroidBitmap(imageBytes);
+            bigPictureStyle = BigPictureStyleInformation(
+              bitmap,
+              contentTitle: title,
+              summaryText: body,
+              largeIcon: bitmap,
+              hideExpandedLargeIcon: true,
+            );
+            androidLargeIcon = bitmap;
+
+            if (!kIsWeb && Platform.isIOS) {
+              try {
+                final tempFile = File('${Directory.systemTemp.path}/notif_${DateTime.now().millisecondsSinceEpoch}.jpg');
+                await tempFile.writeAsBytes(imageBytes);
+                iosAttachments = [DarwinNotificationAttachment(tempFile.path)];
+              } catch (_) {}
+            }
+          }
+        }
+
+        // Display system heads-up notification banner with image support
         flutterLocalNotificationsPlugin.show(
           notification.hashCode,
           title,
@@ -153,15 +206,18 @@ class NotificationService {
               highImportanceChannel.name,
               channelDescription: highImportanceChannel.description,
               icon: '@mipmap/ic_launcher',
+              largeIcon: androidLargeIcon,
+              styleInformation: bigPictureStyle,
               importance: Importance.max,
               priority: Priority.high,
               playSound: true,
               enableVibration: true,
             ),
-            iOS: const DarwinNotificationDetails(
+            iOS: DarwinNotificationDetails(
               presentAlert: true,
               presentBadge: true,
               presentSound: true,
+              attachments: iosAttachments,
             ),
           ),
           payload: message.data.toString(),

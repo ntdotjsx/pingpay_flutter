@@ -194,18 +194,28 @@ export class FcmV1Service {
         sound: "default",
         default_sound: true,
         default_vibrate_timings: true,
-        notification_priority: "PRIORITY_HIGH",
+        notification_priority: "PRIORITY_MAX",
+        visibility: "PUBLIC",
       };
       if (params.imageUrl) {
         androidNotification.image = params.imageUrl;
       }
 
       const apnsPayload: Record<string, any> = {
+        headers: {
+          "apns-priority": "10",
+          "apns-push-type": "alert",
+        },
         payload: {
           aps: {
+            alert: {
+              title: params.title,
+              body: params.body,
+            },
             sound: "default",
             badge: 1,
-            ...(params.imageUrl ? { "mutable-content": 1 } : {}),
+            "mutable-content": params.imageUrl ? 1 : 0,
+            "content-available": 1,
           },
         },
       };
@@ -224,6 +234,9 @@ export class FcmV1Service {
       };
       if (params.imageUrl) {
         dataPayload.imageUrl = params.imageUrl;
+        dataPayload.image = params.imageUrl;
+        dataPayload.bannerUrl = params.imageUrl;
+        dataPayload.mediaUrl = params.imageUrl;
       }
 
       const payload = {
