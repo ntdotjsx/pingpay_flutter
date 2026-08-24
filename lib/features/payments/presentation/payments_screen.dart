@@ -147,7 +147,69 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // 1. Top Action Bar: Search Pill + Rewards Coin + Refresh
+              // 1. Top Title & Quick Action Row
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'การเงินและหนี้สิน',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: -0.4,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(height: 1),
+                      Text(
+                        'จัดการยอดหนี้ค้างและเงินที่ต้องเรียกเก็บ',
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w400,
+                          color: Colors.white.withValues(alpha: 0.88),
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  // PromptPay Quick View Button
+                  GestureDetector(
+                    onTap: () {
+                      HapticFeedback.lightImpact();
+                      context.push('/profile');
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      decoration: ShapeDecoration(
+                        color: Colors.white.withValues(alpha: 0.22),
+                        shape: const SmoothRectangleBorder(
+                          borderRadius: SmoothBorderRadius.all(
+                            SmoothRadius(cornerRadius: 12, cornerSmoothing: 0.8),
+                          ),
+                        ),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.qr_code_2_rounded, size: 16, color: Colors.white),
+                          SizedBox(width: 4),
+                          Text(
+                            'พร้อมเพย์',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
 
               const SizedBox(height: 14),
 
