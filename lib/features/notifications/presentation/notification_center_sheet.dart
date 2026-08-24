@@ -456,7 +456,7 @@ class NotificationCenterSheet extends ConsumerWidget {
             ),
             const SizedBox(height: 14),
             Text(
-              'ไม่มีรายการแจ้งเตือนในขณะนี้',
+              'ไม่มีการแจ้งเตือนใหม่',
               style: TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w600,
@@ -465,7 +465,7 @@ class NotificationCenterSheet extends ConsumerWidget {
             ),
             const SizedBox(height: 4),
             Text(
-              'เมื่อมีคำร้องขอหารบิล การชำระเงิน หรือกิจกรรมใหม่ จะแจ้งเตือนที่นี่',
+              'การแจ้งเตือนที่อ่านแล้วจะไม่แสดงซ้ำ และจะถูกล้างอัตโนมัติทุก 30 วัน',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 12,

@@ -1,6 +1,9 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/realtime/realtime_event.dart';
 import '../../../core/realtime/realtime_providers.dart';
 import '../../../core/services/notification_service.dart';
@@ -46,11 +49,70 @@ class NotificationNotifier extends StateNotifier<NotificationState> {
   final Ref _ref;
   StreamSubscription<RealtimeEvent>? _realtimeSubscription;
   StreamSubscription<RemoteMessage>? _pushSubscription;
+  static const String _kReadNotificationsPrefKey = 'read_notifications_map_v1';
 
   NotificationNotifier(this._ref) : super(const NotificationState()) {
+    _loadPersistedReadIds();
     _listenToRealtime();
     _listenToPushNotifications();
     _listenToAuthAndFetch();
+  }
+
+  /// Loads read IDs and automatically purges any records older than 30 days
+  Future<void> _loadPersistedReadIds() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString(_kReadNotificationsPrefKey);
+      if (raw == null || raw.isEmpty) return;
+
+      final Map<String, dynamic> decoded = jsonDecode(raw);
+      final nowMs = DateTime.now().millisecondsSinceEpoch;
+      const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
+
+      final validReadIds = <String>{};
+      final prunedMap = <String, int>{};
+
+      decoded.forEach((key, val) {
+        final timestamp = (val is num) ? val.toInt() : int.tryParse(val.toString()) ?? 0;
+        // Keep if younger than 30 days
+        if (nowMs - timestamp < thirtyDaysMs) {
+          validReadIds.add(key);
+          prunedMap[key] = timestamp;
+        }
+      });
+
+      state = state.copyWith(readNotificationIds: validReadIds);
+
+      // Save pruned map back to storage
+      await prefs.setString(_kReadNotificationsPrefKey, jsonEncode(prunedMap));
+    } catch (e) {
+      debugPrint('Error loading persisted read notifications: $e');
+    }
+  }
+
+  Future<void> _persistReadIds(Set<String> ids) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString(_kReadNotificationsPrefKey);
+      final Map<String, dynamic> map = raw != null && raw.isNotEmpty ? jsonDecode(raw) : {};
+
+      final nowMs = DateTime.now().millisecondsSinceEpoch;
+      const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
+
+      for (final id in ids) {
+        map[id] = nowMs;
+      }
+
+      // Prune old entries
+      map.removeWhere((_, val) {
+        final ts = (val is num) ? val.toInt() : int.tryParse(val.toString()) ?? 0;
+        return (nowMs - ts) >= thirtyDaysMs;
+      });
+
+      await prefs.setString(_kReadNotificationsPrefKey, jsonEncode(map));
+    } catch (e) {
+      debugPrint('Error persisting read notifications: $e');
+    }
   }
 
   void _listenToAuthAndFetch() {
@@ -214,6 +276,7 @@ class NotificationNotifier extends StateNotifier<NotificationState> {
   void markAsRead(String id) {
     final updated = Set<String>.from(state.readNotificationIds)..add(id);
     state = state.copyWith(readNotificationIds: updated);
+    _persistReadIds({id});
   }
 
   void markAllAsRead() {
@@ -228,7 +291,9 @@ class NotificationNotifier extends StateNotifier<NotificationState> {
     for (final d in debts) {
       allIds.add('debt-${d.id}');
     }
-    state = state.copyWith(readNotificationIds: allIds);
+    final updated = Set<String>.from(state.readNotificationIds)..addAll(allIds);
+    state = state.copyWith(readNotificationIds: updated);
+    _persistReadIds(allIds);
   }
 
   @override
@@ -244,45 +309,57 @@ final notificationNotifierProvider =
   return NotificationNotifier(ref);
 });
 
-/// Aggregated all notifications combining:
+/// Aggregated notifications combining:
 /// 1. Real push notifications (FCM & Realtime Events)
 /// 2. Real backend Outbox notifications (from /api/v1/notifications/user/:id)
 /// 3. Live pending Debt Acknowledgement Requests (from userDebtsProvider)
+///
+/// Filters applied:
+/// - "ถ้าอ่านแล้วไม่ให้ขึ้นอีก": Read notifications are filtered out immediately.
+/// - "ล้างเองทุก 30 วัน": Notifications older than 30 days are automatically purged.
 final allNotificationsProvider = Provider<List<AppNotificationItem>>((ref) {
   final notifState = ref.watch(notificationNotifierProvider);
   final pendingDebts = ref.watch(pendingDebtRequestsProvider);
 
   final Map<String, AppNotificationItem> merged = {};
+  final now = DateTime.now();
+  final thirtyDaysAgo = now.subtract(const Duration(days: 30));
 
-  // 1. Live Pending Debts (highest priority)
+  // 1. Live Pending Debts (highest priority) - only if not read/acknowledged and < 30 days
   for (final debt in pendingDebts) {
     final id = 'debt-${debt.id}';
     final isRead = notifState.readNotificationIds.contains(id);
 
-    merged[id] = AppNotificationItem(
-      id: id,
-      title: 'คำร้องขอรับสภาพหนี้ใหม่ 🧾',
-      body: '${debt.creditor.displayName} เพิ่มคุณในบิล "${debt.billTitle}" ยอดค้าง ฿${debt.outstandingAmount.toStringAsFixed(2)}',
-      type: NotificationType.debtRequest,
-      createdAt: debt.debtStartDate,
-      isRead: isRead,
-      amount: debt.outstandingAmount,
-      relatedId: debt.id,
-      metadata: {'debtItem': debt},
-    );
+    if (!isRead && debt.debtStartDate.isAfter(thirtyDaysAgo)) {
+      merged[id] = AppNotificationItem(
+        id: id,
+        title: 'มีคำขอรับสภาพหนี้ใหม่ 🧾',
+        body: '${debt.creditor.displayName} เพิ่มคุณในบิล "${debt.billTitle}" ยอดค้าง ฿${debt.outstandingAmount.toStringAsFixed(2)}',
+        type: NotificationType.debtRequest,
+        createdAt: debt.debtStartDate,
+        isRead: false,
+        amount: debt.outstandingAmount,
+        relatedId: debt.id,
+        metadata: {'debtItem': debt},
+      );
+    }
   }
 
-  // 2. Real Push Notifications (FCM / Realtime)
+  // 2. Real Push Notifications (FCM / Realtime) - only if unread and < 30 days
   for (final item in notifState.pushNotifications) {
     final isRead = item.isRead || notifState.readNotificationIds.contains(item.id);
-    merged[item.id] = item.copyWith(isRead: isRead);
+    if (!isRead && item.createdAt.isAfter(thirtyDaysAgo)) {
+      merged[item.id] = item.copyWith(isRead: false);
+    }
   }
 
-  // 3. Real Backend Outbox History
+  // 3. Real Backend Outbox History - only if unread and < 30 days
   for (final item in notifState.backendNotifications) {
     if (!merged.containsKey(item.id)) {
       final isRead = item.isRead || notifState.readNotificationIds.contains(item.id);
-      merged[item.id] = item.copyWith(isRead: isRead);
+      if (!isRead && item.createdAt.isAfter(thirtyDaysAgo)) {
+        merged[item.id] = item.copyWith(isRead: false);
+      }
     }
   }
 
@@ -298,8 +375,6 @@ final allNotificationsProvider = Provider<List<AppNotificationItem>>((ref) {
 
 /// Total Unread Notifications Count for Bell Badge
 final totalUnreadNotificationCountProvider = Provider<int>((ref) {
-  final notifState = ref.watch(notificationNotifierProvider);
   final allNotifs = ref.watch(allNotificationsProvider);
-
-  return allNotifs.where((n) => !n.isRead && !notifState.readNotificationIds.contains(n.id)).length;
+  return allNotifs.length;
 });

@@ -5,7 +5,7 @@ import {
   authIdentities,
   users,
 } from "../../db/schema";
-import { eq, and, lte, sql, or, lt, desc } from "drizzle-orm";
+import { eq, and, lte, gte, sql, or, lt, desc } from "drizzle-orm";
 import {
   EnqueueNotificationDTO,
   NotificationEventType,
@@ -88,11 +88,15 @@ export class NotificationOutboxService {
   }
 
   /**
-   * Fetch recent notifications for a user (audit/history)
+   * Fetch recent notifications for a user (audit/history within last 30 days)
    */
-  async getUserNotifications(userId: string, limit = 20) {
+  async getUserNotifications(userId: string, limit = 50) {
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
     return await this.db.query.notificationOutbox.findMany({
-      where: eq(notificationOutbox.recipientUserId, userId),
+      where: and(
+        eq(notificationOutbox.recipientUserId, userId),
+        gte(notificationOutbox.createdAt, thirtyDaysAgo)
+      ),
       orderBy: [desc(notificationOutbox.createdAt)],
       limit,
       with: {
