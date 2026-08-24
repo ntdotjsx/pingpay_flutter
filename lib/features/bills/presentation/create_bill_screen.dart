@@ -6,7 +6,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:mobile_scanner/mobile_scanner.dart';
 import '../../../core/theme/theme.dart';
 import '../../../core/widgets/pingpay_loading.dart';
 import '../../../core/utils/app_toast.dart';
@@ -33,35 +32,16 @@ class CreateBillScreen extends ConsumerStatefulWidget {
   ConsumerState<CreateBillScreen> createState() => _CreateBillScreenState();
 }
 
-class _CreateBillScreenState extends ConsumerState<CreateBillScreen>
-    with SingleTickerProviderStateMixin {
-  bool _isScannerMode = false; // Toggle between full camera scanner and bill form
-
+class _CreateBillScreenState extends ConsumerState<CreateBillScreen> {
   // Form Controllers
   final _titleController = TextEditingController();
   final _amountController = TextEditingController();
   final _descriptionController = TextEditingController();
   final ImagePicker _picker = ImagePicker();
 
-  // Scanner animation & camera
-  late AnimationController _scannerAnimController;
-  late MobileScannerController _cameraController;
-  bool _isTorchOn = false;
-
   @override
   void initState() {
     super.initState();
-    _cameraController = MobileScannerController(
-      facing: CameraFacing.back,
-      torchEnabled: false,
-      autoStart: true,
-    );
-
-    _scannerAnimController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 2000),
-    );
-
     _amountController.addListener(_onAmountChanged);
     _titleController.addListener(_onTitleChanged);
   }
@@ -90,8 +70,6 @@ class _CreateBillScreenState extends ConsumerState<CreateBillScreen>
 
   @override
   void dispose() {
-    _cameraController.dispose();
-    _scannerAnimController.dispose();
     _amountController.removeListener(_onAmountChanged);
     _titleController.removeListener(_onTitleChanged);
     _titleController.dispose();
@@ -100,16 +78,121 @@ class _CreateBillScreenState extends ConsumerState<CreateBillScreen>
     super.dispose();
   }
 
-  void _toggleScanner(bool open) {
+  Future<void> _showScanReceiptActionSheet(BuildContext context) async {
     HapticFeedback.lightImpact();
-    setState(() {
-      _isScannerMode = open;
-    });
-    if (open) {
-      _scannerAnimController.repeat(reverse: true);
-    } else {
-      _scannerAnimController.stop();
-    }
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.surfaceBlack : Colors.white,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: SafeArea(
+          top: false,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Center(
+                child: Container(
+                  margin: const EdgeInsets.only(bottom: 16),
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: isDark ? Colors.white24 : const Color(0xFFE5E7EB),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              Row(
+                children: [
+                  Container(
+                    width: 38,
+                    height: 38,
+                    decoration: const ShapeDecoration(
+                      color: Color(0x1FFF5000),
+                      shape: SmoothRectangleBorder(
+                        borderRadius: SmoothBorderRadius.all(
+                          SmoothRadius(cornerRadius: 10, cornerSmoothing: 0.8),
+                        ),
+                      ),
+                    ),
+                    child: const Icon(
+                      Icons.document_scanner_rounded,
+                      color: Color(0xFFFF5000),
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'สแกนใบเสร็จด้วย AI',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: isDark ? AppColors.bodyOnDark : AppColors.ink,
+                          ),
+                        ),
+                        Text(
+                          'ระบบจะอ่านรายการสินค้าและยอดเงินให้อัตโนมัติ',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  _pickImage(ImageSource.camera);
+                },
+                icon: const Icon(Icons.camera_alt_rounded, size: 18),
+                label: const Text(
+                  'ถ่ายภาพใบเสร็จ (กล้อง)',
+                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFFF5000),
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size(double.infinity, 48),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                ),
+              ),
+              const SizedBox(height: 10),
+              OutlinedButton.icon(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  _pickImage(ImageSource.gallery);
+                },
+                icon: const Icon(Icons.photo_library_rounded, size: 18),
+                label: const Text(
+                  'เลือกจากอัลบั้มรูปภาพ',
+                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                ),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: isDark ? AppColors.bodyOnDark : AppColors.ink,
+                  minimumSize: const Size(double.infinity, 48),
+                  side: BorderSide(color: isDark ? Colors.white24 : const Color(0xFFE5E7EB)),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   Future<void> _pickImage(ImageSource source) async {
@@ -241,10 +324,6 @@ class _CreateBillScreenState extends ConsumerState<CreateBillScreen>
 
     ref.read(billCreationProvider.notifier).populateFromOcr(receipt);
 
-    setState(() {
-      _isScannerMode = false;
-    });
-
     AppToast.success(
       context,
       'ดึงข้อมูลจาก "${receipt.merchant}" ยอด ฿${receipt.totalAmount.toStringAsFixed(2)} เรียบร้อย',
@@ -262,8 +341,6 @@ class _CreateBillScreenState extends ConsumerState<CreateBillScreen>
 
     if (!mounted) return;
     final billState = ref.read(billCreationProvider);
-
-    if (!mounted) return;
 
     showModalBottomSheet(
       context: context,
@@ -334,11 +411,6 @@ class _CreateBillScreenState extends ConsumerState<CreateBillScreen>
   }
 
   Future<bool> _handleBackNavigation() async {
-    if (_isScannerMode) {
-      _toggleScanner(false);
-      return false;
-    }
-
     final billState = ref.read(billCreationProvider);
     if (!billState.hasUnsavedChanges) {
       return true;
@@ -397,9 +469,7 @@ class _CreateBillScreenState extends ConsumerState<CreateBillScreen>
               );
             }
 
-            return _isScannerMode
-                ? _buildCameraOcrScannerView()
-                : _buildCreateBillContent(friends);
+            return _buildCreateBillContent(friends);
           },
         ),
       ),
@@ -407,251 +477,7 @@ class _CreateBillScreenState extends ConsumerState<CreateBillScreen>
   }
 
   // ==========================================
-  // VIEW 1: FULL CAMERA OCR SCANNER VIEW
-  // ==========================================
-  Widget _buildCameraOcrScannerView() {
-    final size = MediaQuery.of(context).size;
-    final scanAreaSize = size.width * 0.76;
-
-    return Stack(
-      children: [
-        Positioned.fill(
-          child: MobileScanner(
-            controller: _cameraController,
-            fit: BoxFit.cover,
-            errorBuilder: (ctx, error) {
-              return Container(
-                color: Colors.black,
-                alignment: Alignment.center,
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.videocam_off_rounded, color: Colors.white54, size: 48),
-                    const SizedBox(height: 12),
-                    const Text(
-                      'ไม่สามารถเปิดกล้องได้',
-                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      'กรุณาตรวจสอบสิทธิ์การเข้าถึงกล้อง หรือกดปุ่มเลือกรูปจากอัลบั้มด้านล่าง',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 12),
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
-        ),
-
-        Positioned.fill(
-          child: Container(
-            decoration: BoxDecoration(
-              gradient: RadialGradient(
-                center: Alignment.center,
-                radius: 0.85,
-                colors: [
-                  Colors.transparent,
-                  Colors.black.withValues(alpha: 0.65),
-                ],
-              ),
-            ),
-          ),
-        ),
-
-        Center(
-          child: Container(
-            width: scanAreaSize,
-            height: scanAreaSize * 1.25,
-            decoration: const ShapeDecoration(
-              shape: SmoothRectangleBorder(
-                side: BorderSide(color: Colors.white70, width: 2),
-                borderRadius: SmoothBorderRadius.all(
-                  SmoothRadius(cornerRadius: 24, cornerSmoothing: 0.8),
-                ),
-              ),
-            ),
-            child: Stack(
-              children: [
-                AnimatedBuilder(
-                  animation: _scannerAnimController,
-                  builder: (ctx, _) {
-                    return Positioned(
-                      top: (scanAreaSize * 1.25 - 4) * _scannerAnimController.value,
-                      left: 12,
-                      right: 12,
-                      child: Container(
-                        height: 3,
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [
-                              Colors.transparent,
-                              Color(0xFFFF5000),
-                              Color(0xFFFF9500),
-                              Color(0xFFFF5000),
-                              Colors.transparent,
-                            ],
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(0xFFFF5000).withValues(alpha: 0.8),
-                              blurRadius: 8,
-                              spreadRadius: 2,
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ],
-            ),
-          ),
-        ),
-
-        SafeArea(
-          child: Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16.0,
-                  vertical: 8.0,
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    IconButton(
-                      icon: const Icon(
-                        Icons.arrow_back_ios_new_rounded,
-                        color: Colors.white,
-                        size: 22,
-                      ),
-                      onPressed: () => _toggleScanner(false),
-                    ),
-                    const Text(
-                      'สแกนบิลด้วย AI',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    IconButton(
-                      icon: Icon(
-                        _isTorchOn ? Icons.flash_on_rounded : Icons.flash_off_rounded,
-                        color: Colors.white,
-                        size: 22,
-                      ),
-                      onPressed: () {
-                        setState(() => _isTorchOn = !_isTorchOn);
-                        _cameraController.toggleTorch();
-                      },
-                    ),
-                  ],
-                ),
-              ),
-              const Spacer(),
-
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.55),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Colors.white24),
-                ),
-                child: const Text(
-                  'วางใบเสร็จให้อยู่ในกรอบ แล้วกดปุ่มถ่ายภาพด้านล่าง',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-              const Spacer(),
-
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24.0,
-                  vertical: 12.0,
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    GestureDetector(
-                      onTap: () => _pickImage(ImageSource.gallery),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 10,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.25),
-                          borderRadius: BorderRadius.circular(24),
-                          border: Border.all(color: Colors.white30),
-                        ),
-                        child: const Row(
-                          children: [
-                            Icon(
-                              Icons.photo_library_rounded,
-                              color: Colors.white,
-                              size: 20,
-                            ),
-                            SizedBox(width: 8),
-                            Text(
-                              'เลือกจากอัลบั้ม',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    GestureDetector(
-                      onTap: () => _pickImage(ImageSource.camera),
-                      child: Container(
-                        width: 68,
-                        height: 68,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white, width: 4),
-                          color: const Color(0xFFFF5000),
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(0xFFFF5000).withValues(alpha: 0.4),
-                              blurRadius: 16,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: const Icon(
-                          Icons.camera_alt_rounded,
-                          color: Colors.white,
-                          size: 32,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 10),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  // ==========================================
-  // VIEW 2: BILL CREATION FORM (CLEAN LIST INPUT & STICKY BOTTOM BUTTON)
+  // VIEW: BILL CREATION FORM (CLEAN LIST INPUT & STICKY BOTTOM BUTTON)
   // ==========================================
   Widget _buildCreateBillContent(List<FriendItemModel> friends) {
     final billState = ref.watch(billCreationProvider);
@@ -718,7 +544,7 @@ class _CreateBillScreenState extends ConsumerState<CreateBillScreen>
 
                       // Quick OCR Scan Pill in Header
                       GestureDetector(
-                        onTap: () => _toggleScanner(true),
+                        onTap: () => _showScanReceiptActionSheet(context),
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                           decoration: BoxDecoration(
