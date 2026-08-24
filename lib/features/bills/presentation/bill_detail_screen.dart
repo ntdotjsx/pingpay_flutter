@@ -92,6 +92,14 @@ class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
           final dateStr = bill.createdAt != null
               ? DateFormat('dd MMM yyyy • HH:mm', 'th').format(bill.createdAt!)
               : '';
+          final hasAnyPayment = bill.totalPaidAmount > 0 ||
+              bill.isFullyPaid ||
+              bill.items.any((i) =>
+                  i.amountPaid > 0 ||
+                  i.isFullyPaid ||
+                  i.status == 'paid' ||
+                  i.status == 'partially_paid');
+          final canDelete = isOwner && bill.status != 'cancelled' && !hasAnyPayment;
 
           return Column(
             children: [
@@ -153,7 +161,7 @@ class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
                                 letterSpacing: -0.3,
                               ),
                             ),
-                            if (isOwner && bill.status != 'cancelled')
+                            if (canDelete)
                               Container(
                                 width: 38,
                                 height: 38,
@@ -1279,6 +1287,19 @@ class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
   }
 
   Future<void> _handleCancelBill(BuildContext parentContext, BillModel bill) async {
+    final hasAnyPayment = bill.totalPaidAmount > 0 ||
+        bill.isFullyPaid ||
+        bill.items.any((i) =>
+            i.amountPaid > 0 ||
+            i.isFullyPaid ||
+            i.status == 'paid' ||
+            i.status == 'partially_paid');
+
+    if (hasAnyPayment) {
+      AppToast.warning(parentContext, 'ไม่สามารถลบหรือยกเลิกบิลที่มีการชำระเงินเข้ามาแล้วได้');
+      return;
+    }
+
     final confirmed = await DestructiveConfirmationSheet.show(
       parentContext,
       title: 'ต้องการยกเลิกบิลนี้?',

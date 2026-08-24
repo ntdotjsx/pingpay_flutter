@@ -26,12 +26,17 @@ export class BillPolicy {
     }
   }
 
-  static canDeleteBill(userId: string, billOwnerId: string, hasLockedItems: boolean) {
+  static canDeleteBill(
+    userId: string,
+    billOwnerId: string,
+    hasLockedItems: boolean,
+    hasAnyPayment = false
+  ) {
     if (userId !== billOwnerId) {
       throw new Error("Unauthorized: Only the bill owner can delete this bill.");
     }
-    if (hasLockedItems) {
-      throw new Error("Business rule violation: Cannot delete a bill with locked items.");
+    if (hasLockedItems || hasAnyPayment) {
+      throw new Error("PAID_DEBT_LOCKED: Cannot delete or cancel a bill after payments/installments have been made.");
     }
   }
 

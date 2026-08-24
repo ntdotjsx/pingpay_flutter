@@ -35,7 +35,15 @@ describe("Unit: Bill Policy", () => {
     expect(() => BillPolicy.canWriteOffDebt("debtor-user", "owner-user")).toThrow("Only the bill owner can write off debt");
   });
 
-  it("should allow bill owner to write off debt", () => {
-    expect(() => BillPolicy.canWriteOffDebt("owner-user", "owner-user")).not.toThrow();
+  it("should allow bill owner to delete unpaid unlocked bill", () => {
+    expect(() => BillPolicy.canDeleteBill("user-1", "user-1", false, false)).not.toThrow();
+  });
+
+  it("should forbid deleting bill if any payment has been made", () => {
+    expect(() => BillPolicy.canDeleteBill("user-1", "user-1", false, true)).toThrow("PAID_DEBT_LOCKED");
+  });
+
+  it("should forbid deleting bill if non-owner", () => {
+    expect(() => BillPolicy.canDeleteBill("user-2", "user-1", false, false)).toThrow("Unauthorized");
   });
 });

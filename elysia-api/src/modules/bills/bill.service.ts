@@ -376,7 +376,11 @@ export class BillService {
     const bill = await this.repo.getBillById(billId);
     if (!bill) throw new Error("BILL_NOT_FOUND: Bill not found.");
 
-    BillPolicy.canEditBill(userId, bill.ownerId);
+    const hasAnyPayment = (bill.items || []).some(
+      (item) => Number(item.amountPaid || 0) > 0 || item.status === "paid" || item.status === "partially_paid"
+    );
+
+    BillPolicy.canDeleteBill(userId, bill.ownerId, false, hasAnyPayment);
 
     const cancelled = await this.repo.cancelBill(billId, userId, reason);
 
