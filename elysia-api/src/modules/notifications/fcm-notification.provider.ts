@@ -121,6 +121,8 @@ export class FcmNotificationProvider implements NotificationProvider {
             token,
             title: message.title || "PingPay Notification",
             body: message.body,
+            imageUrl: message.imageUrl,
+            data: message.data ? Object.fromEntries(Object.entries(message.data).map(([k, v]) => [k, String(v)])) : undefined,
           });
           if (res.success) isDispatched = true;
         }
@@ -144,11 +146,13 @@ export class FcmNotificationProvider implements NotificationProvider {
                 notification: {
                   title: message.title || "PingPay Notification",
                   body: message.body,
+                  image: message.imageUrl,
                   sound: "default",
                   badge: 1,
                 },
                 data: {
                   click_action: "FLUTTER_NOTIFICATION_CLICK",
+                  imageUrl: message.imageUrl,
                   timestamp: new Date().toISOString(),
                 },
               }),

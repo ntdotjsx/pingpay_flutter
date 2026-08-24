@@ -551,6 +551,7 @@ export class AdminService {
       deviceToken?: string;
       title: string;
       body: string;
+      imageUrl?: string;
       dataPayload?: any;
     }
   ) {
@@ -572,6 +573,7 @@ export class AdminService {
         payload: {
           title: params.title,
           body: params.body,
+          imageUrl: params.imageUrl || null,
           data: params.dataPayload || {},
         },
         deduplicationKey: dedupKey,
@@ -585,6 +587,9 @@ export class AdminService {
         {
           title: params.title,
           body: params.body,
+          imageUrl: params.imageUrl,
+          data: params.dataPayload,
+          fallbackText: `${params.title}: ${params.body}`,
         }
       );
 
@@ -602,6 +607,9 @@ export class AdminService {
         {
           title: params.title,
           body: params.body,
+          imageUrl: params.imageUrl,
+          data: params.dataPayload,
+          fallbackText: `${params.title}: ${params.body}`,
         }
       );
 
@@ -623,6 +631,9 @@ export class AdminService {
             {
               title: params.title,
               body: params.body,
+              imageUrl: params.imageUrl,
+              data: params.dataPayload,
+              fallbackText: `${params.title}: ${params.body}`,
             }
           );
           if (res.success) sentCount++;

@@ -347,6 +347,7 @@ export async function sendFcmNotification(data: {
 	deviceToken?: string;
 	title: string;
 	body: string;
+	imageUrl?: string;
 	dataPayload?: any;
 }) {
 	return request<{

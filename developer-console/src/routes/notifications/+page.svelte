@@ -34,6 +34,7 @@
     deviceToken: string;
     title: string;
     body: string;
+    imageUrl: string;
     customData: string;
     sending: boolean;
   }>({
@@ -43,6 +44,7 @@
     deviceToken: '',
     title: 'PingPay Announcement',
     body: '',
+    imageUrl: '',
     customData: '{\n  "route": "/home"\n}',
     sending: false,
   });
@@ -102,6 +104,7 @@
       deviceToken: '',
       title: 'PingPay Announcement',
       body: '',
+      imageUrl: '',
       customData: '{\n  "route": "/home"\n}',
       sending: false,
     };
@@ -150,6 +153,7 @@
         deviceToken: sendModal.target === 'token' ? sendModal.deviceToken : undefined,
         title: sendModal.title,
         body: sendModal.body,
+        imageUrl: sendModal.imageUrl.trim() || undefined,
         dataPayload: parsedData,
       });
 
@@ -473,6 +477,31 @@
             placeholder="Write your push notification message..."
             class="mt-1 block w-full rounded-[4px] border border-[#e6e6e6] bg-white px-2.5 py-1.5 text-xs text-[#000000] focus:border-[#0075de] focus:outline-none"
           ></textarea>
+        </div>
+
+        <div>
+          <label for="fcm-image-url" class="block text-[11px] font-semibold text-[#615d59]">Banner Image URL (Optional)</label>
+          <input
+            id="fcm-image-url"
+            type="url"
+            bind:value={sendModal.imageUrl}
+            placeholder="https://example.com/banner.png"
+            class="mt-1 block w-full rounded-[4px] border border-[#e6e6e6] bg-white px-2.5 py-1.5 text-xs text-[#000000] focus:border-[#0075de] focus:outline-none font-mono"
+          />
+          {#if sendModal.imageUrl}
+            <div class="mt-2 flex items-center gap-3 rounded-lg border border-[#e6e6e6] bg-[#fbfbfa] p-2">
+              <img
+                src={sendModal.imageUrl}
+                alt="Push Banner Preview"
+                class="h-14 w-24 rounded object-cover border border-[#e6e6e6]"
+                onerror={(e) => ((e.target as HTMLElement).style.display = 'none')}
+              />
+              <div class="text-[11px] text-[#615d59]">
+                <span class="font-semibold text-[#000000] block">Image Preview</span>
+                <span class="text-[10px] text-[#a39e98] truncate max-w-xs block font-mono">{sendModal.imageUrl}</span>
+              </div>
+            </div>
+          {/if}
         </div>
 
         <div>

@@ -17,6 +17,8 @@ export interface FormattedNotificationMessage {
   title: string;
   body: string;
   fallbackText: string;
+  imageUrl?: string;
+  data?: Record<string, any>;
 }
 
 export class NotificationTemplateService {

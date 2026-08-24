@@ -172,6 +172,7 @@ export class FcmV1Service {
     token: string;
     title: string;
     body: string;
+    imageUrl?: string;
     data?: Record<string, string>;
   }): Promise<{ success: boolean; messageId?: string; error?: string }> {
     try {
@@ -180,38 +181,61 @@ export class FcmV1Service {
 
       const fcmUrl = `https://fcm.googleapis.com/v1/projects/${projectId}/messages:send`;
 
+      const notificationPayload: Record<string, any> = {
+        title: params.title,
+        body: params.body,
+      };
+      if (params.imageUrl) {
+        notificationPayload.image = params.imageUrl;
+      }
+
+      const androidNotification: Record<string, any> = {
+        channel_id: "high_importance_channel",
+        sound: "default",
+        default_sound: true,
+        default_vibrate_timings: true,
+        notification_priority: "PRIORITY_HIGH",
+      };
+      if (params.imageUrl) {
+        androidNotification.image = params.imageUrl;
+      }
+
+      const apnsPayload: Record<string, any> = {
+        payload: {
+          aps: {
+            sound: "default",
+            badge: 1,
+            ...(params.imageUrl ? { "mutable-content": 1 } : {}),
+          },
+        },
+      };
+      if (params.imageUrl) {
+        apnsPayload.fcm_options = {
+          image: params.imageUrl,
+        };
+      }
+
+      const dataPayload: Record<string, string> = {
+        title: params.title,
+        body: params.body,
+        click_action: "FLUTTER_NOTIFICATION_CLICK",
+        timestamp: new Date().toISOString(),
+        ...(params.data || {}),
+      };
+      if (params.imageUrl) {
+        dataPayload.imageUrl = params.imageUrl;
+      }
+
       const payload = {
         message: {
           token: params.token,
-          notification: {
-            title: params.title,
-            body: params.body,
-          },
-          data: {
-            title: params.title,
-            body: params.body,
-            click_action: "FLUTTER_NOTIFICATION_CLICK",
-            timestamp: new Date().toISOString(),
-            ...(params.data || {}),
-          },
+          notification: notificationPayload,
+          data: dataPayload,
           android: {
             priority: "high",
-            notification: {
-              channel_id: "high_importance_channel",
-              sound: "default",
-              default_sound: true,
-              default_vibrate_timings: true,
-              notification_priority: "PRIORITY_HIGH",
-            },
+            notification: androidNotification,
           },
-          apns: {
-            payload: {
-              aps: {
-                sound: "default",
-                badge: 1,
-              },
-            },
-          },
+          apns: apnsPayload,
         },
       };
 

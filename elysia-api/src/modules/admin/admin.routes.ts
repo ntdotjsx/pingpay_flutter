@@ -600,6 +600,7 @@ export const adminRoutes = new Elysia()
       deviceToken: t.Optional(t.String()),
       title: t.String({ minLength: 1 }),
       body: t.String({ minLength: 1 }),
+      imageUrl: t.Optional(t.String()),
       dataPayload: t.Optional(t.Any()),
     }),
     detail: {
