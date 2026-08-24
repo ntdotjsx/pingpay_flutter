@@ -515,27 +515,27 @@ class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
                           children: [
                             // Header
                             Padding(
-                              padding: const EdgeInsets.fromLTRB(14, 11, 14, 11),
+                              padding: const EdgeInsets.fromLTRB(14, 9, 14, 9),
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
                                   Row(
                                     children: [
                                       Container(
-                                        width: 28,
-                                        height: 28,
+                                        width: 26,
+                                        height: 26,
                                         decoration: const ShapeDecoration(
                                           color: Color(0x1FFF5000),
                                           shape: SmoothRectangleBorder(
                                             borderRadius: SmoothBorderRadius.all(
-                                              SmoothRadius(cornerRadius: 8, cornerSmoothing: 0.8),
+                                              SmoothRadius(cornerRadius: 7, cornerSmoothing: 0.8),
                                             ),
                                           ),
                                         ),
                                         child: const Icon(
                                           Icons.group_rounded,
                                           color: Color(0xFFFF5000),
-                                          size: 16,
+                                          size: 15,
                                         ),
                                       ),
                                       const SizedBox(width: 8),
@@ -576,13 +576,14 @@ class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
 
                             // List of participants inside the card
                             ListView.separated(
+                              padding: EdgeInsets.zero,
                               shrinkWrap: true,
                               physics: const NeverScrollableScrollPhysics(),
                               itemCount: bill.items.length,
                               separatorBuilder: (_, __) => Divider(
                                 height: 1,
                                 thickness: 0.6,
-                                indent: 54,
+                                indent: 52,
                                 color: isDark ? Colors.white10 : const Color(0xFFE5E7EB),
                               ),
                               itemBuilder: (ctx, idx) {
@@ -592,128 +593,133 @@ class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
                                 final isPaidLocked = item.isFullyPaid || item.isLocked;
 
                                 return Padding(
-                                  padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
-                                  child: Column(
+                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                  child: Row(
+                                    crossAxisAlignment: CrossAxisAlignment.center,
                                     children: [
-                                      Row(
-                                        children: [
-                                          // Real Debtor Avatar
-                                          _buildUserAvatar(
-                                            avatarUrl: avatarUrl,
-                                            displayName: debtorName,
-                                            isDark: isDark,
-                                          ),
-                                          const SizedBox(width: 10),
-                                          Expanded(
-                                            child: Column(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                      // Real Debtor Avatar
+                                      _buildUserAvatar(
+                                        avatarUrl: avatarUrl,
+                                        displayName: debtorName,
+                                        isDark: isDark,
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Row(
                                               children: [
-                                                Row(
-                                                  children: [
-                                                    Flexible(
-                                                      child: Text(
-                                                        debtorName,
-                                                        style: TextStyle(
-                                                          fontWeight: FontWeight.w700,
-                                                          fontSize: 13.5,
-                                                          color: isDark ? AppColors.bodyOnDark : AppColors.ink,
-                                                        ),
-                                                        maxLines: 1,
-                                                        overflow: TextOverflow.ellipsis,
-                                                      ),
+                                                Flexible(
+                                                  child: Text(
+                                                    debtorName,
+                                                    style: TextStyle(
+                                                      fontWeight: FontWeight.w700,
+                                                      fontSize: 13.5,
+                                                      color: isDark ? AppColors.bodyOnDark : AppColors.ink,
                                                     ),
-                                                    const SizedBox(width: 6),
-                                                    _buildItemStatusBadge(item),
-                                                  ],
-                                                ),
-                                                const SizedBox(height: 2),
-                                                Text(
-                                                  'ยอด ฿${item.currentAmount.toStringAsFixed(2)} • จ่ายแล้ว ฿${item.amountPaid.toStringAsFixed(2)}',
-                                                  style: TextStyle(
-                                                    fontSize: 11,
-                                                    color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
+                                                    maxLines: 1,
+                                                    overflow: TextOverflow.ellipsis,
                                                   ),
                                                 ),
+                                                const SizedBox(width: 6),
+                                                _buildItemStatusBadge(item),
                                               ],
                                             ),
-                                          ),
-                                          Column(
-                                            crossAxisAlignment: CrossAxisAlignment.end,
-                                            children: [
-                                              Text(
-                                                '฿${item.outstandingAmount.toStringAsFixed(2)}',
-                                                style: TextStyle(
-                                                  fontSize: 14.5,
-                                                  fontWeight: FontWeight.w800,
-                                                  color: item.outstandingAmount > 0
-                                                      ? const Color(0xFFFF5000)
-                                                      : const Color(0xFF34C759),
-                                                ),
+                                            const SizedBox(height: 1),
+                                            Text(
+                                              'ยอด ฿${item.currentAmount.toStringAsFixed(2)} • จ่ายแล้ว ฿${item.amountPaid.toStringAsFixed(2)}',
+                                              style: TextStyle(
+                                                fontSize: 11,
+                                                color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
                                               ),
-                                              Text(
-                                                item.outstandingAmount > 0 ? 'คงค้าง' : 'ครบแล้ว',
-                                                style: TextStyle(
-                                                  fontSize: 10,
-                                                  color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
-                                                ),
+                                            ),
+                                            // Action buttons inline
+                                            if (isOwner && !isPaidLocked && item.outstandingAmount > 0) ...[
+                                              const SizedBox(height: 5),
+                                              Row(
+                                                children: [
+                                                  GestureDetector(
+                                                    onTap: () => _showEditAmountDialog(item),
+                                                    child: Container(
+                                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2.5),
+                                                      decoration: BoxDecoration(
+                                                        color: const Color(0xFFFF5000).withValues(alpha: 0.1),
+                                                        borderRadius: BorderRadius.circular(5),
+                                                      ),
+                                                      child: const Row(
+                                                        mainAxisSize: MainAxisSize.min,
+                                                        children: [
+                                                          Icon(Icons.edit_outlined, size: 10.5, color: Color(0xFFFF5000)),
+                                                          SizedBox(width: 3),
+                                                          Text(
+                                                            'แก้ไขยอด',
+                                                            style: TextStyle(
+                                                              fontSize: 10.5,
+                                                              fontWeight: FontWeight.w700,
+                                                              color: Color(0xFFFF5000),
+                                                            ),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 6),
+                                                  GestureDetector(
+                                                    onTap: () => _showWriteOffDialog(item),
+                                                    child: Container(
+                                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2.5),
+                                                      decoration: BoxDecoration(
+                                                        color: AppColors.error.withValues(alpha: 0.1),
+                                                        borderRadius: BorderRadius.circular(5),
+                                                      ),
+                                                      child: const Row(
+                                                        mainAxisSize: MainAxisSize.min,
+                                                        children: [
+                                                          Icon(Icons.money_off_rounded, size: 10.5, color: AppColors.error),
+                                                          SizedBox(width: 3),
+                                                          Text(
+                                                            'ยกหนี้ให้',
+                                                            style: TextStyle(
+                                                              fontSize: 10.5,
+                                                              fontWeight: FontWeight.w700,
+                                                              color: AppColors.error,
+                                                            ),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
                                               ),
                                             ],
+                                          ],
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Column(
+                                        crossAxisAlignment: CrossAxisAlignment.end,
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Text(
+                                            '฿${item.outstandingAmount.toStringAsFixed(2)}',
+                                            style: TextStyle(
+                                              fontSize: 14.5,
+                                              fontWeight: FontWeight.w800,
+                                              color: item.outstandingAmount > 0
+                                                  ? const Color(0xFFFF5000)
+                                                  : const Color(0xFF34C759),
+                                            ),
+                                          ),
+                                          Text(
+                                            item.outstandingAmount > 0 ? 'คงค้าง' : 'ครบแล้ว',
+                                            style: TextStyle(
+                                              fontSize: 10,
+                                              color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
+                                            ),
                                           ),
                                         ],
                                       ),
-
-                                      // Actions row for owner if not fully paid
-                                      if (isOwner && !isPaidLocked && item.outstandingAmount > 0) ...[
-                                        const SizedBox(height: 8),
-                                        Row(
-                                          mainAxisAlignment: MainAxisAlignment.end,
-                                          children: [
-                                            GestureDetector(
-                                              onTap: () => _showEditAmountDialog(item),
-                                              child: Container(
-                                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                                decoration: BoxDecoration(
-                                                  color: const Color(0xFFFF5000).withValues(alpha: 0.1),
-                                                  borderRadius: BorderRadius.circular(6),
-                                                ),
-                                                child: const Row(
-                                                  mainAxisSize: MainAxisSize.min,
-                                                  children: [
-                                                    Icon(Icons.edit_outlined, size: 12, color: Color(0xFFFF5000)),
-                                                    SizedBox(width: 3),
-                                                    Text(
-                                                      'แก้ไขยอด',
-                                                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFFFF5000)),
-                                                    ),
-                                                  ],
-                                                ),
-                                              ),
-                                            ),
-                                            const SizedBox(width: 8),
-                                            GestureDetector(
-                                              onTap: () => _showWriteOffDialog(item),
-                                              child: Container(
-                                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                                decoration: BoxDecoration(
-                                                  color: AppColors.error.withValues(alpha: 0.1),
-                                                  borderRadius: BorderRadius.circular(6),
-                                                ),
-                                                child: const Row(
-                                                  mainAxisSize: MainAxisSize.min,
-                                                  children: [
-                                                    Icon(Icons.money_off_rounded, size: 12, color: AppColors.error),
-                                                    SizedBox(width: 3),
-                                                    Text(
-                                                      'ยกหนี้ให้',
-                                                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.error),
-                                                    ),
-                                                  ],
-                                                ),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ],
                                     ],
                                   ),
                                 );
@@ -739,32 +745,40 @@ class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
                               ),
                             ),
                           ),
-                          padding: const EdgeInsets.all(14),
                           child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                              Row(
-                                children: [
-                                  const Icon(Icons.history_rounded, size: 16, color: Color(0xFFFF5000)),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    'ประวัติการแก้ไขและยกหนี้',
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w700,
-                                      color: isDark ? AppColors.bodyOnDark : AppColors.ink,
+                              Padding(
+                                padding: const EdgeInsets.fromLTRB(14, 9, 14, 9),
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.history_rounded, size: 15, color: Color(0xFFFF5000)),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      'ประวัติการแก้ไขและยกหนี้',
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w700,
+                                        color: isDark ? AppColors.bodyOnDark : AppColors.ink,
+                                      ),
                                     ),
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
-                              const SizedBox(height: 10),
+                              Divider(
+                                height: 1,
+                                thickness: 0.6,
+                                color: isDark ? Colors.white10 : const Color(0xFFE5E7EB),
+                              ),
                               ListView.separated(
+                                padding: EdgeInsets.zero,
                                 shrinkWrap: true,
                                 physics: const NeverScrollableScrollPhysics(),
                                 itemCount: bill.editLogs.length,
                                 separatorBuilder: (_, __) => Divider(
-                                  height: 12,
-                                  thickness: 0.5,
+                                  height: 1,
+                                  thickness: 0.6,
+                                  indent: 48,
                                   color: isDark ? Colors.white10 : const Color(0xFFE5E7EB),
                                 ),
                                 itemBuilder: (ctx, idx) {
@@ -779,69 +793,72 @@ class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
                                       : (isWriteOff ? const Color(0xFFFF9500) : const Color(0xFFFF5000));
                                   final performerName = log.performedBy?.displayName ?? 'เจ้าของบิล';
 
-                                  return Row(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Container(
-                                        padding: const EdgeInsets.all(5),
-                                        decoration: BoxDecoration(
-                                          color: logColor.withValues(alpha: 0.12),
-                                          shape: BoxShape.circle,
+                                  return Padding(
+                                    padding: const EdgeInsets.fromLTRB(14, 8, 14, 8),
+                                    child: Row(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.all(4.5),
+                                          decoration: BoxDecoration(
+                                            color: logColor.withValues(alpha: 0.12),
+                                            shape: BoxShape.circle,
+                                          ),
+                                          child: Icon(
+                                            isCancel
+                                                ? Icons.cancel_rounded
+                                                : (isWriteOff ? Icons.money_off_rounded : Icons.edit_note_rounded),
+                                            size: 11,
+                                            color: logColor,
+                                          ),
                                         ),
-                                        child: Icon(
-                                          isCancel
-                                              ? Icons.cancel_rounded
-                                              : (isWriteOff ? Icons.money_off_rounded : Icons.edit_note_rounded),
-                                          size: 12,
-                                          color: logColor,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Row(
-                                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                              children: [
-                                                Text(
-                                                  actionLabel,
-                                                  style: TextStyle(
-                                                    fontSize: 12.5,
-                                                    fontWeight: FontWeight.bold,
-                                                    color: isDark ? AppColors.bodyOnDark : AppColors.ink,
-                                                  ),
-                                                ),
-                                                if (log.createdAt != null)
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Row(
+                                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                                children: [
                                                   Text(
-                                                    DateFormat('dd/MM/yy HH:mm').format(log.createdAt!),
-                                                    style: const TextStyle(
-                                                      fontSize: 10,
-                                                      color: AppColors.inkMuted48,
+                                                    actionLabel,
+                                                    style: TextStyle(
+                                                      fontSize: 12.5,
+                                                      fontWeight: FontWeight.bold,
+                                                      color: isDark ? AppColors.bodyOnDark : AppColors.ink,
                                                     ),
                                                   ),
-                                              ],
-                                            ),
-                                            Text(
-                                              'ดำเนินการโดย $performerName',
-                                              style: TextStyle(
-                                                fontSize: 11,
-                                                color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
+                                                  if (log.createdAt != null)
+                                                    Text(
+                                                      DateFormat('dd/MM/yy HH:mm').format(log.createdAt!),
+                                                      style: const TextStyle(
+                                                        fontSize: 10,
+                                                        color: AppColors.inkMuted48,
+                                                      ),
+                                                    ),
+                                                ],
                                               ),
-                                            ),
-                                            if (log.note != null && log.note!.trim().isNotEmpty)
                                               Text(
-                                                'เหตุผล: ${log.note!.trim()}',
-                                                style: const TextStyle(
+                                                'ดำเนินการโดย $performerName',
+                                                style: TextStyle(
                                                   fontSize: 11,
-                                                  fontStyle: FontStyle.italic,
-                                                  color: Color(0xFFFF5000),
+                                                  color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
                                                 ),
                                               ),
-                                          ],
+                                              if (log.note != null && log.note!.trim().isNotEmpty)
+                                                Text(
+                                                  'เหตุผล: ${log.note!.trim()}',
+                                                  style: const TextStyle(
+                                                    fontSize: 11,
+                                                    fontStyle: FontStyle.italic,
+                                                    color: Color(0xFFFF5000),
+                                                  ),
+                                                ),
+                                            ],
+                                          ),
                                         ),
-                                      ),
-                                    ],
+                                      ],
+                                    ),
                                   );
                                 },
                               ),
