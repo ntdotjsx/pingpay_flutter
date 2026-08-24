@@ -15,12 +15,20 @@ class ReceivablesScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(body: ReceivablesScreenBody());
+    return const Scaffold(
+      backgroundColor: Colors.white,
+      body: SingleChildScrollView(
+        physics: AlwaysScrollableScrollPhysics(
+          parent: BouncingScrollPhysics(),
+        ),
+        child: ReceivablesContentSection(),
+      ),
+    );
   }
 }
 
-class ReceivablesScreenBody extends ConsumerWidget {
-  const ReceivablesScreenBody({super.key});
+class ReceivablesContentSection extends ConsumerWidget {
+  const ReceivablesContentSection({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -29,111 +37,84 @@ class ReceivablesScreenBody extends ConsumerWidget {
     final notifier = ref.read(userReceivablesProvider.notifier);
     final filteredFriends = state.filteredFriends;
 
-    return RefreshIndicator(
-      onRefresh: () => notifier.loadReceivables(showLoading: false),
-      color: const Color(0xFFFF5000),
-      child: state.isLoading
-          ? _buildSkeletonLoading(isDark)
-          : state.errorMessage != null
-              ? _buildErrorState(context, state.errorMessage!, notifier, isDark)
-              : LayoutBuilder(
-                  builder: (context, constraints) {
-                    return SingleChildScrollView(
-                      physics: const AlwaysScrollableScrollPhysics(
-                        parent: BouncingScrollPhysics(),
-                      ),
-                      child: ConstrainedBox(
-                        constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                        child: IntrinsicHeight(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              const SizedBox(height: 14),
+    if (state.isLoading) {
+      return _buildSkeletonLoading(isDark);
+    }
+    if (state.errorMessage != null) {
+      return _buildErrorState(context, state.errorMessage!, notifier, isDark);
+    }
 
-                              // 1. Search & Sort Row
-                              Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                                child: _buildSearchAndSortBar(context, ref, isDark, state),
-                              ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const SizedBox(height: 14),
 
-                              const SizedBox(height: 10),
+        // 1. Search & Sort Row
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          child: _buildSearchAndSortBar(context, ref, isDark, state),
+        ),
 
-                              // 2. Filter Chips Bar
-                              Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                                child: _buildFiltersBar(isDark, state, notifier),
-                              ),
+        const SizedBox(height: 10),
 
-                              const SizedBox(height: 14),
+        // 2. Filter Chips Bar
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          child: _buildFiltersBar(isDark, state, notifier),
+        ),
 
-                              // 3. Section Title
-                              Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text(
-                                      'เพื่อนที่ยังค้างชำระ',
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w600,
-                                        letterSpacing: -0.2,
-                                        color: isDark ? AppColors.bodyOnDark : AppColors.ink,
-                                      ),
-                                    ),
-                                    Text(
-                                      '${filteredFriends.length} คน',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w500,
-                                        color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
+        const SizedBox(height: 14),
 
-                              const SizedBox(height: 10),
-
-                              // 4. Expanded Full-Height White Background Area
-                              Expanded(
-                                child: Container(
-                                  width: double.infinity,
-                                  decoration: BoxDecoration(
-                                    color: isDark ? AppColors.surfaceTile1 : Colors.white,
-                                    border: Border(
-                                      top: BorderSide(
-                                        color: isDark ? Colors.white10 : const Color(0xFFF0F2F5),
-                                        width: 0.5,
-                                      ),
-                                    ),
-                                  ),
-                                  child: filteredFriends.isEmpty
-                                      ? _buildEmptyState(isDark)
-                                      : Column(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: filteredFriends.asMap().entries.map((entry) {
-                                            return AnimatedListItem(
-                                              index: entry.key,
-                                              child: ReceivableFriendCard(
-                                                friend: entry.value,
-                                                onTap: () => FriendReceivableDetailBottomSheet.show(
-                                                  context,
-                                                  entry.value,
-                                                ),
-                                              ),
-                                            );
-                                          }).toList(),
-                                        ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    );
-                  },
+        // 3. Section Title
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'เพื่อนที่ยังค้างชำระ',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: -0.2,
+                  color: isDark ? AppColors.bodyOnDark : AppColors.ink,
                 ),
+              ),
+              Text(
+                '${filteredFriends.length} คน',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        const SizedBox(height: 10),
+
+        // 4. Friends List / Empty State
+        if (filteredFriends.isEmpty)
+          _buildEmptyState(isDark)
+        else
+          Column(
+            children: filteredFriends.asMap().entries.map((entry) {
+              return AnimatedListItem(
+                index: entry.key,
+                child: ReceivableFriendCard(
+                  friend: entry.value,
+                  onTap: () => FriendReceivableDetailBottomSheet.show(
+                    context,
+                    entry.value,
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+
+        const SizedBox(height: 36),
+      ],
     );
   }
 
@@ -152,10 +133,10 @@ class ReceivablesScreenBody extends ConsumerWidget {
           child: Container(
             height: 38,
             decoration: ShapeDecoration(
-              color: isDark ? AppColors.surfaceTile1 : Colors.white,
+              color: isDark ? AppColors.surfaceTile1 : const Color(0xFFF3F4F6),
               shape: SmoothRectangleBorder(
                 side: BorderSide(
-                  color: isDark ? Colors.white10 : const Color(0xFFE2E6EC),
+                  color: isDark ? Colors.white10 : const Color(0xFFE5E7EB),
                   width: 0.8,
                 ),
                 borderRadius: const SmoothBorderRadius.all(
@@ -217,10 +198,10 @@ class ReceivablesScreenBody extends ConsumerWidget {
             height: 38,
             padding: const EdgeInsets.symmetric(horizontal: 10),
             decoration: ShapeDecoration(
-              color: isDark ? AppColors.surfaceTile1 : Colors.white,
+              color: isDark ? AppColors.surfaceTile1 : const Color(0xFFF3F4F6),
               shape: SmoothRectangleBorder(
                 side: BorderSide(
-                  color: isDark ? Colors.white10 : const Color(0xFFE2E6EC),
+                  color: isDark ? Colors.white10 : const Color(0xFFE5E7EB),
                   width: 0.8,
                 ),
                 borderRadius: const SmoothBorderRadius.all(
@@ -287,12 +268,12 @@ class ReceivablesScreenBody extends ConsumerWidget {
                 decoration: ShapeDecoration(
                   color: isSelected
                       ? const Color(0xFFFF5000)
-                      : (isDark ? AppColors.surfaceTile1 : Colors.white),
+                      : (isDark ? AppColors.surfaceTile1 : const Color(0xFFF3F4F6)),
                   shape: SmoothRectangleBorder(
                     side: BorderSide(
                       color: isSelected
                           ? Colors.transparent
-                          : (isDark ? Colors.white10 : const Color(0xFFE2E6EC)),
+                          : (isDark ? Colors.white10 : const Color(0xFFE5E7EB)),
                       width: 0.8,
                     ),
                     borderRadius: const SmoothBorderRadius.all(
@@ -418,9 +399,8 @@ class ReceivablesScreenBody extends ConsumerWidget {
   }
 
   Widget _buildEmptyState(bool isDark) {
-    return Container(
+    return Padding(
       padding: const EdgeInsets.symmetric(vertical: 48, horizontal: 24),
-      alignment: Alignment.center,
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -460,15 +440,17 @@ class ReceivablesScreenBody extends ConsumerWidget {
   }
 
   Widget _buildSkeletonLoading(bool isDark) {
-    return ListView(
+    return Padding(
       padding: const EdgeInsets.all(16),
-      children: const [
-        AppSkeleton(width: double.infinity, height: 38, cornerRadius: 10, margin: EdgeInsets.only(bottom: 10)),
-        AppSkeleton(width: double.infinity, height: 32, cornerRadius: 10, margin: EdgeInsets.only(bottom: 14)),
-        DebtCardSkeleton(),
-        DebtCardSkeleton(),
-        DebtCardSkeleton(),
-      ],
+      child: Column(
+        children: const [
+          AppSkeleton(width: double.infinity, height: 38, cornerRadius: 10, margin: EdgeInsets.only(bottom: 10)),
+          AppSkeleton(width: double.infinity, height: 32, cornerRadius: 10, margin: EdgeInsets.only(bottom: 14)),
+          DebtCardSkeleton(),
+          DebtCardSkeleton(),
+          DebtCardSkeleton(),
+        ],
+      ),
     );
   }
 

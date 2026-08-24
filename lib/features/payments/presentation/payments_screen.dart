@@ -51,44 +51,55 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
         : receivablesState.summary.debtorCount;
 
     return Scaffold(
-      backgroundColor: isDark
-          ? AppColors.surfaceBlack
-          : AppColors.canvasParchment,
-      body: Column(
-        children: [
-          // ── 1. Signature Executive Header ─────────────────────────────────────
-          _buildExecutiveHeader(
-            context,
-            isDark: isDark,
-            debtsState: debtsState,
-            receivablesState: receivablesState,
-            totalAmount: currentTotalAmount,
-            count: currentCount,
-            onRefresh: () {
-              HapticFeedback.lightImpact();
-              if (_selectedPaymentTab == 0) {
-                debtsNotifier.loadDebts();
-              } else {
-                receivablesNotifier.loadReceivables();
-              }
-            },
+      backgroundColor: isDark ? AppColors.surfaceBlack : Colors.white,
+      body: RefreshIndicator(
+        onRefresh: () async {
+          if (_selectedPaymentTab == 0) {
+            await debtsNotifier.loadDebts(showLoading: false);
+          } else {
+            await receivablesNotifier.loadReceivables(showLoading: false);
+          }
+        },
+        color: const Color(0xFFFF5000),
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(
+            parent: BouncingScrollPhysics(),
           ),
+          child: Container(
+            color: isDark ? AppColors.surfaceBlack : Colors.white,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // ── 1. Unified Top Header ──────────────────────────────────────
+                _buildExecutiveHeader(
+                  context,
+                  isDark: isDark,
+                  debtsState: debtsState,
+                  receivablesState: receivablesState,
+                  totalAmount: currentTotalAmount,
+                  count: currentCount,
+                  onRefresh: () {
+                    HapticFeedback.lightImpact();
+                    if (_selectedPaymentTab == 0) {
+                      debtsNotifier.loadDebts();
+                    } else {
+                      receivablesNotifier.loadReceivables();
+                    }
+                  },
+                ),
 
-          // ── 2. Scrollable Body Content (Full-height list background) ────────────
-          Expanded(
-            child: _selectedPaymentTab == 0
-                ? RefreshIndicator(
-                    onRefresh: () => debtsNotifier.loadDebts(showLoading: false),
-                    color: const Color(0xFFFF5000),
-                    child: debtsState.isLoading
+                // ── 2. Content Section (Tab 0: Debts, Tab 1: Receivables) ────
+                _selectedPaymentTab == 0
+                    ? (debtsState.isLoading
                         ? _buildSkeletonLoading(isDark)
                         : debtsState.errorMessage != null
                             ? _buildErrorState(context, debtsState.errorMessage!)
-                            : _buildDebtsContent(context, debtsState),
-                  )
-                : const ReceivablesScreenBody(),
+                            : _buildDebtsContent(context, debtsState))
+                    : const ReceivablesContentSection(),
+              ],
+            ),
           ),
-        ],
+        ),
       ),
     );
   }
@@ -414,266 +425,240 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
   }
 
   // =========================================================================
-  // BODY: DEBTS LIST & FILTERS (FULL-HEIGHT WHITE/DARK BACKGROUND)
+  // BODY: DEBTS LIST & FILTERS
   // =========================================================================
   Widget _buildDebtsContent(BuildContext context, UserDebtsState state) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final filteredDebts = state.filteredDebts;
     final pendingDebts = state.pendingAcceptanceDebts;
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        return SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(
-            parent: BouncingScrollPhysics(),
-          ),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minHeight: constraints.maxHeight),
-            child: IntrinsicHeight(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const SizedBox(height: 14),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const SizedBox(height: 14),
 
-                  // 1. Pending Debt Requests Banner (if any)
-                  if (pendingDebts.isNotEmpty && state.currentFilter != DebtFilter.pendingAcceptance) ...[
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                      child: Container(
-                        padding: const EdgeInsets.all(14),
-                        decoration: ShapeDecoration(
-                          color: isDark ? const Color(0xFF2B1D0B) : const Color(0xFFFFF8E6),
-                          shape: const SmoothRectangleBorder(
-                            borderRadius: SmoothBorderRadius.all(
-                              SmoothRadius(cornerRadius: 16, cornerSmoothing: 0.8),
+        // 1. Pending Debt Requests Banner (if any)
+        if (pendingDebts.isNotEmpty && state.currentFilter != DebtFilter.pendingAcceptance) ...[
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: Container(
+              padding: const EdgeInsets.all(14),
+              decoration: ShapeDecoration(
+                color: isDark ? const Color(0xFF2B1D0B) : const Color(0xFFFFF8E6),
+                shape: const SmoothRectangleBorder(
+                  borderRadius: SmoothBorderRadius.all(
+                    SmoothRadius(cornerRadius: 16, cornerSmoothing: 0.8),
+                  ),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(5),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFF9500).withValues(alpha: 0.15),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.assignment_late_outlined,
+                              color: Color(0xFFFF9500),
+                              size: 16,
                             ),
                           ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'คำร้องขอเป็นหนี้รอการตอบรับ',
+                            style: TextStyle(
+                              fontSize: 13.5,
+                              fontWeight: FontWeight.w600,
+                              color: isDark ? const Color(0xFFFFB340) : const Color(0xFFB45309),
+                            ),
+                          ),
+                        ],
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFF9500).withValues(alpha: 0.18),
+                          borderRadius: BorderRadius.circular(8),
                         ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Row(
+                        child: Text(
+                          '${pendingDebts.length} รายการ',
+                          style: const TextStyle(
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFFFF9500),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'เพื่อนสร้างบิลหารเงินมา แตะที่รายการเพื่อตรวจสอบและยอมรับหนี้',
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      color: isDark ? AppColors.bodyMuted : AppColors.inkMuted80,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  ...pendingDebts.map(
+                    (debt) => Padding(
+                      padding: const EdgeInsets.only(bottom: 6.0),
+                      child: InkWell(
+                        onTap: () => DebtAcknowledgementDetailSheet.show(context, debt),
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: isDark ? AppColors.surfaceTile2 : Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: const Color(0xFFFF9500).withValues(alpha: 0.25),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              CircleAvatar(
+                                radius: 15,
+                                backgroundColor: const Color(0xFFFF9500).withValues(alpha: 0.15),
+                                child: Text(
+                                  debt.creditor.displayName.isNotEmpty
+                                      ? debt.creditor.displayName[0].toUpperCase()
+                                      : 'U',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFFFF9500),
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Container(
-                                      padding: const EdgeInsets.all(5),
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFFFF9500).withValues(alpha: 0.15),
-                                        shape: BoxShape.circle,
-                                      ),
-                                      child: const Icon(
-                                        Icons.assignment_late_outlined,
-                                        color: Color(0xFFFF9500),
-                                        size: 16,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 8),
                                     Text(
-                                      'คำร้องขอเป็นหนี้รอการตอบรับ',
+                                      debt.billTitle,
                                       style: TextStyle(
-                                        fontSize: 13.5,
+                                        fontSize: 13,
                                         fontWeight: FontWeight.w600,
-                                        color: isDark ? const Color(0xFFFFB340) : const Color(0xFFB45309),
+                                        color: isDark ? AppColors.bodyOnDark : AppColors.ink,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    Text(
+                                      'สร้างโดย ${debt.creditor.displayName}',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
                                       ),
                                     ),
                                   ],
                                 ),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFFF9500).withValues(alpha: 0.18),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Text(
-                                    '${pendingDebts.length} รายการ',
+                              ),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  Text(
+                                    '฿${debt.outstandingAmount.toStringAsFixed(2)}',
                                     style: const TextStyle(
-                                      fontSize: 10.5,
+                                      fontSize: 13.5,
                                       fontWeight: FontWeight.w600,
                                       color: Color(0xFFFF9500),
                                     ),
                                   ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'เพื่อนสร้างบิลหารเงินมา แตะที่รายการเพื่อตรวจสอบและยอมรับหนี้',
-                              style: TextStyle(
-                                fontSize: 11.5,
-                                color: isDark ? AppColors.bodyMuted : AppColors.inkMuted80,
-                              ),
-                            ),
-                            const SizedBox(height: 10),
-                            ...pendingDebts.map(
-                              (debt) => Padding(
-                                padding: const EdgeInsets.only(bottom: 6.0),
-                                child: InkWell(
-                                  onTap: () => DebtAcknowledgementDetailSheet.show(context, debt),
-                                  borderRadius: BorderRadius.circular(12),
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                                    decoration: BoxDecoration(
-                                      color: isDark ? AppColors.surfaceTile2 : Colors.white,
-                                      borderRadius: BorderRadius.circular(12),
-                                      border: Border.all(
-                                        color: const Color(0xFFFF9500).withValues(alpha: 0.25),
-                                      ),
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        CircleAvatar(
-                                          radius: 15,
-                                          backgroundColor: const Color(0xFFFF9500).withValues(alpha: 0.15),
-                                          child: Text(
-                                            debt.creditor.displayName.isNotEmpty
-                                                ? debt.creditor.displayName[0].toUpperCase()
-                                                : 'U',
-                                            style: const TextStyle(
-                                              fontWeight: FontWeight.w600,
-                                              color: Color(0xFFFF9500),
-                                              fontSize: 12,
-                                            ),
-                                          ),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                debt.billTitle,
-                                                style: TextStyle(
-                                                  fontSize: 13,
-                                                  fontWeight: FontWeight.w600,
-                                                  color: isDark ? AppColors.bodyOnDark : AppColors.ink,
-                                                ),
-                                                maxLines: 1,
-                                                overflow: TextOverflow.ellipsis,
-                                              ),
-                                              Text(
-                                                'สร้างโดย ${debt.creditor.displayName}',
-                                                style: TextStyle(
-                                                  fontSize: 11,
-                                                  color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                        Column(
-                                          crossAxisAlignment: CrossAxisAlignment.end,
-                                          children: [
-                                            Text(
-                                              '฿${debt.outstandingAmount.toStringAsFixed(2)}',
-                                              style: const TextStyle(
-                                                fontSize: 13.5,
-                                                fontWeight: FontWeight.w600,
-                                                color: Color(0xFFFF9500),
-                                              ),
-                                            ),
-                                            const Text(
-                                              'แตะเพื่อยอมรับ >',
-                                              style: TextStyle(
-                                                fontSize: 10,
-                                                fontWeight: FontWeight.w600,
-                                                color: Color(0xFFFF9500),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ],
+                                  const Text(
+                                    'แตะเพื่อยอมรับ >',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w600,
+                                      color: Color(0xFFFF9500),
                                     ),
                                   ),
-                                ),
+                                ],
                               ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-                  ],
-
-                  // 2. Horizontal Filter Bar
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                    child: _buildFilterBar(context, state),
-                  ),
-
-                  const SizedBox(height: 14),
-
-                  // 3. Section Title with Count
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          _getFilterSectionTitle(state.currentFilter),
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: -0.2,
-                            color: isDark ? AppColors.bodyOnDark : AppColors.ink,
-                          ),
-                        ),
-                        Text(
-                          '${filteredDebts.length} รายการ',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                            color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 10),
-
-                  // 4. Expanded Full-Height White Background Area
-                  Expanded(
-                    child: Container(
-                      width: double.infinity,
-                      decoration: BoxDecoration(
-                        color: isDark ? AppColors.surfaceTile1 : Colors.white,
-                        border: Border(
-                          top: BorderSide(
-                            color: isDark ? Colors.white10 : const Color(0xFFF0F2F5),
-                            width: 0.5,
+                            ],
                           ),
                         ),
                       ),
-                      child: filteredDebts.isEmpty
-                          ? _buildEmptyState(context, state.currentFilter)
-                          : Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: filteredDebts.asMap().entries.map((entry) {
-                                return AnimatedListItem(
-                                  index: entry.key,
-                                  child: DebtCard(
-                                    debt: entry.value,
-                                    onPayTap: () {
-                                      if (!entry.value.isAcknowledged) {
-                                        DebtAcknowledgementDetailSheet.show(context, entry.value);
-                                      } else {
-                                        PaymentDetailBottomSheet.show(context, entry.value);
-                                      }
-                                    },
-                                  ),
-                                );
-                              }).toList(),
-                            ),
                     ),
                   ),
                 ],
               ),
             ),
           ),
-        );
-      },
+          const SizedBox(height: 14),
+        ],
+
+        // 2. Horizontal Filter Bar
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          child: _buildFilterBar(context, state),
+        ),
+
+        const SizedBox(height: 14),
+
+        // 3. Section Title with Count
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                _getFilterSectionTitle(state.currentFilter),
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: -0.2,
+                  color: isDark ? AppColors.bodyOnDark : AppColors.ink,
+                ),
+              ),
+              Text(
+                '${filteredDebts.length} รายการ',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        const SizedBox(height: 10),
+
+        // 4. Clean Edge-to-Edge List
+        if (filteredDebts.isEmpty)
+          _buildEmptyState(context, state.currentFilter)
+        else
+          Column(
+            children: filteredDebts.asMap().entries.map((entry) {
+              return AnimatedListItem(
+                index: entry.key,
+                child: DebtCard(
+                  debt: entry.value,
+                  onPayTap: () {
+                    if (!entry.value.isAcknowledged) {
+                      DebtAcknowledgementDetailSheet.show(context, entry.value);
+                    } else {
+                      PaymentDetailBottomSheet.show(context, entry.value);
+                    }
+                  },
+                ),
+              );
+            }).toList(),
+          ),
+
+        const SizedBox(height: 36),
+      ],
     );
   }
 
@@ -714,12 +699,12 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
                 decoration: ShapeDecoration(
                   color: isSelected
                       ? const Color(0xFFFF5000)
-                      : (isDark ? AppColors.surfaceTile1 : Colors.white),
+                      : (isDark ? AppColors.surfaceTile1 : const Color(0xFFF3F4F6)),
                   shape: SmoothRectangleBorder(
                     side: BorderSide(
                       color: isSelected
                           ? Colors.transparent
-                          : (isDark ? Colors.white10 : const Color(0xFFE2E6EC)),
+                          : (isDark ? Colors.white10 : const Color(0xFFE5E7EB)),
                       width: 0.8,
                     ),
                     borderRadius: const SmoothBorderRadius.all(
@@ -810,14 +795,16 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
   }
 
   Widget _buildSkeletonLoading(bool isDark) {
-    return ListView(
+    return Padding(
       padding: const EdgeInsets.all(16),
-      children: const [
-        AppSkeleton(width: double.infinity, height: 38, cornerRadius: 10, margin: EdgeInsets.only(bottom: 14)),
-        DebtCardSkeleton(),
-        DebtCardSkeleton(),
-        DebtCardSkeleton(),
-      ],
+      child: Column(
+        children: const [
+          AppSkeleton(width: double.infinity, height: 38, cornerRadius: 10, margin: EdgeInsets.only(bottom: 14)),
+          DebtCardSkeleton(),
+          DebtCardSkeleton(),
+          DebtCardSkeleton(),
+        ],
+      ),
     );
   }
 
