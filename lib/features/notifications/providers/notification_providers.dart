@@ -158,6 +158,12 @@ class NotificationNotifier extends StateNotifier<NotificationState> {
     final amount = (data['amount'] is num)
         ? (data['amount'] as num).toDouble()
         : double.tryParse(data['amount']?.toString() ?? '');
+    final imageUrl = notification?.android?.imageUrl ??
+        notification?.apple?.imageUrl ??
+        data['imageUrl'] ??
+        data['image'] ??
+        data['bannerUrl'];
+    final avatarUrl = data['avatarUrl'] ?? data['avatar'] ?? data['senderAvatar'] ?? data['iconUrl'];
 
     NotificationType type = NotificationType.systemGeneral;
     if (eventType.contains('debt') || eventType.contains('bill') || eventType == 'BILL_CREATED') {
@@ -179,6 +185,8 @@ class NotificationNotifier extends StateNotifier<NotificationState> {
       isRead: false,
       amount: amount,
       relatedId: data['billId'] ?? data['paymentId'] ?? data['friendshipId'],
+      avatarUrl: avatarUrl?.toString(),
+      imageUrl: imageUrl?.toString(),
       metadata: data,
     );
 

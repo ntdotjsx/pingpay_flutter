@@ -150,6 +150,15 @@ class NotificationRepository {
         break;
     }
 
+    final imageUrl = payload['imageUrl']?.toString() ??
+        payload['image']?.toString() ??
+        payload['bannerUrl']?.toString() ??
+        payload['picture']?.toString();
+    final avatarUrl = payload['avatarUrl']?.toString() ??
+        payload['avatar']?.toString() ??
+        payload['senderAvatar']?.toString() ??
+        payload['iconUrl']?.toString();
+
     return AppNotificationItem(
       id: id.isNotEmpty ? id : 'backend-${createdAt.millisecondsSinceEpoch}',
       title: title,
@@ -159,6 +168,8 @@ class NotificationRepository {
       isRead: status == 'READ',
       amount: amount,
       relatedId: relatedId,
+      avatarUrl: avatarUrl,
+      imageUrl: imageUrl,
       metadata: payload,
     );
   }

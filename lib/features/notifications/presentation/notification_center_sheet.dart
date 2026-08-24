@@ -322,23 +322,11 @@ class NotificationCenterSheet extends ConsumerWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Icon in tinted squircle box
-              Container(
-                width: 40,
-                height: 40,
-                decoration: ShapeDecoration(
-                  color: notif.iconColor.withValues(alpha: 0.14),
-                  shape: const SmoothRectangleBorder(
-                    borderRadius: SmoothBorderRadius.all(
-                      SmoothRadius(cornerRadius: 12, cornerSmoothing: 0.8),
-                    ),
-                  ),
-                ),
-                child: Icon(notif.icon, color: notif.iconColor, size: 20),
-              ),
+              // Avatar / App Icon / Category Icon
+              _buildNotificationAvatar(notif, isDark),
               const SizedBox(width: 12),
 
-              // Title, Body, Timestamp
+              // Title, Body, Timestamp, Images, Action buttons
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -374,6 +362,35 @@ class NotificationCenterSheet extends ConsumerWidget {
                         color: isDark ? AppColors.bodyMuted : AppColors.inkMuted80,
                       ),
                     ),
+
+                    // Attached Image Banner (if available)
+                    if (notif.effectiveImageUrl != null && notif.effectiveImageUrl!.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: Image.network(
+                          notif.effectiveImageUrl!,
+                          width: double.infinity,
+                          height: 140,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                          loadingBuilder: (context, child, progress) {
+                            if (progress == null) return child;
+                            return Container(
+                              height: 140,
+                              width: double.infinity,
+                              color: isDark ? Colors.white10 : const Color(0xFFF3F4F6),
+                              child: const Center(
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Color(0xFFFF5000),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
 
                     // Quick Action Button for Debt Acknowledgements
                     if (notif.type == NotificationType.debtRequest) ...[
@@ -475,6 +492,76 @@ class NotificationCenterSheet extends ConsumerWidget {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildNotificationAvatar(AppNotificationItem notif, bool isDark) {
+    final avatarUrl = notif.effectiveAvatarUrl;
+    if (avatarUrl != null && avatarUrl.isNotEmpty) {
+      return ClipSmoothRect(
+        radius: const SmoothBorderRadius.all(
+          SmoothRadius(cornerRadius: 12, cornerSmoothing: 0.8),
+        ),
+        child: Image.network(
+          avatarUrl,
+          width: 40,
+          height: 40,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => _buildFallbackIcon(notif),
+        ),
+      );
+    }
+
+    // PingPay Announcements & System Broadcasts show App Icon
+    if (notif.isPingPayAnnouncement) {
+      return Container(
+        width: 40,
+        height: 40,
+        decoration: const ShapeDecoration(
+          shape: SmoothRectangleBorder(
+            borderRadius: SmoothBorderRadius.all(
+              SmoothRadius(cornerRadius: 12, cornerSmoothing: 0.8),
+            ),
+          ),
+          shadows: [
+            BoxShadow(
+              color: Color(0x33FF5000),
+              blurRadius: 6,
+              offset: Offset(0, 2),
+            ),
+          ],
+        ),
+        child: ClipSmoothRect(
+          radius: const SmoothBorderRadius.all(
+            SmoothRadius(cornerRadius: 12, cornerSmoothing: 0.8),
+          ),
+          child: Image.asset(
+            'assets/images/app_icon.png',
+            width: 40,
+            height: 40,
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => _buildFallbackIcon(notif),
+          ),
+        ),
+      );
+    }
+
+    return _buildFallbackIcon(notif);
+  }
+
+  Widget _buildFallbackIcon(AppNotificationItem notif) {
+    return Container(
+      width: 40,
+      height: 40,
+      decoration: ShapeDecoration(
+        color: notif.iconColor.withValues(alpha: 0.14),
+        shape: const SmoothRectangleBorder(
+          borderRadius: SmoothBorderRadius.all(
+            SmoothRadius(cornerRadius: 12, cornerSmoothing: 0.8),
+          ),
+        ),
+      ),
+      child: Icon(notif.icon, color: notif.iconColor, size: 20),
     );
   }
 

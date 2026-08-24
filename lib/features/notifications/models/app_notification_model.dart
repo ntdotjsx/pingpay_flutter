@@ -31,6 +31,7 @@ class AppNotificationItem {
   final double? amount;
   final String? relatedId;
   final String? avatarUrl;
+  final String? imageUrl;
   final Map<String, dynamic>? metadata;
 
   const AppNotificationItem({
@@ -43,8 +44,43 @@ class AppNotificationItem {
     this.amount,
     this.relatedId,
     this.avatarUrl,
+    this.imageUrl,
     this.metadata,
   });
+
+  String? get effectiveImageUrl {
+    if (imageUrl != null && imageUrl!.trim().isNotEmpty) return imageUrl!.trim();
+    final img = metadata?['imageUrl'] ??
+        metadata?['image'] ??
+        metadata?['bannerUrl'] ??
+        metadata?['picture'] ??
+        metadata?['mediaUrl'];
+    if (img != null && img.toString().trim().isNotEmpty) {
+      return img.toString().trim();
+    }
+    return null;
+  }
+
+  String? get effectiveAvatarUrl {
+    if (avatarUrl != null && avatarUrl!.trim().isNotEmpty) return avatarUrl!.trim();
+    final av = metadata?['avatarUrl'] ??
+        metadata?['avatar'] ??
+        metadata?['senderAvatar'] ??
+        metadata?['iconUrl'] ??
+        metadata?['userAvatar'];
+    if (av != null && av.toString().trim().isNotEmpty) {
+      return av.toString().trim();
+    }
+    return null;
+  }
+
+  bool get isPingPayAnnouncement {
+    final t = title.toLowerCase();
+    return t.contains('pingpay') ||
+        t.contains('ประกาศ') ||
+        type == NotificationType.systemGeneral ||
+        type == NotificationType.systemSecurity;
+  }
 
   NotificationCategory get category {
     switch (type) {
@@ -108,7 +144,7 @@ class AppNotificationItem {
       case NotificationType.systemSecurity:
         return const Color(0xFFFF2D55);
       case NotificationType.systemGeneral:
-        return const Color(0xFF8E8E93);
+        return const Color(0xFFFF5000);
     }
   }
 
@@ -122,6 +158,7 @@ class AppNotificationItem {
     double? amount,
     String? relatedId,
     String? avatarUrl,
+    String? imageUrl,
     Map<String, dynamic>? metadata,
   }) {
     return AppNotificationItem(
@@ -134,6 +171,7 @@ class AppNotificationItem {
       amount: amount ?? this.amount,
       relatedId: relatedId ?? this.relatedId,
       avatarUrl: avatarUrl ?? this.avatarUrl,
+      imageUrl: imageUrl ?? this.imageUrl,
       metadata: metadata ?? this.metadata,
     );
   }
