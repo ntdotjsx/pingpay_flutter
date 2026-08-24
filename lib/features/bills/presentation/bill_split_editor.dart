@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/theme.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../providers/bill_provider.dart';
-import '../services/bill_split_calculator.dart';
 
 class BillSplitEditor extends ConsumerWidget {
   const BillSplitEditor({super.key});
@@ -16,22 +15,16 @@ class BillSplitEditor extends ConsumerWidget {
     final authUser = ref.watch(authStateProvider).user;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    final ownerSatang = billState.includeOwner
-        ? billState.ownerAmountSatang
-        : 0;
-    final isSumValid = BillSplitCalculator.validateTotalInvariant(
-      billState.participants,
-      billState.totalSatang,
-      ownerSatang: ownerSatang,
-    );
+    if (billState.participants.isEmpty) {
+      return const SizedBox.shrink();
+    }
 
-    final currentSumSatang =
-        billState.participants.fold<int>(
-          0,
-          (acc, curr) => acc + curr.amountSatang,
-        ) +
-        ownerSatang;
-    final currentSumBaht = BillSplitCalculator.toBaht(currentSumSatang);
+    final currentSumSatang = billState.participants.fold(0, (acc, p) => acc + p.amountSatang) +
+        (billState.includeOwner ? billState.ownerAmountSatang : 0);
+    final currentSumBaht = currentSumSatang / 100.0;
+    final isSumValid = (currentSumSatang - billState.totalSatang).abs() <= 1;
+    final isEven = !billState.participants.any((p) => p.isManuallyAdjusted) &&
+        !billState.isOwnerAmountManuallyAdjusted;
 
     return Container(
       decoration: ShapeDecoration(
@@ -48,11 +41,10 @@ class BillSplitEditor extends ConsumerWidget {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
-        mainAxisSize: MainAxisSize.min,
         children: [
-          // 1. Header with Rebalance button
+          // 1. Header Row: Title & Quick Allocate Button
           Padding(
-            padding: const EdgeInsets.fromLTRB(14, 10, 10, 8),
+            padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -70,14 +62,14 @@ class BillSplitEditor extends ConsumerWidget {
                         ),
                       ),
                       child: const Icon(
-                        Icons.pie_chart_outline_rounded,
+                        Icons.people_alt_rounded,
                         color: Color(0xFFFF5000),
-                        size: 16,
+                        size: 15,
                       ),
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      'ส่วนแบ่งรายบุคคล',
+                      'แบ่งจ่ายค่าบิล (${billState.participants.length + (billState.includeOwner ? 1 : 0)} คน)',
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w700,
@@ -87,24 +79,30 @@ class BillSplitEditor extends ConsumerWidget {
                   ],
                 ),
                 GestureDetector(
-                  onTap: () => billNotifier.rebalanceEvenly(),
+                  onTap: isEven ? null : () => billNotifier.rebalanceEvenly(),
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFFF5000).withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
+                      color: isEven
+                          ? const Color(0xFFFF5000).withValues(alpha: 0.12)
+                          : (isDark ? Colors.white10 : const Color(0xFFE5E7EB)),
+                      borderRadius: BorderRadius.circular(6),
                     ),
-                    child: const Row(
+                    child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.balance_rounded, size: 12, color: Color(0xFFFF5000)),
-                        SizedBox(width: 4),
+                        Icon(
+                          Icons.balance_rounded,
+                          size: 12,
+                          color: isEven ? const Color(0xFFFF5000) : (isDark ? AppColors.bodyMuted : AppColors.inkMuted48),
+                        ),
+                        const SizedBox(width: 4),
                         Text(
                           'หารเท่ากัน',
                           style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w700,
-                            color: Color(0xFFFF5000),
+                            color: isEven ? const Color(0xFFFF5000) : (isDark ? AppColors.bodyMuted : AppColors.inkMuted48),
                           ),
                         ),
                       ],
@@ -121,44 +119,24 @@ class BillSplitEditor extends ConsumerWidget {
             color: isDark ? Colors.white10 : const Color(0xFFE5E7EB),
           ),
 
-          // 2. Owner / Creator Share Row
+          // 2. Owner / Creator Share Row (Aligned directly with list)
           InkWell(
             onTap: () {
               billNotifier.setIncludeOwner(!billState.includeOwner);
             },
             child: Container(
               color: billState.includeOwner
-                  ? const Color(0xFFFF5000).withValues(alpha: isDark ? 0.12 : 0.04)
+                  ? const Color(0xFFFF5000).withValues(alpha: isDark ? 0.08 : 0.03)
                   : Colors.transparent,
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
               child: Row(
                 children: [
-                  SizedBox(
-                    width: 28,
-                    height: 28,
-                    child: Checkbox(
-                      value: billState.includeOwner,
-                      activeColor: const Color(0xFFFF5000),
-                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      visualDensity: VisualDensity.compact,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      onChanged: (val) {
-                        billNotifier.setIncludeOwner(val ?? false);
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-
-                  // Real Owner Avatar
                   _buildUserAvatar(
                     avatarUrl: authUser?.avatarUrl,
                     displayName: authUser?.displayName ?? 'ฉัน',
                     isDark: isDark,
                   ),
                   const SizedBox(width: 10),
-
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -170,24 +148,24 @@ class BillSplitEditor extends ConsumerWidget {
                                 authUser?.displayName ?? 'ฉัน',
                                 style: TextStyle(
                                   fontWeight: FontWeight.w700,
-                                  fontSize: 13,
+                                  fontSize: 13.5,
                                   color: isDark ? AppColors.bodyOnDark : AppColors.ink,
                                 ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
                             ),
-                            const SizedBox(width: 5),
+                            const SizedBox(width: 6),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
                               decoration: BoxDecoration(
-                                color: const Color(0xFFFF5000).withValues(alpha: 0.15),
+                                color: const Color(0xFFFF5000).withValues(alpha: 0.12),
                                 borderRadius: BorderRadius.circular(4),
                               ),
                               child: const Text(
                                 'ผู้สร้างบิล',
                                 style: TextStyle(
-                                  fontSize: 9,
+                                  fontSize: 9.5,
                                   color: Color(0xFFFF5000),
                                   fontWeight: FontWeight.bold,
                                 ),
@@ -195,29 +173,44 @@ class BillSplitEditor extends ConsumerWidget {
                             ),
                           ],
                         ),
+                        const SizedBox(height: 1),
                         Text(
                           billState.includeOwner
-                              ? 'หักส่วนของฉันออกจากบิล'
-                              : 'ไม่หักส่วนฉัน (หารเฉพาะเพื่อน)',
+                              ? 'มีส่วนฉันในบิลนี้'
+                              : 'ไม่คิดส่วนฉัน (หารเฉพาะเพื่อน)',
                           style: TextStyle(
-                            fontSize: 10.5,
+                            fontSize: 11,
                             color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
                           ),
                         ),
                       ],
                     ),
                   ),
-
-                  Text(
-                    billState.includeOwner
-                        ? '฿${billState.ownerAmountBaht.toStringAsFixed(2)}'
-                        : '฿0.00',
-                    style: TextStyle(
-                      fontSize: 13.5,
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
                       color: billState.includeOwner
-                          ? const Color(0xFFFF5000)
-                          : (isDark ? AppColors.bodyMuted : AppColors.inkMuted48),
-                      fontWeight: FontWeight.w700,
+                          ? const Color(0xFFFF5000).withValues(alpha: 0.12)
+                          : (isDark ? Colors.white10 : const Color(0xFFE5E7EB)),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: billState.includeOwner
+                            ? const Color(0xFFFF5000).withValues(alpha: 0.3)
+                            : Colors.transparent,
+                        width: 0.8,
+                      ),
+                    ),
+                    child: Text(
+                      billState.includeOwner
+                          ? '฿${billState.ownerAmountBaht.toStringAsFixed(2)}'
+                          : 'ไม่หารด้วย',
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w700,
+                        color: billState.includeOwner
+                            ? const Color(0xFFFF5000)
+                            : (isDark ? AppColors.bodyMuted : AppColors.inkMuted48),
+                      ),
                     ),
                   ),
                 ],
@@ -225,7 +218,14 @@ class BillSplitEditor extends ConsumerWidget {
             ),
           ),
 
-          // 3. Participants List
+          Divider(
+            height: 1,
+            thickness: 0.6,
+            indent: 52,
+            color: isDark ? Colors.white10 : const Color(0xFFE5E7EB),
+          ),
+
+          // 3. Participants List (Straight vertical column alignment)
           ListView.separated(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
@@ -239,10 +239,9 @@ class BillSplitEditor extends ConsumerWidget {
             itemBuilder: (ctx, idx) {
               final p = billState.participants[idx];
               return Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                 child: Row(
                   children: [
-                    const SizedBox(width: 32), // Align with avatar above
                     _buildUserAvatar(
                       avatarUrl: p.avatarUrl,
                       displayName: p.displayName,
@@ -256,22 +255,24 @@ class BillSplitEditor extends ConsumerWidget {
                           Text(
                             p.displayName,
                             style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 13.5,
                               color: isDark ? AppColors.bodyOnDark : AppColors.ink,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
-                          if (p.isManuallyAdjusted)
+                          if (p.isManuallyAdjusted) ...[
+                            const SizedBox(height: 1),
                             const Text(
                               'แก้ไขยอดเอง',
                               style: TextStyle(
-                                fontSize: 9.5,
-                                color: AppColors.warning,
+                                fontSize: 10,
+                                color: Color(0xFFFF9500),
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
+                          ],
                         ],
                       ),
                     ),
@@ -384,8 +385,8 @@ class BillSplitEditor extends ConsumerWidget {
         : 'U';
 
     return Container(
-      width: 26,
-      height: 26,
+      width: 28,
+      height: 28,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         color: const Color(0xFFFF5000).withValues(alpha: 0.15),
@@ -405,7 +406,7 @@ class BillSplitEditor extends ConsumerWidget {
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       color: Color(0xFFFF5000),
-                      fontSize: 10,
+                      fontSize: 11,
                     ),
                   ),
                 ),
@@ -416,7 +417,7 @@ class BillSplitEditor extends ConsumerWidget {
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     color: Color(0xFFFF5000),
-                    fontSize: 10,
+                    fontSize: 11,
                   ),
                 ),
               ),
