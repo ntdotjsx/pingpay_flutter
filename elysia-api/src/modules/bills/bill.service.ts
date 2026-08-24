@@ -194,8 +194,9 @@ export class BillService {
 
     BillPolicy.canEditBill(userId, bill.ownerId, hasAnyPayment);
 
-    if (dto.totalAmount !== undefined && dto.totalAmount > Number(bill.totalAmount)) {
-      throw new Error(`INVALID_AMOUNT: Cannot increase bill total amount higher than original total (฿${Number(bill.totalAmount).toFixed(2)}).`);
+    const maxAllowedTotal = Number((bill as any).originalTotalAmount || bill.totalAmount);
+    if (dto.totalAmount !== undefined && dto.totalAmount > maxAllowedTotal) {
+      throw new Error(`INVALID_AMOUNT: Cannot increase bill total amount higher than original initial total (฿${maxAllowedTotal.toFixed(2)}).`);
     }
 
     const updated = await this.repo.updateBill(id, userId, {
@@ -247,9 +248,9 @@ export class BillService {
       throw new Error("INVALID_AMOUNT: Participant amount cannot be negative.");
     }
 
-    const currentItemAmount = Number(item.currentAmount);
-    if (newAmount > currentItemAmount) {
-      throw new Error(`INVALID_AMOUNT: Cannot increase debt amount higher than original amount (฿${currentItemAmount.toFixed(2)}).`);
+    const maxAllowedAmount = Number(item.originalAmount || item.currentAmount);
+    if (newAmount > maxAllowedAmount) {
+      throw new Error(`INVALID_AMOUNT: Cannot increase debt amount higher than original initial amount (฿${maxAllowedAmount.toFixed(2)}).`);
     }
 
     const billTotalCents = Math.round(Number(bill.totalAmount) * 100);

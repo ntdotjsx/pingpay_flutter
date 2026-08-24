@@ -253,6 +253,7 @@ export const bills = pgTable(
     title: varchar("title", { length: 128 }),
     currency: varchar("currency", { length: 3 }).notNull().default("THB"),
     totalAmount: numeric("total_amount", { precision: 12, scale: 2 }).notNull(),
+    originalTotalAmount: numeric("original_total_amount", { precision: 12, scale: 2 }), // initial total amount at bill creation, never modified
     receiptImageUrl: text("receipt_image_url"), // original bill photo
     ocrRawData: jsonb("ocr_raw_data"), // raw OCR extraction result, for audit
     itemsBreakdown: jsonb("items_breakdown"), // Detailed breakdown: subtotal, service charge, tax, items list, formula explanation

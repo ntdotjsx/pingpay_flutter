@@ -38,6 +38,7 @@ export class BillRepository {
         title: data.title,
         currency: data.currency,
         totalAmount: data.totalAmount,
+        originalTotalAmount: data.totalAmount,
         groupId: data.groupId,
         itemsBreakdown: data.itemsBreakdown,
         receiptImageUrl: data.receiptImageUrl,

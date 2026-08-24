@@ -570,6 +570,8 @@ class _FriendReceivableDetailBottomSheetState
       text: item.currentAmount.toStringAsFixed(2),
     );
 
+    final maxAllowed = (item.originalAmount > 0) ? item.originalAmount : item.currentAmount;
+
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -585,7 +587,7 @@ class _FriendReceivableDetailBottomSheetState
             ),
             const SizedBox(height: 4),
             Text(
-              'ยอดเดิม: ฿${item.currentAmount.toStringAsFixed(2)}\n* ระบบอนุญาตเฉพาะการปรับลดยอดเงิน (ห้ามปรับสูงกว่าเดิม) และจะเฉลี่ยส่วนต่างให้อัตโนมัติ',
+              'ยอดตั้งต้น: ฿${maxAllowed.toStringAsFixed(2)} • ยอดปัจจุบัน: ฿${item.currentAmount.toStringAsFixed(2)}\n* สามารถปรับลดยอด หรือปรับกลับขึ้นได้ไม่เกินยอดตั้งต้น (฿${maxAllowed.toStringAsFixed(2)})',
               style: const TextStyle(fontSize: 12, color: AppColors.inkMuted48, height: 1.35),
             ),
             const SizedBox(height: 14),
@@ -613,10 +615,10 @@ class _FriendReceivableDetailBottomSheetState
                 AppToast.warning(ctx, 'กรุณาระบุจำนวนเงินที่ถูกต้อง (ตั้งแต่ 0 ขึ้นไป)');
                 return;
               }
-              if (newAmt > item.currentAmount) {
+              if (newAmt > maxAllowed) {
                 AppToast.warning(
                   ctx,
-                  'ไม่สามารถปรับยอดเงินสูงกว่ายอดเดิม (฿${item.currentAmount.toStringAsFixed(2)}) ได้',
+                  'ไม่สามารถปรับยอดเงินสูงกว่ายอดตั้งต้น (฿${maxAllowed.toStringAsFixed(2)}) ได้',
                 );
                 return;
               }
