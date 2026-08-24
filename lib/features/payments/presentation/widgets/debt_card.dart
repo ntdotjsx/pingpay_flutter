@@ -1,7 +1,6 @@
 import 'package:figma_squircle/figma_squircle.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../../../../core/animations/animated_pressable.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../models/payment_models.dart';
 import '../../services/debt_age_calculator.dart';
@@ -25,316 +24,264 @@ class DebtCard extends StatelessWidget {
         ? const Color(0xFFFF3B30)
         : (days >= 7 ? const Color(0xFFFF9500) : const Color(0xFFFF5000));
 
-    return AnimatedPressable(
-      onTap: onPayTap,
-      scaleDown: 0.985,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 14),
-        decoration: ShapeDecoration(
-          color: isDark ? AppColors.surfaceTile1 : Colors.white,
-          shadows: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.04),
-              blurRadius: 14,
-              offset: const Offset(0, 4),
-            ),
-          ],
-          shape: SmoothRectangleBorder(
-            side: BorderSide(
-              color: isDark ? Colors.white10 : const Color(0xFFEBEFF5),
-              width: 1,
-            ),
-            borderRadius: const SmoothBorderRadius.all(
-              SmoothRadius(cornerRadius: 22, cornerSmoothing: 0.8),
-            ),
-          ),
-        ),
-        padding: const EdgeInsets.all(18),
+    return Material(
+      color: isDark ? AppColors.surfaceTile1 : Colors.white,
+      child: InkWell(
+        onTap: onPayTap,
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 1. Header: Creditor Info & Status Badge
-            Row(
-              children: [
-                // Creditor Squircle Avatar
-                Container(
-                  width: 42,
-                  height: 42,
-                  decoration: ShapeDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFFFF7A00), Color(0xFFFF4500)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    shape: const SmoothRectangleBorder(
-                      borderRadius: SmoothBorderRadius.all(
-                        SmoothRadius(cornerRadius: 14, cornerSmoothing: 0.7),
-                      ),
-                    ),
-                  ),
-                  child: ClipSmoothRect(
-                    radius: const SmoothBorderRadius.all(
-                      SmoothRadius(cornerRadius: 14, cornerSmoothing: 0.7),
-                    ),
-                    child: debt.creditor.avatarUrl != null &&
-                            debt.creditor.avatarUrl!.isNotEmpty
-                        ? Image.network(
-                            debt.creditor.avatarUrl!,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => _buildAvatarInitial(debt),
-                          )
-                        : _buildAvatarInitial(debt),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'คุณต้องจ่ายให้',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w500,
-                          color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  // 1. Creditor Squircle Avatar
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: ShapeDecoration(
+                      color: isDark
+                          ? const Color(0xFF2C2D32)
+                          : const Color(0xFFFFECE5),
+                      shape: const SmoothRectangleBorder(
+                        borderRadius: SmoothBorderRadius.all(
+                          SmoothRadius(cornerRadius: 13, cornerSmoothing: 0.8),
                         ),
                       ),
-                      Text(
-                        debt.creditor.displayName,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: -0.2,
-                          color: isDark ? AppColors.bodyOnDark : AppColors.ink,
-                        ),
+                    ),
+                    child: ClipSmoothRect(
+                      radius: const SmoothBorderRadius.all(
+                        SmoothRadius(cornerRadius: 13, cornerSmoothing: 0.8),
                       ),
-                    ],
+                      child: debt.creditor.avatarUrl != null &&
+                              debt.creditor.avatarUrl!.isNotEmpty
+                          ? Image.network(
+                              debt.creditor.avatarUrl!,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) =>
+                                  _buildAvatarInitial(debt, isDark),
+                            )
+                          : _buildAvatarInitial(debt, isDark),
+                    ),
                   ),
-                ),
-                _buildStatusBadge(context),
-              ],
-            ),
 
-            const SizedBox(height: 14),
-            Divider(
-              height: 1,
-              thickness: 1,
-              color: isDark ? Colors.white10 : const Color(0xFFF0F2F5),
-            ),
-            const SizedBox(height: 14),
+                  const SizedBox(width: 12),
 
-            // 2. Body: Bill Title & Outstanding Amount
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        debt.billTitle,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: -0.2,
-                          color: isDark ? AppColors.bodyOnDark : AppColors.ink,
-                        ),
-                      ),
-                      const SizedBox(height: 5),
-                      // Date & Debt Age
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.access_time_rounded,
-                            size: 13,
-                            color: ageBadgeColor,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            debtAgeText,
-                            style: TextStyle(
-                              fontSize: 11.5,
-                              fontWeight: FontWeight.bold,
-                              color: ageBadgeColor,
+                  // 2. Middle Content (Name, Bill, Status, Date)
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Creditor Name + Status Badge
+                        Row(
+                          children: [
+                            Flexible(
+                              child: Text(
+                                debt.creditor.displayName,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 14.5,
+                                  fontWeight: FontWeight.w600,
+                                  letterSpacing: -0.2,
+                                  color: isDark
+                                      ? AppColors.bodyOnDark
+                                      : AppColors.ink,
+                                ),
+                              ),
                             ),
+                            const SizedBox(width: 6),
+                            _buildStatusBadge(context),
+                          ],
+                        ),
+                        const SizedBox(height: 3),
+
+                        // Bill Title
+                        Text(
+                          debt.billTitle,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w400,
+                            color: isDark
+                                ? AppColors.bodyMuted
+                                : AppColors.inkMuted80,
                           ),
-                          const SizedBox(width: 5),
-                          Text(
-                            '• $formattedDate',
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
+                        ),
+                        const SizedBox(height: 3),
+
+                        // Date & Debt Age
+                        Row(
+                          children: [
+                            Text(
+                              debtAgeText,
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: ageBadgeColor,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              '• $formattedDate',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w400,
+                                color: isDark
+                                    ? AppColors.bodyMuted
+                                    : AppColors.inkMuted48,
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        // Partial Progress indicator
+                        if (debt.isPartiallyPaid) ...[
+                          const SizedBox(height: 6),
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(2),
+                            child: LinearProgressIndicator(
+                              value: debt.paymentProgress,
+                              minHeight: 3,
+                              backgroundColor: isDark
+                                  ? Colors.white12
+                                  : const Color(0xFFF0F2F5),
+                              valueColor: const AlwaysStoppedAnimation<Color>(
+                                Color(0xFF34C759),
+                              ),
                             ),
                           ),
                         ],
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      'ค้าง ฿${debt.outstandingAmount.toStringAsFixed(2)}',
-                      style: const TextStyle(
-                        fontSize: 19,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: -0.5,
-                        color: Color(0xFFFF5000),
-                      ),
+                      ],
                     ),
-                    if (debt.amountPaid > 0)
+                  ),
+
+                  const SizedBox(width: 10),
+
+                  // 3. Right: Amount & Action Button
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
                       Text(
-                        'ชำระแล้ว ฿${debt.amountPaid.toStringAsFixed(2)}',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w500,
-                          color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
+                        'ค้าง ฿${debt.outstandingAmount.toStringAsFixed(2)}',
+                        style: const TextStyle(
+                          fontSize: 15.5,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: -0.3,
+                          color: Color(0xFFFF5000),
                         ),
                       ),
-                  ],
-                ),
-              ],
-            ),
-
-            // Partial Payment Progress Bar
-            if (debt.isPartiallyPaid) ...[
-              const SizedBox(height: 12),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(4),
-                child: LinearProgressIndicator(
-                  value: debt.paymentProgress,
-                  minHeight: 4.5,
-                  backgroundColor: isDark ? Colors.white12 : const Color(0xFFF0F2F5),
-                  valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF34C759)),
-                ),
-              ),
-              const SizedBox(height: 4),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'ชำระแล้ว ฿${debt.amountPaid.toStringAsFixed(2)} / ฿${debt.currentAmount.toStringAsFixed(2)}',
-                    style: TextStyle(
-                      fontSize: 10.5,
-                      color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
-                    ),
-                  ),
-                  Text(
-                    '${(debt.paymentProgress * 100).toInt()}%',
-                    style: TextStyle(
-                      fontSize: 10.5,
-                      fontWeight: FontWeight.bold,
-                      color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-
-            const SizedBox(height: 14),
-
-            // 3. Action Area
-            if (!debt.isAcknowledged && debt.outstandingAmount > 0)
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFF9500).withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.info_outline_rounded, size: 14, color: Color(0xFFFF9500)),
-                        SizedBox(width: 4),
+                      if (debt.amountPaid > 0) ...[
+                        const SizedBox(height: 1),
                         Text(
-                          'รอตรวจสอบและยอมรับ',
+                          'ชำระแล้ว ฿${debt.amountPaid.toStringAsFixed(2)}',
                           style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            color: Color(0xFFFF9500),
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w400,
+                            color: isDark
+                                ? AppColors.bodyMuted
+                                : AppColors.inkMuted48,
                           ),
                         ),
                       ],
-                    ),
-                  ),
-                  ElevatedButton(
-                    onPressed: () => DebtAcknowledgementDetailSheet.show(context, debt),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFFF9500),
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.visibility_rounded, size: 15),
-                        SizedBox(width: 5),
-                        Text(
-                          'ตรวจสอบและยอมรับ',
-                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                      const SizedBox(height: 6),
+
+                      // Action Button
+                      if (!debt.isAcknowledged && debt.outstandingAmount > 0)
+                        InkWell(
+                          onTap: () {
+                            HapticFeedback.lightImpact();
+                            DebtAcknowledgementDetailSheet.show(context, debt);
+                          },
+                          borderRadius: BorderRadius.circular(8),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFF9500).withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Text(
+                              'ตรวจสอบ',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFFFF9500),
+                              ),
+                            ),
+                          ),
+                        )
+                      else
+                        InkWell(
+                          onTap: () {
+                            HapticFeedback.lightImpact();
+                            onPayTap();
+                          },
+                          borderRadius: BorderRadius.circular(8),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 4.5,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFF5000),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.payment_rounded,
+                                  size: 13,
+                                  color: Colors.white,
+                                ),
+                                SizedBox(width: 4),
+                                Text(
+                                  'จ่ายเงิน',
+                                  style: TextStyle(
+                                    fontSize: 11.5,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
-                      ],
-                    ),
-                  ),
-                ],
-              )
-            else
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  ElevatedButton(
-                    onPressed: onPayTap,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFFF5000),
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      shadowColor: const Color(0xFFFF5000).withValues(alpha: 0.3),
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 9),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.qr_code_scanner_rounded, size: 15),
-                        SizedBox(width: 6),
-                        Text(
-                          'จ่ายเงิน',
-                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800),
-                        ),
-                      ],
-                    ),
+                    ],
                   ),
                 ],
               ),
+            ),
+
+            // Inset Divider
+            Divider(
+              height: 1,
+              thickness: 0.5,
+              indent: 68,
+              color: isDark ? Colors.white10 : const Color(0xFFF0F2F5),
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildAvatarInitial(DebtItemModel debt) {
+  Widget _buildAvatarInitial(DebtItemModel debt, bool isDark) {
     return Center(
       child: Text(
         debt.creditor.displayName.isNotEmpty
             ? debt.creditor.displayName[0].toUpperCase()
             : 'U',
-        style: const TextStyle(
-          fontSize: 16,
-          fontWeight: FontWeight.bold,
-          color: Colors.white,
+        style: TextStyle(
+          fontSize: 15,
+          fontWeight: FontWeight.w700,
+          color: isDark ? const Color(0xFFFF6A00) : const Color(0xFFFF5000),
         ),
       ),
     );
@@ -348,12 +295,12 @@ class DebtCard extends StatelessWidget {
     if (debt.status == 'paid') {
       bg = const Color(0xFF34C759).withValues(alpha: 0.12);
       fg = const Color(0xFF34C759);
-      label = 'ชำระครบแล้ว';
+      label = 'ชำระครบ';
     } else if (debt.latestPaymentStatus == 'pending_owner_confirmation' ||
         debt.latestPaymentStatus == 'pending_approval') {
       bg = const Color(0xFF007AFF).withValues(alpha: 0.12);
       fg = const Color(0xFF007AFF);
-      label = 'รอยืนยันสลิป';
+      label = 'รอยืนยัน';
     } else if (debt.isPartiallyPaid) {
       bg = const Color(0xFFFF9500).withValues(alpha: 0.12);
       fg = const Color(0xFFFF9500);
@@ -365,16 +312,16 @@ class DebtCard extends StatelessWidget {
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
         color: bg,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(6),
       ),
       child: Text(
         label,
         style: TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w700,
+          fontSize: 10,
+          fontWeight: FontWeight.w600,
           color: fg,
         ),
       ),
