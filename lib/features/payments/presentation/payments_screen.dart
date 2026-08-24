@@ -26,7 +26,8 @@ class PaymentsScreen extends ConsumerStatefulWidget {
 }
 
 class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
-  late int _selectedPaymentTab; // 0: เราต้องจ่าย (Payable), 1: เพื่อนติดเรา (Receivable)
+  late int
+      _selectedPaymentTab; // 0: เราต้องจ่าย (Payable), 1: เพื่อนติดเรา (Receivable)
 
   @override
   void initState() {
@@ -93,7 +94,8 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
                     ? (debtsState.isLoading
                         ? _buildSkeletonLoading(isDark)
                         : debtsState.errorMessage != null
-                            ? _buildErrorState(context, debtsState.errorMessage!)
+                            ? _buildErrorState(
+                                context, debtsState.errorMessage!)
                             : _buildDebtsContent(context, debtsState))
                     : const ReceivablesContentSection(),
               ],
@@ -146,115 +148,6 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               // 1. Top Action Bar: Search Pill + Rewards Coin + Refresh
-              Row(
-                children: [
-                  // Clickable Search Bar Squircle
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: () {
-                        HapticFeedback.lightImpact();
-                        GlobalSearchSheet.show(context);
-                      },
-                      child: Container(
-                        height: 38,
-                        decoration: ShapeDecoration(
-                          color: Colors.white.withValues(alpha: isDark ? 0.15 : 0.22),
-                          shape: const SmoothRectangleBorder(
-                            borderRadius: SmoothBorderRadius.all(
-                              SmoothRadius(cornerRadius: 19, cornerSmoothing: 1.0),
-                            ),
-                          ),
-                        ),
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                        child: Row(
-                          children: [
-                            const Icon(
-                              Icons.search_rounded,
-                              size: 18,
-                              color: Colors.white,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              'ค้นหาเพื่อน หรือบิล...',
-                              style: TextStyle(
-                                color: Colors.white.withValues(alpha: 0.95),
-                                fontSize: 13,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-
-                  // Coin Points Capsule
-                  Consumer(
-                    builder: (context, ref, _) {
-                      final storeState = ref.watch(rewardStoreProvider);
-                      final points = storeState.points;
-
-                      return GestureDetector(
-                        onTap: () => context.push('/rewards'),
-                        child: Container(
-                          height: 38,
-                          padding: const EdgeInsets.symmetric(horizontal: 10),
-                          decoration: ShapeDecoration(
-                            color: Colors.white.withValues(alpha: 0.18),
-                            shape: const SmoothRectangleBorder(
-                              borderRadius: SmoothBorderRadius.all(
-                                SmoothRadius(cornerRadius: 19, cornerSmoothing: 1.0),
-                              ),
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              const Icon(
-                                Icons.monetization_on,
-                                size: 16,
-                                color: Color(0xFFFFD700),
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                '$points',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                  const SizedBox(width: 8),
-
-                  // Refresh Button
-                  GestureDetector(
-                    onTap: onRefresh,
-                    child: Container(
-                      width: 38,
-                      height: 38,
-                      decoration: ShapeDecoration(
-                        color: Colors.white.withValues(alpha: 0.18),
-                        shape: const SmoothRectangleBorder(
-                          borderRadius: SmoothBorderRadius.all(
-                            SmoothRadius(cornerRadius: 19, cornerSmoothing: 1.0),
-                          ),
-                        ),
-                      ),
-                      child: const Icon(
-                        Icons.refresh_rounded,
-                        size: 19,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
 
               const SizedBox(height: 14),
 
@@ -292,7 +185,8 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
 
                   // Status Pill
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
                     decoration: ShapeDecoration(
                       color: Colors.white.withValues(alpha: 0.22),
                       shape: const SmoothRectangleBorder(
@@ -303,8 +197,12 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
                     ),
                     child: Text(
                       _selectedPaymentTab == 0
-                          ? (count > 0 ? '$count รายการค้าง' : 'ไม่มีหนี้ค้าง 🎉')
-                          : (count > 0 ? '$count คนค้างชำระ' : 'ไม่มีลูกหนี้ค้าง 🎉'),
+                          ? (count > 0
+                              ? '$count รายการค้าง'
+                              : 'ไม่มีหนี้ค้าง 🎉')
+                          : (count > 0
+                              ? '$count คนค้างชำระ'
+                              : 'ไม่มีลูกหนี้ค้าง 🎉'),
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 11,
@@ -401,10 +299,13 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
               ),
               const SizedBox(width: 5),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 5.5, vertical: 1.5),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 5.5, vertical: 1.5),
                 decoration: BoxDecoration(
                   color: isSelected
-                      ? (count > 0 ? const Color(0xFFFF5000) : const Color(0xFF34C759))
+                      ? (count > 0
+                          ? const Color(0xFFFF5000)
+                          : const Color(0xFF34C759))
                       : Colors.white.withValues(alpha: 0.25),
                   borderRadius: BorderRadius.circular(8),
                 ),
@@ -438,13 +339,15 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
         const SizedBox(height: 14),
 
         // 1. Pending Debt Requests Banner (if any)
-        if (pendingDebts.isNotEmpty && state.currentFilter != DebtFilter.pendingAcceptance) ...[
+        if (pendingDebts.isNotEmpty &&
+            state.currentFilter != DebtFilter.pendingAcceptance) ...[
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
             child: Container(
               padding: const EdgeInsets.all(14),
               decoration: ShapeDecoration(
-                color: isDark ? const Color(0xFF2B1D0B) : const Color(0xFFFFF8E6),
+                color:
+                    isDark ? const Color(0xFF2B1D0B) : const Color(0xFFFFF8E6),
                 shape: const SmoothRectangleBorder(
                   borderRadius: SmoothBorderRadius.all(
                     SmoothRadius(cornerRadius: 16, cornerSmoothing: 0.8),
@@ -462,7 +365,8 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
                           Container(
                             padding: const EdgeInsets.all(5),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFFF9500).withValues(alpha: 0.15),
+                              color: const Color(0xFFFF9500)
+                                  .withValues(alpha: 0.15),
                               shape: BoxShape.circle,
                             ),
                             child: const Icon(
@@ -477,15 +381,19 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
                             style: TextStyle(
                               fontSize: 13.5,
                               fontWeight: FontWeight.w600,
-                              color: isDark ? const Color(0xFFFFB340) : const Color(0xFFB45309),
+                              color: isDark
+                                  ? const Color(0xFFFFB340)
+                                  : const Color(0xFFB45309),
                             ),
                           ),
                         ],
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 7, vertical: 2),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFFF9500).withValues(alpha: 0.18),
+                          color:
+                              const Color(0xFFFF9500).withValues(alpha: 0.18),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
@@ -504,7 +412,8 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
                     'เพื่อนสร้างบิลหารเงินมา แตะที่รายการเพื่อตรวจสอบและยอมรับหนี้',
                     style: TextStyle(
                       fontSize: 11.5,
-                      color: isDark ? AppColors.bodyMuted : AppColors.inkMuted80,
+                      color:
+                          isDark ? AppColors.bodyMuted : AppColors.inkMuted80,
                     ),
                   ),
                   const SizedBox(height: 10),
@@ -512,25 +421,31 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
                     (debt) => Padding(
                       padding: const EdgeInsets.only(bottom: 6.0),
                       child: InkWell(
-                        onTap: () => DebtAcknowledgementDetailSheet.show(context, debt),
+                        onTap: () =>
+                            DebtAcknowledgementDetailSheet.show(context, debt),
                         borderRadius: BorderRadius.circular(12),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 8),
                           decoration: BoxDecoration(
-                            color: isDark ? AppColors.surfaceTile2 : Colors.white,
+                            color:
+                                isDark ? AppColors.surfaceTile2 : Colors.white,
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
-                              color: const Color(0xFFFF9500).withValues(alpha: 0.25),
+                              color: const Color(0xFFFF9500)
+                                  .withValues(alpha: 0.25),
                             ),
                           ),
                           child: Row(
                             children: [
                               CircleAvatar(
                                 radius: 15,
-                                backgroundColor: const Color(0xFFFF9500).withValues(alpha: 0.15),
+                                backgroundColor: const Color(0xFFFF9500)
+                                    .withValues(alpha: 0.15),
                                 child: Text(
                                   debt.creditor.displayName.isNotEmpty
-                                      ? debt.creditor.displayName[0].toUpperCase()
+                                      ? debt.creditor.displayName[0]
+                                          .toUpperCase()
                                       : 'U',
                                   style: const TextStyle(
                                     fontWeight: FontWeight.w600,
@@ -549,7 +464,9 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
                                       style: TextStyle(
                                         fontSize: 13,
                                         fontWeight: FontWeight.w600,
-                                        color: isDark ? AppColors.bodyOnDark : AppColors.ink,
+                                        color: isDark
+                                            ? AppColors.bodyOnDark
+                                            : AppColors.ink,
                                       ),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
@@ -558,7 +475,9 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
                                       'สร้างโดย ${debt.creditor.displayName}',
                                       style: TextStyle(
                                         fontSize: 11,
-                                        color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
+                                        color: isDark
+                                            ? AppColors.bodyMuted
+                                            : AppColors.inkMuted48,
                                       ),
                                     ),
                                   ],
@@ -670,7 +589,10 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
     final filters = [
       {'key': DebtFilter.unpaid, 'label': 'ค้างชำระ'},
       if (pendingCount > 0)
-        {'key': DebtFilter.pendingAcceptance, 'label': 'รอตอบรับ ($pendingCount)'},
+        {
+          'key': DebtFilter.pendingAcceptance,
+          'label': 'รอตอบรับ ($pendingCount)'
+        },
       {'key': DebtFilter.partiallyPaid, 'label': 'ชำระบางส่วน'},
       {'key': DebtFilter.pendingConfirmation, 'label': 'รอยืนยัน'},
       {'key': DebtFilter.all, 'label': 'ทั้งหมด'},
@@ -695,11 +617,14 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
               borderRadius: BorderRadius.circular(10),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 160),
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6.5),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6.5),
                 decoration: ShapeDecoration(
                   color: isSelected
                       ? const Color(0xFFFF5000)
-                      : (isDark ? AppColors.surfaceTile1 : const Color(0xFFF3F4F6)),
+                      : (isDark
+                          ? AppColors.surfaceTile1
+                          : const Color(0xFFF3F4F6)),
                   shape: SmoothRectangleBorder(
                     side: BorderSide(
                       color: isSelected
@@ -799,7 +724,11 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
       padding: const EdgeInsets.all(16),
       child: Column(
         children: const [
-          AppSkeleton(width: double.infinity, height: 38, cornerRadius: 10, margin: EdgeInsets.only(bottom: 14)),
+          AppSkeleton(
+              width: double.infinity,
+              height: 38,
+              cornerRadius: 10,
+              margin: EdgeInsets.only(bottom: 14)),
           DebtCardSkeleton(),
           DebtCardSkeleton(),
           DebtCardSkeleton(),
@@ -815,11 +744,15 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.error_outline_rounded, size: 42, color: AppColors.error),
+            const Icon(Icons.error_outline_rounded,
+                size: 42, color: AppColors.error),
             const SizedBox(height: 12),
             Text(
               'ไม่สามารถโหลดข้อมูลหนี้สินได้',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+              style: Theme.of(context)
+                  .textTheme
+                  .titleMedium
+                  ?.copyWith(fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 4),
             Text(
@@ -835,7 +768,8 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFFF5000),
                 foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
               ),
             ),
           ],

@@ -160,6 +160,7 @@ class ReceivablesContentSection extends ConsumerWidget {
                       fontSize: 12.5,
                       color: isDark ? AppColors.bodyOnDark : AppColors.ink,
                     ),
+                    cursorColor: const Color(0xFFFF5000),
                     decoration: InputDecoration(
                       hintText: 'ค้นหาเพื่อนที่ติดเงิน...',
                       hintStyle: TextStyle(
@@ -167,8 +168,14 @@ class ReceivablesContentSection extends ConsumerWidget {
                         color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
                       ),
                       border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      errorBorder: InputBorder.none,
+                      disabledBorder: InputBorder.none,
+                      focusedErrorBorder: InputBorder.none,
+                      filled: false,
                       isDense: true,
-                      contentPadding: EdgeInsets.zero,
+                      contentPadding: const EdgeInsets.symmetric(vertical: 6),
                     ),
                   ),
                 ),
