@@ -146,7 +146,7 @@ export class PaymentService {
       }
     }
 
-    // 4.19 - 4.21 Verify with SlipOK
+    // 4.19 - 4.21 Verify with EasySlip
     const slipResult = await this.slipService.verify({
       slipFile: slipBuffer,
       qrData: dto.qrData,
@@ -155,7 +155,7 @@ export class PaymentService {
       expectedReceiverAccount: bill.owner.bankAccountNumber || undefined,
     });
 
-    // 4.22 Check duplicate SlipOK transaction reference
+    // 4.22 Check duplicate EasySlip transaction reference
     if (slipResult.transactionReference) {
       const duplicateByRef = await this.repo.findDuplicateSlip(
         undefined,
@@ -165,7 +165,7 @@ export class PaymentService {
         await db.insert(suspiciousActivityLogs).values({
           userId: payerId,
           type: "duplicate_slip",
-          description: `Duplicate SlipOK bank reference ${slipResult.transactionReference} submitted`,
+          description: `Duplicate EasySlip bank reference ${slipResult.transactionReference} submitted`,
           metadata: { transactionReference: slipResult.transactionReference, billId, participantId: dto.participantId, existingPaymentId: duplicateByRef.id },
         }).catch(() => {});
         throw new Error(
@@ -196,7 +196,7 @@ export class PaymentService {
       }
     }
 
-    // 4.19 Strict Check: Must be verified by SlipOK
+    // 4.19 Strict Check: Must be verified by EasySlip
     if (!slipResult.verified) {
       throw new Error(`SLIP_VERIFICATION_FAILED: ${slipResult.failureMessage || "Slip verification failed."}`);
     }
@@ -221,7 +221,7 @@ export class PaymentService {
         confirmedByOwnerId: bill.ownerId,
       },
       {
-        provider: "slipok",
+        provider: "easyslip",
         status: "success",
         providerReference: slipResult.transactionReference,
         verifiedAmount: slipResult.amount !== undefined ? slipResult.amount.toFixed(2) : undefined,
@@ -367,7 +367,7 @@ export class PaymentService {
       status: "confirmed",
       installmentNumber: newPayment.installmentNumber,
       slipOkVerified: true,
-      message: "Payment verified by SlipOK and confirmed automatically.",
+      message: "Payment verified by EasySlip and confirmed automatically.",
     };
 
     if (dto.idempotencyKey) {

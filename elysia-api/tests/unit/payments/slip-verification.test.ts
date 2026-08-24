@@ -1,8 +1,8 @@
 import { describe, it, expect } from "bun:test";
-import { SlipOkVerificationService } from "../../../src/modules/payments/slip-verification.service";
+import { EasySlipVerificationService, SlipOkVerificationService } from "../../../src/modules/payments/slip-verification.service";
 
-describe("Unit: SlipVerificationService with @prakrit_m/slipok-sdk wrapping", () => {
-  const service = new SlipOkVerificationService();
+describe("Unit: EasySlipVerificationService (API v2)", () => {
+  const service = new EasySlipVerificationService();
 
   it("should compute deterministic SHA-256 file hashes", () => {
     const buf1 = Buffer.from("mock-slip-image-bytes-1");
@@ -22,7 +22,7 @@ describe("Unit: SlipVerificationService with @prakrit_m/slipok-sdk wrapping", ()
     service.setMockResult({
       verified: true,
       amount: 500,
-      transactionReference: "SLIPOK-TX-12345",
+      transactionReference: "EASYSLIP-TX-12345",
       sender: { name: "Somchai", account: "081-xxx-1111" },
       receiver: { name: "Sompong", promptPayId: "089-xxx-2222" },
     });
@@ -34,11 +34,16 @@ describe("Unit: SlipVerificationService with @prakrit_m/slipok-sdk wrapping", ()
 
     expect(res.verified).toBe(true);
     expect(res.amount).toBe(500);
-    expect(res.transactionReference).toBe("SLIPOK-TX-12345");
+    expect(res.transactionReference).toBe("EASYSLIP-TX-12345");
     expect(res.sender?.name).toBe("Somchai");
     expect(res.receiver?.name).toBe("Sompong");
     expect(res.slipHash).toBeDefined();
 
     service.setMockResult(null, false);
+  });
+
+  it("should support SlipOkVerificationService as backward-compatible subclass/alias", () => {
+    const legacyService = new SlipOkVerificationService();
+    expect(legacyService).toBeInstanceOf(EasySlipVerificationService);
   });
 });

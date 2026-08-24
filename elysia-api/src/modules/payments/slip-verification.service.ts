@@ -1,5 +1,4 @@
 import crypto from "crypto";
-import SlipOk from "@prakrit_m/slipok-sdk";
 import { env } from "../../config/env";
 
 export interface SlipVerificationInput {
@@ -36,18 +35,19 @@ export interface SlipVerificationService {
   verify(input: SlipVerificationInput): Promise<SlipVerificationResult>;
 }
 
-export class SlipOkVerificationService implements SlipVerificationService {
-  private slipOk: SlipOk | null = null;
+/**
+ * EasySlip API v2 Verification Service
+ * Docs: https://document.easyslip.com/th/v2/verify/bank/
+ * Endpoint: POST https://api.easyslip.com/v2/verify/bank
+ */
+export class EasySlipVerificationService implements SlipVerificationService {
+  private apiKey: string;
+  private apiEndpoint: string = "https://api.easyslip.com/v2/verify/bank";
   private mockMode: boolean = false;
   private mockResult: Partial<SlipVerificationResult> | null = null;
 
-  constructor(apiKey: string = env.SLIPOK_API_KEY, branchId: string = env.SLIPOK_BRANCH_ID) {
-    if (apiKey && branchId) {
-      this.slipOk = new SlipOk(apiKey, branchId, {
-        timeout: 8000,
-        retries: 1,
-      });
-    }
+  constructor(apiKey: string = env.EASYSLIP_API_KEY || env.SLIPOK_API_KEY) {
+    this.apiKey = apiKey || "";
   }
 
   setMockResult(result: Partial<SlipVerificationResult> | null, enabled: boolean = true) {
@@ -80,7 +80,7 @@ export class SlipOkVerificationService implements SlipVerificationService {
         verified: isVerified,
         transactionReference: isVerified
           ? this.mockResult.transactionReference ||
-            "SLIP-REF-" + Math.random().toString(36).substring(2, 9).toUpperCase()
+            "EASYSLIP-REF-" + Math.random().toString(36).substring(2, 9).toUpperCase()
           : undefined,
         amount: isVerified ? (this.mockResult.amount ?? input.expectedAmount ?? 100) : undefined,
         sender: isVerified
@@ -101,29 +101,43 @@ export class SlipOkVerificationService implements SlipVerificationService {
       };
     }
 
-    // Strict SlipOK SDK Integration (Reject if credentials not configured)
-    if (!this.slipOk) {
+    // Strict EasySlip Integration (Reject if API key not configured)
+    if (!this.apiKey) {
       return {
         verified: false,
-        failureCode: "SLIPOK_NOT_CONFIGURED",
-        failureMessage: "SlipOK API Key / Branch ID is not configured on server.",
+        failureCode: "EASYSLIP_NOT_CONFIGURED",
+        failureMessage: "EasySlip API Key is not configured on server.",
         slipHash,
       };
     }
 
     try {
-      let response: any;
+      let response: Response;
+
       if (input.qrData) {
-        response = await this.slipOk.checkSlip({
-          data: input.qrData,
-          log: true,
+        // Send QR Payload as JSON
+        response = await fetch(this.apiEndpoint, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${this.apiKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            payload: input.qrData,
+          }),
         });
       } else if (fileBuffer) {
-        // Use base64 or buffer url
-        const b64 = fileBuffer.toString("base64");
-        response = await this.slipOk.checkSlip({
-          data: b64,
-          log: true,
+        // Send image file as multipart/form-data
+        const formData = new FormData();
+        const blob = new Blob([fileBuffer], { type: "image/jpeg" });
+        formData.append("image", blob, "slip.jpg");
+
+        response = await fetch(this.apiEndpoint, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${this.apiKey}`,
+          },
+          body: formData,
         });
       } else {
         return {
@@ -134,30 +148,59 @@ export class SlipOkVerificationService implements SlipVerificationService {
         };
       }
 
-      if (!response || !response.success || !response.data) {
+      const json = await response.json().catch(() => null);
+
+      if (!response.ok || !json || json.success !== true || !json.data) {
+        const errCode = json?.error?.code || json?.code || (response.status === 404 ? "SLIP_NOT_FOUND" : "SLIP_VERIFICATION_FAILED");
+        const errMsg = json?.error?.message || json?.message || `EasySlip verification failed (Status ${response.status}).`;
+
         return {
           verified: false,
-          failureCode: response?.code || "SLIP_VERIFICATION_FAILED",
-          failureMessage: response?.message || "SlipOK was unable to verify this slip.",
+          failureCode: errCode,
+          failureMessage: errMsg,
           slipHash,
-          rawResponse: response,
+          rawResponse: json,
         };
       }
 
-      const data = response.data;
-      const verifiedAmount = parseFloat(data.amount || "0");
-      const transactionRef = data.transRef || data.id || `SLIPOK-${Date.now()}`;
-      const sender = {
-        name: data.sender?.name?.th || data.sender?.name?.en || data.sender?.displayName,
-        account: data.sender?.account?.value,
-        bank: data.sender?.bank?.short,
+      const data = json.data;
+      const raw = data.rawSlip || data;
+
+      // Extract verified amount (EasySlip provides amountInSlip or rawSlip.amount.amount)
+      let verifiedAmount = 0;
+      if (typeof data.amountInSlip === "number") {
+        verifiedAmount = data.amountInSlip;
+      } else if (typeof raw.amount === "number") {
+        verifiedAmount = raw.amount;
+      } else if (raw.amount?.amount !== undefined) {
+        verifiedAmount = typeof raw.amount.amount === "number" ? raw.amount.amount : parseFloat(raw.amount.amount || "0");
+      }
+
+      // Extract transaction reference
+      const transactionRef = raw.transRef || raw.transactionReference || data.transRef || data.id || `EASYSLIP-${Date.now()}`;
+
+      // Extract Sender Info
+      const sender: NormalizedSlipParty = {
+        name: raw.sender?.account?.name?.th || raw.sender?.account?.name?.en || raw.sender?.name?.th || raw.sender?.name?.en || raw.sender?.displayName,
+        account: raw.sender?.account?.bank?.account || raw.sender?.account?.proxy?.account || raw.sender?.account?.value,
+        bank: raw.sender?.bank?.short || raw.sender?.bank?.shortCode || raw.sender?.bank?.name,
       };
-      const receiver = {
-        name: data.receiver?.name?.th || data.receiver?.name?.en || data.receiver?.displayName,
-        account: data.receiver?.account?.value,
-        bank: data.receiver?.bank?.short,
-        promptPayId: data.receiver?.proxy?.value,
+
+      // Extract Receiver Info
+      const receiver: NormalizedSlipParty = {
+        name: raw.receiver?.account?.name?.th || raw.receiver?.account?.name?.en || raw.receiver?.name?.th || raw.receiver?.name?.en || raw.receiver?.displayName,
+        account: raw.receiver?.account?.bank?.account || raw.receiver?.account?.proxy?.account || raw.receiver?.account?.value,
+        bank: raw.receiver?.bank?.short || raw.receiver?.bank?.shortCode || raw.receiver?.bank?.name,
+        promptPayId: raw.receiver?.account?.proxy?.account || raw.receiver?.proxy?.value || raw.receiver?.proxy?.account,
       };
+
+      // Extract Transaction Date
+      let transactionDate = new Date();
+      if (raw.date) {
+        transactionDate = new Date(raw.date);
+      } else if (raw.transDate) {
+        transactionDate = new Date(raw.transDate);
+      }
 
       return {
         verified: true,
@@ -165,20 +208,23 @@ export class SlipOkVerificationService implements SlipVerificationService {
         amount: verifiedAmount,
         sender,
         receiver,
-        transactionDate: data.transDate ? new Date(data.transDate) : new Date(),
+        transactionDate,
         slipHash,
         rawResponse: data,
       };
     } catch (err: any) {
-      console.error("[SlipOkVerificationService] Provider error:", err);
+      console.error("[EasySlipVerificationService] Provider error:", err);
       return {
         verified: false,
         failureCode: "SLIP_VERIFICATION_UNAVAILABLE",
-        failureMessage: `SlipOK service error: ${err?.message || "Network or Provider Failure"}`,
+        failureMessage: `EasySlip service error: ${err?.message || "Network or Provider Failure"}`,
         slipHash,
       };
     }
   }
 }
 
-export const defaultSlipVerificationService = new SlipOkVerificationService();
+// Backward compatibility alias for SlipOK imports
+export class SlipOkVerificationService extends EasySlipVerificationService {}
+
+export const defaultSlipVerificationService = new EasySlipVerificationService();

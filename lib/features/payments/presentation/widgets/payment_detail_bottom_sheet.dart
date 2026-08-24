@@ -165,7 +165,7 @@ class _PaymentDetailBottomSheetState
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'ตรวจสอบสลิปผ่าน SlipOK สำเร็จ',
+              'ตรวจสอบสลิปผ่าน EasySlip สำเร็จ',
               style: TextStyle(
                 fontWeight: FontWeight.bold,
                 color: isDark ? AppColors.bodyOnDark : AppColors.ink,
@@ -655,7 +655,7 @@ class _PaymentDetailBottomSheetState
 
             // Slip Upload Card
             Text(
-              'แนบสลิปการโอนเงิน (ตรวจสอบผ่าน SlipOK)',
+              'แนบสลิปการโอนเงิน (ตรวจสอบผ่าน EasySlip)',
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.bold,
