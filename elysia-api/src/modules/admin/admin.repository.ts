@@ -9,6 +9,7 @@ import {
   bills,
   billItems,
   payments,
+  paymentVerifications,
   editLogs,
   rewardItems,
   rewardRedemptions,
@@ -16,12 +17,34 @@ import {
   notificationDeliveries,
   securityEvents,
   deviceTokens,
+  friendships,
+  consentRecords,
+  userCredentials,
+  authIdentities,
+  authSessions,
 } from "../../db/schema";
 import { eq, and, gte, lte, desc, sql, ilike, or, asc } from "drizzle-orm";
 
 export interface PaginationParams {
   page: number;
   limit: number;
+}
+
+export interface BillFilters {
+  ownerId?: string;
+  status?: string;
+  search?: string;
+  dateFrom?: Date;
+  dateTo?: Date;
+}
+
+export interface PaymentFilters {
+  payerId?: string;
+  status?: string;
+  channel?: string;
+  method?: string;
+  dateFrom?: Date;
+  dateTo?: Date;
 }
 
 export interface TransactionFilters {
@@ -845,6 +868,217 @@ export class AdminRepository {
       rewardsCategories: redemptionsCatRows,
       fcmStatuses: fcmStatusRows,
       settlementDuration: settlementDurationResult[0] || { avgHours: 0, settledCount: 0 },
+    };
+  }
+
+  // ── Bills Explorer ────────────────────────────────────────────────
+  async getBills(filters: BillFilters, pagination: PaginationParams) {
+    const conditions: any[] = [];
+
+    if (filters.ownerId) {
+      conditions.push(eq(bills.ownerId, filters.ownerId));
+    }
+    if (filters.status) {
+      conditions.push(eq(bills.status, filters.status as any));
+    }
+    if (filters.search) {
+      conditions.push(ilike(bills.title, `%${filters.search}%`));
+    }
+    if (filters.dateFrom) {
+      conditions.push(gte(bills.createdAt, filters.dateFrom));
+    }
+    if (filters.dateTo) {
+      conditions.push(lte(bills.createdAt, filters.dateTo));
+    }
+
+    const where = conditions.length > 0 ? and(...conditions) : undefined;
+
+    const [rows, countResult] = await Promise.all([
+      db.query.bills.findMany({
+        where,
+        with: {
+          owner: true,
+          items: {
+            with: {
+              debtor: true,
+            },
+          },
+        },
+        orderBy: [desc(bills.createdAt)],
+        limit: pagination.limit,
+        offset: (pagination.page - 1) * pagination.limit,
+      }),
+      db.select({ count: sql<number>`count(*)::int` }).from(bills).where(where),
+    ]);
+
+    return { rows, total: countResult[0]?.count ?? 0 };
+  }
+
+  async getBillById(billId: string) {
+    return db.query.bills.findFirst({
+      where: eq(bills.id, billId),
+      with: {
+        owner: true,
+        items: {
+          with: {
+            debtor: true,
+            payments: {
+              with: {
+                verifications: true,
+              },
+            },
+          },
+        },
+      },
+    });
+  }
+
+  // ── Payments & Slips Explorer ─────────────────────────────────────
+  async getPayments(filters: PaymentFilters, pagination: PaginationParams) {
+    const conditions: any[] = [];
+
+    if (filters.payerId) {
+      conditions.push(eq(payments.payerId, filters.payerId));
+    }
+    if (filters.status) {
+      conditions.push(eq(payments.status, filters.status as any));
+    }
+    if (filters.channel) {
+      conditions.push(eq(payments.channel, filters.channel as any));
+    }
+    if (filters.method) {
+      conditions.push(eq(payments.method, filters.method as any));
+    }
+    if (filters.dateFrom) {
+      conditions.push(gte(payments.createdAt, filters.dateFrom));
+    }
+    if (filters.dateTo) {
+      conditions.push(lte(payments.createdAt, filters.dateTo));
+    }
+
+    const where = conditions.length > 0 ? and(...conditions) : undefined;
+
+    const [rows, countResult] = await Promise.all([
+      db.query.payments.findMany({
+        where,
+        with: {
+          payer: true,
+          verifications: {
+            orderBy: [desc(paymentVerifications.createdAt)],
+          },
+          billItem: {
+            with: {
+              bill: {
+                with: {
+                  owner: true,
+                },
+              },
+              debtor: true,
+            },
+          },
+        },
+        orderBy: [desc(payments.createdAt)],
+        limit: pagination.limit,
+        offset: (pagination.page - 1) * pagination.limit,
+      }),
+      db.select({ count: sql<number>`count(*)::int` }).from(payments).where(where),
+    ]);
+
+    return { rows, total: countResult[0]?.count ?? 0 };
+  }
+
+  async getPaymentById(paymentId: string) {
+    return db.query.payments.findFirst({
+      where: eq(payments.id, paymentId),
+      with: {
+        payer: true,
+        verifications: {
+          orderBy: [desc(paymentVerifications.createdAt)],
+        },
+        billItem: {
+          with: {
+            bill: {
+              with: {
+                owner: true,
+              },
+            },
+            debtor: true,
+          },
+        },
+      },
+    });
+  }
+
+  // ── Live Database Table Row Counts ────────────────────────────────
+  async getDatabaseStats() {
+    const [
+      usersCount,
+      billsCount,
+      billItemsCount,
+      paymentsCount,
+      verificationsCount,
+      financialTxCount,
+      disputesCount,
+      friendshipsCount,
+      editLogsCount,
+      activityLogsCount,
+      suspiciousLogsCount,
+      adminLogsCount,
+      notificationOutboxCount,
+      notificationDeliveriesCount,
+      deviceTokensCount,
+      securityEventsCount,
+      rewardItemsCount,
+      rewardRedemptionsCount,
+      consentRecordsCount,
+      authIdentitiesCount,
+      authSessionsCount,
+    ] = await Promise.all([
+      db.select({ count: sql<number>`count(*)::int` }).from(users),
+      db.select({ count: sql<number>`count(*)::int` }).from(bills),
+      db.select({ count: sql<number>`count(*)::int` }).from(billItems),
+      db.select({ count: sql<number>`count(*)::int` }).from(payments),
+      db.select({ count: sql<number>`count(*)::int` }).from(paymentVerifications),
+      db.select({ count: sql<number>`count(*)::int` }).from(financialTransactions),
+      db.select({ count: sql<number>`count(*)::int` }).from(disputes),
+      db.select({ count: sql<number>`count(*)::int` }).from(friendships),
+      db.select({ count: sql<number>`count(*)::int` }).from(editLogs),
+      db.select({ count: sql<number>`count(*)::int` }).from(activityLogs),
+      db.select({ count: sql<number>`count(*)::int` }).from(suspiciousActivityLogs),
+      db.select({ count: sql<number>`count(*)::int` }).from(adminActionLogs),
+      db.select({ count: sql<number>`count(*)::int` }).from(notificationOutbox),
+      db.select({ count: sql<number>`count(*)::int` }).from(notificationDeliveries),
+      db.select({ count: sql<number>`count(*)::int` }).from(deviceTokens),
+      db.select({ count: sql<number>`count(*)::int` }).from(securityEvents),
+      db.select({ count: sql<number>`count(*)::int` }).from(rewardItems),
+      db.select({ count: sql<number>`count(*)::int` }).from(rewardRedemptions),
+      db.select({ count: sql<number>`count(*)::int` }).from(consentRecords),
+      db.select({ count: sql<number>`count(*)::int` }).from(authIdentities),
+      db.select({ count: sql<number>`count(*)::int` }).from(authSessions),
+    ]);
+
+    return {
+      users: usersCount[0]?.count ?? 0,
+      bills: billsCount[0]?.count ?? 0,
+      billItems: billItemsCount[0]?.count ?? 0,
+      payments: paymentsCount[0]?.count ?? 0,
+      paymentVerifications: verificationsCount[0]?.count ?? 0,
+      financialTransactions: financialTxCount[0]?.count ?? 0,
+      disputes: disputesCount[0]?.count ?? 0,
+      friendships: friendshipsCount[0]?.count ?? 0,
+      editLogs: editLogsCount[0]?.count ?? 0,
+      activityLogs: activityLogsCount[0]?.count ?? 0,
+      suspiciousActivityLogs: suspiciousLogsCount[0]?.count ?? 0,
+      adminActionLogs: adminLogsCount[0]?.count ?? 0,
+      notificationOutbox: notificationOutboxCount[0]?.count ?? 0,
+      notificationDeliveries: notificationDeliveriesCount[0]?.count ?? 0,
+      deviceTokens: deviceTokensCount[0]?.count ?? 0,
+      securityEvents: securityEventsCount[0]?.count ?? 0,
+      rewardItems: rewardItemsCount[0]?.count ?? 0,
+      rewardRedemptions: rewardRedemptionsCount[0]?.count ?? 0,
+      consentRecords: consentRecordsCount[0]?.count ?? 0,
+      authIdentities: authIdentitiesCount[0]?.count ?? 0,
+      authSessions: authSessionsCount[0]?.count ?? 0,
     };
   }
 }

@@ -252,40 +252,41 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
           // ── 1. My Friend Code Card (Hero Banner) ────────────────────────
           if (currentUser?.userCode != null)
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+              padding: const EdgeInsets.fromLTRB(16, 2, 16, 10),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                 decoration: ShapeDecoration(
                   color: isDark ? AppColors.surfaceTile1 : Colors.white,
-                  shape: const SmoothRectangleBorder(
-                    borderRadius: SmoothBorderRadius.all(
-                      SmoothRadius(cornerRadius: 18, cornerSmoothing: 0.8),
+                  shape: SmoothRectangleBorder(
+                    side: BorderSide(
+                      color: isDark ? Colors.white10 : const Color(0xFFE5E7EB),
+                      width: 0.8,
+                    ),
+                    borderRadius: const SmoothBorderRadius.all(
+                      SmoothRadius(cornerRadius: 16, cornerSmoothing: 0.8),
                     ),
                   ),
-                  shadows: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
-                      blurRadius: 12,
-                      offset: const Offset(0, 3),
-                    ),
-                  ],
                 ),
                 child: Row(
                   children: [
                     Container(
-                      width: 42,
-                      height: 42,
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
+                      width: 40,
+                      height: 40,
+                      decoration: const ShapeDecoration(
+                        gradient: LinearGradient(
                           colors: [Color(0xFFFF7A00), Color(0xFFFF5000)],
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                         ),
-                        borderRadius: BorderRadius.circular(12),
+                        shape: SmoothRectangleBorder(
+                          borderRadius: SmoothBorderRadius.all(
+                            SmoothRadius(cornerRadius: 11, cornerSmoothing: 0.6),
+                          ),
+                        ),
                       ),
-                      child: const Icon(Icons.badge_rounded, color: Colors.white, size: 22),
+                      child: const Icon(Icons.badge_rounded, color: Colors.white, size: 20),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 10),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -298,13 +299,13 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
                               color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
                             ),
                           ),
-                          const SizedBox(height: 2),
+                          const SizedBox(height: 1),
                           Text(
                             currentUser!.userCode!,
                             style: TextStyle(
-                              fontSize: 16,
+                              fontSize: 15.5,
                               fontWeight: FontWeight.w800,
-                              letterSpacing: 0.6,
+                              letterSpacing: 0.5,
                               color: isDark ? AppColors.bodyOnDark : AppColors.ink,
                             ),
                           ),
@@ -314,23 +315,23 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
                     // Scan QR Button
                     InkWell(
                       onTap: () => context.push('/friends/scan'),
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(8),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
                         decoration: BoxDecoration(
                           color: const Color(0xFFFF5000).withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(10),
+                          borderRadius: BorderRadius.circular(8),
                         ),
                         child: const Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.qr_code_scanner_rounded, size: 14, color: Color(0xFFFF5000)),
-                            SizedBox(width: 4),
+                            Icon(Icons.qr_code_scanner_rounded, size: 13, color: Color(0xFFFF5000)),
+                            SizedBox(width: 3),
                             Text(
                               'สแกน',
                               style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w700,
                                 color: Color(0xFFFF5000),
                               ),
                             ),
@@ -338,7 +339,7 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
                         ),
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 6),
                     // Quick Copy Button
                     InkWell(
                       onTap: () {
@@ -346,23 +347,23 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
                         HapticFeedback.lightImpact();
                         AppToast.success(context, 'คัดลอกรหัส ${currentUser.userCode} แล้ว');
                       },
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(8),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
                         decoration: BoxDecoration(
                           color: isDark ? AppColors.surfaceTile2 : const Color(0xFFF0F2F5),
-                          borderRadius: BorderRadius.circular(10),
+                          borderRadius: BorderRadius.circular(8),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.copy_rounded, size: 14, color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48),
-                            const SizedBox(width: 4),
+                            Icon(Icons.copy_rounded, size: 13, color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48),
+                            const SizedBox(width: 3),
                             Text(
                               'คัดลอก',
                               style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w700,
                                 color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
                               ),
                             ),
@@ -379,11 +380,11 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Container(
-              height: 44,
+              height: 42,
               padding: const EdgeInsets.all(3),
               decoration: BoxDecoration(
                 color: isDark ? AppColors.surfaceTile2 : const Color(0xFFE9ECF0),
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: BorderRadius.circular(12),
               ),
               child: TabBar(
                 controller: _tabController,
@@ -391,19 +392,19 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
                 indicatorSize: TabBarIndicatorSize.tab,
                 indicator: BoxDecoration(
                   color: isDark ? AppColors.surfaceTile1 : Colors.white,
-                  borderRadius: BorderRadius.circular(11),
+                  borderRadius: BorderRadius.circular(9),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.06),
-                      blurRadius: 6,
-                      offset: const Offset(0, 2),
+                      color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.05),
+                      blurRadius: 4,
+                      offset: const Offset(0, 1.5),
                     ),
                   ],
                 ),
                 labelColor: const Color(0xFFFF5000),
                 unselectedLabelColor: isDark ? Colors.white60 : AppColors.inkMuted48,
-                labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                labelStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 12.5),
+                unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12.5),
                 tabs: [
                   const Tab(text: 'เพื่อนของฉัน'),
                   Tab(
@@ -414,16 +415,16 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
                         if (incomingCount > 0) ...[
                           const SizedBox(width: 5),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
                             decoration: BoxDecoration(
                               color: const Color(0xFFFF3B30),
-                              borderRadius: BorderRadius.circular(8),
+                              borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(
                               '$incomingCount',
                               style: const TextStyle(
                                 color: Colors.white,
-                                fontSize: 10,
+                                fontSize: 9.5,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
@@ -438,7 +439,7 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
             ),
           ),
 
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
 
           // ── 3. Tab Views ────────────────────────────────────────────────
           Expanded(
@@ -466,64 +467,42 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
         children: [
           // Search input field
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+            padding: const EdgeInsets.fromLTRB(16, 6, 16, 8),
             child: Container(
               decoration: BoxDecoration(
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
-                    blurRadius: 10,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
+                color: isDark ? AppColors.surfaceTile1 : const Color(0xFFF0F2F5),
+                borderRadius: BorderRadius.circular(12),
               ),
               child: TextField(
                 controller: _searchController,
                 style: TextStyle(
-                  fontSize: 14,
+                  fontSize: 13.5,
                   fontWeight: FontWeight.w500,
                   color: isDark ? AppColors.bodyOnDark : AppColors.ink,
                 ),
                 decoration: InputDecoration(
                   hintText: 'ค้นหาด้วยชื่อเพื่อน หรือรหัส User ID...',
                   hintStyle: TextStyle(
-                    fontSize: 13,
+                    fontSize: 12.5,
                     color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
                   ),
                   prefixIcon: const Icon(
                     Icons.search_rounded,
-                    size: 20,
+                    size: 18,
                     color: AppColors.inkMuted48,
                   ),
                   suffixIcon: _searchController.text.isNotEmpty
                       ? IconButton(
-                          icon: const Icon(Icons.cancel_rounded, size: 18, color: AppColors.inkMuted48),
+                          icon: const Icon(Icons.cancel_rounded, size: 16, color: AppColors.inkMuted48),
                           onPressed: () => _searchController.clear(),
                         )
                       : null,
-                  filled: true,
-                  fillColor: isDark ? AppColors.surfaceTile1 : Colors.white,
+                  filled: false,
                   isDense: true,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide(
-                      color: isDark ? Colors.white10 : const Color(0xFFE9ECF0),
-                    ),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide(
-                      color: isDark ? Colors.white10 : const Color(0xFFE9ECF0),
-                    ),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: const BorderSide(
-                      color: Color(0xFFFF5000),
-                      width: 1.5,
-                    ),
-                  ),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  border: InputBorder.none,
+                  enabledBorder: InputBorder.none,
+                  focusedBorder: InputBorder.none,
                 ),
               ),
             ),
@@ -572,9 +551,9 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
                 }
 
                 return ListView.separated(
-                  padding: const EdgeInsets.fromLTRB(16, 6, 16, 24),
+                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
                   itemCount: filtered.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 10),
+                  separatorBuilder: (_, __) => const SizedBox(height: 8),
                   itemBuilder: (context, index) {
                     final friend = filtered[index];
                     return _buildFriendCard(context, friend, isDark);
@@ -596,26 +575,23 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
     return Container(
       decoration: ShapeDecoration(
         color: isDark ? AppColors.surfaceTile1 : Colors.white,
-        shape: const SmoothRectangleBorder(
-          borderRadius: SmoothBorderRadius.all(
-            SmoothRadius(cornerRadius: 18, cornerSmoothing: 0.8),
+        shape: SmoothRectangleBorder(
+          side: BorderSide(
+            color: isDark ? Colors.white10 : const Color(0xFFE5E7EB),
+            width: 0.8,
+          ),
+          borderRadius: const SmoothBorderRadius.all(
+            SmoothRadius(cornerRadius: 16, cornerSmoothing: 0.8),
           ),
         ),
-        shadows: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.03),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(16),
           onTap: () => context.push('/friends/${friend.friendshipId}'),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
             child: Row(
               children: [
                 // Avatar

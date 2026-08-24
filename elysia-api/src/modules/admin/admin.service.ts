@@ -550,4 +550,77 @@ export class AdminService {
   async getFcmUsers(adminId: string, search?: string) {
     return this.repo.getUsersWithFcm(search);
   }
+
+  // ── Bills Explorer ────────────────────────────────────────────────
+  async getBills(
+    adminId: string,
+    filters: {
+      ownerId?: string;
+      status?: string;
+      search?: string;
+      dateFrom?: string;
+      dateTo?: string;
+    },
+    page = 1,
+    limit = 20
+  ) {
+    return this.repo.getBills(
+      {
+        ownerId: filters.ownerId,
+        status: filters.status,
+        search: filters.search,
+        dateFrom: filters.dateFrom ? new Date(filters.dateFrom) : undefined,
+        dateTo: filters.dateTo ? new Date(filters.dateTo) : undefined,
+      },
+      { page, limit }
+    );
+  }
+
+  async getBillDetail(adminId: string, billId: string) {
+    const bill = await this.repo.getBillById(billId);
+    if (!bill) {
+      throw new Error("BILL_NOT_FOUND");
+    }
+    return bill;
+  }
+
+  // ── Payments Explorer ─────────────────────────────────────────────
+  async getPayments(
+    adminId: string,
+    filters: {
+      payerId?: string;
+      status?: string;
+      channel?: string;
+      method?: string;
+      dateFrom?: string;
+      dateTo?: string;
+    },
+    page = 1,
+    limit = 20
+  ) {
+    return this.repo.getPayments(
+      {
+        payerId: filters.payerId,
+        status: filters.status,
+        channel: filters.channel,
+        method: filters.method,
+        dateFrom: filters.dateFrom ? new Date(filters.dateFrom) : undefined,
+        dateTo: filters.dateTo ? new Date(filters.dateTo) : undefined,
+      },
+      { page, limit }
+    );
+  }
+
+  async getPaymentDetail(adminId: string, paymentId: string) {
+    const payment = await this.repo.getPaymentById(paymentId);
+    if (!payment) {
+      throw new Error("PAYMENT_NOT_FOUND");
+    }
+    return payment;
+  }
+
+  // ── Live DB Stats ─────────────────────────────────────────────────
+  async getDatabaseStats(adminId: string) {
+    return this.repo.getDatabaseStats();
+  }
 }
