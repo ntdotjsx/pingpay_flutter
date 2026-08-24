@@ -209,20 +209,47 @@ class _SelectedFriendsHorizontalBarState
                                 child: child,
                               );
                             },
-                            child: CircleAvatar(
-                              radius: 26,
-                              backgroundColor: AppColors.primary.withValues(
-                                alpha: 0.15,
-                              ),
-                              child: Text(
-                                p.displayName.isNotEmpty
-                                    ? p.displayName[0].toUpperCase()
-                                    : 'U',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.primary,
-                                  fontSize: 16,
+                            child: Container(
+                              width: 52,
+                              height: 52,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: AppColors.primary.withValues(alpha: 0.15),
+                                border: Border.all(
+                                  color: isDark ? AppColors.surfaceTile1 : Colors.white,
+                                  width: 1.5,
                                 ),
+                              ),
+                              child: ClipOval(
+                                child: (p.avatarUrl != null && p.avatarUrl!.trim().isNotEmpty)
+                                    ? Image.network(
+                                        p.avatarUrl!,
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (_, __, ___) => Center(
+                                          child: Text(
+                                            p.displayName.isNotEmpty
+                                                ? p.displayName[0].toUpperCase()
+                                                : 'U',
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              color: AppColors.primary,
+                                              fontSize: 16,
+                                            ),
+                                          ),
+                                        ),
+                                      )
+                                    : Center(
+                                        child: Text(
+                                          p.displayName.isNotEmpty
+                                              ? p.displayName[0].toUpperCase()
+                                              : 'U',
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            color: AppColors.primary,
+                                            fontSize: 16,
+                                          ),
+                                        ),
+                                      ),
                               ),
                             ),
                           ),
