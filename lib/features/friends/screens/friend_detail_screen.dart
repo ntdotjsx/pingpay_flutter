@@ -653,7 +653,7 @@ class FriendDetailScreen extends ConsumerWidget {
           ElevatedButton(
             onPressed: () {
               Navigator.pop(ctx);
-              context.push('/payments');
+              context.go('/payments');
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFFFF5000),

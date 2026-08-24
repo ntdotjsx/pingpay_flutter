@@ -103,7 +103,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   subtitle: 'ใช้เหรียญ PingPay Coins แลกของรางวัลส่งตรงถึงบ้าน',
                   badge: _buildStatusBadge('${user?.rewardPoints ?? 27} แต้ม', const Color(0xFFFF9500)),
                   isDark: isDark,
-                  onTap: () => context.push('/rewards'),
+                  onTap: () => context.go('/rewards'),
                 ),
                 _buildTileDivider(isDark),
 
@@ -601,7 +601,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 // 1. Coins
                 Expanded(
                   child: InkWell(
-                    onTap: () => context.push('/rewards'),
+                    onTap: () => context.go('/rewards'),
                     borderRadius: BorderRadius.circular(14),
                     child: Padding(
                       padding: const EdgeInsets.symmetric(vertical: 4),

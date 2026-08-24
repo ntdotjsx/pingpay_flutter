@@ -927,7 +927,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       final points = storeState.points;
 
                       return GestureDetector(
-                        onTap: () => context.push('/rewards'),
+                        onTap: () => context.go('/rewards'),
                         child: Container(
                           height: 38,
                           padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -1072,19 +1072,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       _buildHeaderActionButton(
                         icon: Icons.folder_shared_rounded,
                         label: 'บิลของฉัน',
-                        onTap: () => context.push('/bills/my'),
+                        onTap: () => context.go('/bills/my'),
                       ),
                       _buildHeaderActionButton(
                         icon: Icons.arrow_downward_rounded,
                         label: 'เพื่อนติดเรา',
                         badge: receivableBadge,
-                        onTap: () => context.push('/payments?tab=receivables'),
+                        onTap: () => context.go('/payments?tab=receivables'),
                       ),
                       _buildHeaderActionButton(
                         icon: Icons.arrow_upward_rounded,
                         label: 'เราติดเพื่อน',
                         badge: debtBadge,
-                        onTap: () => context.push('/payments?tab=debts'),
+                        onTap: () => context.go('/payments?tab=debts'),
                       ),
                       _buildHeaderActionButton(
                         icon: Icons.add_circle_rounded,
@@ -1104,7 +1104,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   final summary = ref.watch(receivableSummaryProvider);
 
                   return GestureDetector(
-                    onTap: () => context.push('/payments?tab=receivables'),
+                    onTap: () => context.go('/payments?tab=receivables'),
                     child: Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 18,
@@ -1193,7 +1193,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                             ),
                           ),
                           ElevatedButton(
-                            onPressed: () => context.push('/payments?tab=receivables'),
+                            onPressed: () => context.go('/payments?tab=receivables'),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppColors.primary,
                               foregroundColor: AppColors.onPrimary,
