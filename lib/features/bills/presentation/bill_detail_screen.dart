@@ -12,6 +12,7 @@ import '../../payments/providers/payment_providers.dart';
 import 'widgets/destructive_confirmation_sheet.dart';
 import '../models/bill_models.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../friends/providers/friend_nickname_provider.dart';
 import '../providers/bill_provider.dart';
 import '../repositories/bill_repository.dart';
 
@@ -588,7 +589,12 @@ class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
                               ),
                               itemBuilder: (ctx, idx) {
                                 final item = bill.items[idx];
-                                final debtorName = item.debtor?.displayName ?? 'เพื่อน';
+                                final nicknamesMap = ref.watch(friendNicknameProvider);
+                                final nick = item.debtor != null
+                                    ? (nicknamesMap[item.debtor!.id] ?? nicknamesMap[item.debtor!.userCode])
+                                    : null;
+                                final hasNick = nick != null && nick.trim().isNotEmpty;
+                                final debtorName = hasNick ? nick : (item.debtor?.displayName ?? 'เพื่อน');
                                 final avatarUrl = item.debtor?.avatarUrl;
                                 final isPaidLocked = item.isFullyPaid || item.isLocked;
 
@@ -622,6 +628,16 @@ class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
                                                     overflow: TextOverflow.ellipsis,
                                                   ),
                                                 ),
+                                                if (hasNick && item.debtor?.displayName != null) ...[
+                                                  const SizedBox(width: 4),
+                                                  Text(
+                                                    '(${item.debtor!.displayName})',
+                                                    style: TextStyle(
+                                                      fontSize: 11,
+                                                      color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
+                                                    ),
+                                                  ),
+                                                ],
                                                 const SizedBox(width: 6),
                                                 _buildItemStatusBadge(item),
                                               ],
@@ -1045,6 +1061,14 @@ class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
   }
 
   void _showEditAmountDialog(BillItemParticipantModel item) {
+    final nicknamesMap = ref.read(friendNicknameProvider);
+    final nick = item.debtor != null
+        ? (nicknamesMap[item.debtor!.id] ?? nicknamesMap[item.debtor!.userCode])
+        : null;
+    final effectiveDebtorName = (nick != null && nick.trim().isNotEmpty)
+        ? nick
+        : (item.debtor?.displayName ?? 'ผู้ใช้');
+
     final controller = TextEditingController(
       text: item.currentAmount.toStringAsFixed(2),
     );
@@ -1053,7 +1077,7 @@ class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-        title: Text('แก้ไขยอดของ ${item.debtor?.displayName ?? "ผู้ใช้"}'),
+        title: Text('แก้ไขยอดของ $effectiveDebtorName'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1129,6 +1153,14 @@ class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
   }
 
   void _showWriteOffDialog(BillItemParticipantModel item) {
+    final nicknamesMap = ref.read(friendNicknameProvider);
+    final nick = item.debtor != null
+        ? (nicknamesMap[item.debtor!.id] ?? nicknamesMap[item.debtor!.userCode])
+        : null;
+    final effectiveDebtorName = (nick != null && nick.trim().isNotEmpty)
+        ? nick
+        : (item.debtor?.displayName ?? 'ผู้ใช้');
+
     final controller = TextEditingController(
       text: item.outstandingAmount.toStringAsFixed(2),
     );
@@ -1139,7 +1171,7 @@ class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
         title: Text(
-          'ยกหนี้ให้ ${item.debtor?.displayName ?? "ผู้ใช้"}',
+          'ยกหนี้ให้ $effectiveDebtorName',
         ),
         content: SingleChildScrollView(
           child: Column(

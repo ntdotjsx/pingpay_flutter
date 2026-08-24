@@ -8,6 +8,7 @@ import '../../../../core/utils/app_toast.dart';
 import '../../models/payment_models.dart';
 import '../../providers/payment_providers.dart';
 import '../../services/debt_age_calculator.dart';
+import '../../../friends/providers/friend_nickname_provider.dart';
 
 class FriendReceivableDetailBottomSheet extends ConsumerStatefulWidget {
   final ReceivableFriendModel friend;
@@ -85,6 +86,10 @@ class _FriendReceivableDetailBottomSheetState
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final friend = widget.friend;
+    final nicknamesMap = ref.watch(friendNicknameProvider);
+    final nickname = nicknamesMap[friend.debtor.id] ?? nicknamesMap[friend.debtor.userCode];
+    final hasNickname = nickname != null && nickname.trim().isNotEmpty;
+    final effectiveName = hasNickname ? nickname : friend.debtor.displayName;
 
     return Container(
       constraints: BoxConstraints(
@@ -120,19 +125,37 @@ class _FriendReceivableDetailBottomSheetState
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
             child: Row(
               children: [
-                _buildAvatar(isDark),
+                _buildAvatar(isDark, effectiveName),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        friend.debtor.displayName,
-                        style: TextStyle(
-                          fontSize: 17,
-                          fontWeight: FontWeight.w800,
-                          color: isDark ? AppColors.bodyOnDark : AppColors.ink,
-                        ),
+                      Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              effectiveName,
+                              style: TextStyle(
+                                fontSize: 17,
+                                fontWeight: FontWeight.w800,
+                                color: isDark ? AppColors.bodyOnDark : AppColors.ink,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          if (hasNickname) ...[
+                            const SizedBox(width: 4),
+                            Text(
+                              '(${friend.debtor.displayName})',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
                       const SizedBox(height: 2),
                       Text(
@@ -171,7 +194,7 @@ class _FriendReceivableDetailBottomSheetState
               separatorBuilder: (_, __) => const SizedBox(height: 12),
               itemBuilder: (context, index) {
                 final item = friend.bills[index];
-                return _buildBillItemCard(context, item, isDark);
+                return _buildBillItemCard(context, item, effectiveName, isDark);
               },
             ),
           ),
@@ -225,6 +248,7 @@ class _FriendReceivableDetailBottomSheetState
   Widget _buildBillItemCard(
     BuildContext context,
     ReceivableBillItemModel item,
+    String effectiveName,
     bool isDark,
   ) {
     final ageText = DebtAgeCalculator.formatDebtAgeThai(item.debtStartDate);
@@ -484,7 +508,7 @@ class _FriendReceivableDetailBottomSheetState
                   const SizedBox(width: 6),
                   Expanded(
                     child: OutlinedButton.icon(
-                      onPressed: () => _showEditAmountDialog(context, item),
+                      onPressed: () => _showEditAmountDialog(context, item, effectiveName),
                       icon: const Icon(Icons.edit_outlined, size: 13),
                       label: const Text('แก้ไขยอด', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700)),
                       style: OutlinedButton.styleFrom(
@@ -502,7 +526,7 @@ class _FriendReceivableDetailBottomSheetState
                   const SizedBox(width: 6),
                   Expanded(
                     child: OutlinedButton.icon(
-                      onPressed: () => _showWriteOffDialog(context, item),
+                      onPressed: () => _showWriteOffDialog(context, item, effectiveName),
                       icon: const Icon(
                         Icons.money_off_rounded,
                         size: 13,
@@ -532,7 +556,11 @@ class _FriendReceivableDetailBottomSheetState
     );
   }
 
-  void _showEditAmountDialog(BuildContext context, ReceivableBillItemModel item) {
+  void _showEditAmountDialog(
+    BuildContext context,
+    ReceivableBillItemModel item,
+    String effectiveName,
+  ) {
     final controller = TextEditingController(
       text: item.currentAmount.toStringAsFixed(2),
     );
@@ -541,7 +569,7 @@ class _FriendReceivableDetailBottomSheetState
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-        title: Text('แก้ไขยอดหนี้ของ ${widget.friend.debtor.displayName}'),
+        title: Text('แก้ไขยอดหนี้ของ $effectiveName'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -608,7 +636,11 @@ class _FriendReceivableDetailBottomSheetState
     );
   }
 
-  void _showWriteOffDialog(BuildContext context, ReceivableBillItemModel item) {
+  void _showWriteOffDialog(
+    BuildContext context,
+    ReceivableBillItemModel item,
+    String effectiveName,
+  ) {
     final controller = TextEditingController(
       text: item.outstandingAmount.toStringAsFixed(2),
     );
@@ -618,7 +650,7 @@ class _FriendReceivableDetailBottomSheetState
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-        title: Text('ยกเลิกหนี้ให้ ${widget.friend.debtor.displayName}'),
+        title: Text('ยกเลิกหนี้ให้ $effectiveName'),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -712,7 +744,7 @@ class _FriendReceivableDetailBottomSheetState
     );
   }
 
-  Widget _buildAvatar(bool isDark) {
+  Widget _buildAvatar(bool isDark, String effectiveName) {
     final debtor = widget.friend.debtor;
     return Container(
       width: 44,
@@ -735,8 +767,8 @@ class _FriendReceivableDetailBottomSheetState
                 fit: BoxFit.cover,
                 errorBuilder: (_, __, ___) => Center(
                   child: Text(
-                    debtor.displayName.isNotEmpty
-                        ? debtor.displayName[0].toUpperCase()
+                    effectiveName.isNotEmpty
+                        ? effectiveName[0].toUpperCase()
                         : '?',
                     style: const TextStyle(
                       fontSize: 16,
@@ -748,8 +780,8 @@ class _FriendReceivableDetailBottomSheetState
               )
             : Center(
                 child: Text(
-                  debtor.displayName.isNotEmpty
-                      ? debtor.displayName[0].toUpperCase()
+                  effectiveName.isNotEmpty
+                      ? effectiveName[0].toUpperCase()
                       : '?',
                   style: const TextStyle(
                     fontSize: 16,

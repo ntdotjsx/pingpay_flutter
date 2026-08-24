@@ -4,6 +4,7 @@ import '../models/ocr_models.dart';
 import '../repositories/bill_repository.dart';
 import '../services/bill_split_calculator.dart';
 import '../../friends/models/friend_models.dart';
+import '../../friends/providers/friend_nickname_provider.dart';
 
 enum BillCreationStateStatus {
   initial,
@@ -108,8 +109,9 @@ class BillCreationState {
 
 class BillCreationNotifier extends StateNotifier<BillCreationState> {
   final BillRepository _repo;
+  final Ref? _ref;
 
-  BillCreationNotifier(this._repo) : super(const BillCreationState());
+  BillCreationNotifier(this._repo, [this._ref]) : super(const BillCreationState());
 
   void _recalculateAll({
     double? newTotalAmount,
@@ -216,10 +218,17 @@ class BillCreationNotifier extends StateNotifier<BillCreationState> {
       final existing = state.participants
           .where((p) => p.userId == friendUserId)
           .firstOrNull;
+      final effectiveDisplayName = _ref != null
+          ? _ref.read(friendNicknameProvider.notifier).getEffectiveName(
+                userId: friend.user.id,
+                userCode: friend.user.userCode,
+                defaultName: friend.user.displayName,
+              )
+          : friend.user.displayName;
       return existing ??
           BillSplitParticipant(
             userId: friendUserId,
-            displayName: friend.user.displayName,
+            displayName: effectiveDisplayName,
             userCode: friend.user.userCode,
             avatarUrl: friend.user.avatarUrl,
             amountSatang: 0,
@@ -232,6 +241,13 @@ class BillCreationNotifier extends StateNotifier<BillCreationState> {
   void toggleFriendSelection(FriendItemModel friend) {
     final friendUserId = friend.user.id ?? friend.friendshipId;
     final exists = state.participants.any((p) => p.userId == friendUserId);
+    final effectiveDisplayName = _ref != null
+        ? _ref.read(friendNicknameProvider.notifier).getEffectiveName(
+              userId: friend.user.id,
+              userCode: friend.user.userCode,
+              defaultName: friend.user.displayName,
+            )
+        : friend.user.displayName;
 
     List<BillSplitParticipant> updated;
     if (exists) {
@@ -243,7 +259,7 @@ class BillCreationNotifier extends StateNotifier<BillCreationState> {
         ...state.participants,
         BillSplitParticipant(
           userId: friendUserId,
-          displayName: friend.user.displayName,
+          displayName: effectiveDisplayName,
           userCode: friend.user.userCode,
           avatarUrl: friend.user.avatarUrl,
           amountSatang: 0,
@@ -372,7 +388,7 @@ class BillCreationNotifier extends StateNotifier<BillCreationState> {
 final billCreationProvider =
     StateNotifierProvider<BillCreationNotifier, BillCreationState>((ref) {
       final repo = ref.watch(billRepositoryProvider);
-      return BillCreationNotifier(repo);
+      return BillCreationNotifier(repo, ref);
     });
 
 final billDetailProvider = FutureProvider.family<BillModel, String>((

@@ -16,9 +16,9 @@ void main() {
       final notifier = FriendNicknameNotifier();
       await Future.delayed(const Duration(milliseconds: 50));
 
-      expect(notifier.getNickname('USR-0931C3'), 'ต๋อง DevOps');
+      expect(notifier.getNickname(userCode: 'USR-0931C3'), 'ต๋อง DevOps');
       expect(
-        notifier.getEffectiveName(userId: 'USR-0931C3', defaultName: 'ntdotjsx'),
+        notifier.getEffectiveName(userCode: 'USR-0931C3', defaultName: 'ntdotjsx'),
         'ต๋อง DevOps',
       );
       expect(
@@ -31,14 +31,22 @@ void main() {
       final notifier = FriendNicknameNotifier();
       await Future.delayed(const Duration(milliseconds: 50));
 
-      await notifier.setNickname(userId: 'USR-TEST-1', nickname: 'น้องมายด์');
-      expect(notifier.getNickname('USR-TEST-1'), 'น้องมายด์');
+      await notifier.setNickname(userId: 'uuid-123', userCode: 'USR-TEST-1', nickname: 'น้องมายด์');
+      expect(notifier.getNickname(userId: 'uuid-123'), 'น้องมายด์');
+      expect(notifier.getNickname(userCode: 'USR-TEST-1'), 'น้องมายด์');
+      expect(
+        notifier.getEffectiveName(userId: 'uuid-123', defaultName: 'Real Name'),
+        'น้องมายด์',
+      );
 
       final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getString('pingpay_friend_nickname_uuid-123'), 'น้องมายด์');
       expect(prefs.getString('pingpay_friend_nickname_USR-TEST-1'), 'น้องมายด์');
 
-      await notifier.removeNickname('USR-TEST-1');
-      expect(notifier.getNickname('USR-TEST-1'), null);
+      await notifier.removeNickname(userId: 'uuid-123', userCode: 'USR-TEST-1');
+      expect(notifier.getNickname(userId: 'uuid-123'), null);
+      expect(notifier.getNickname(userCode: 'USR-TEST-1'), null);
+      expect(prefs.getString('pingpay_friend_nickname_uuid-123'), null);
       expect(prefs.getString('pingpay_friend_nickname_USR-TEST-1'), null);
     });
   });

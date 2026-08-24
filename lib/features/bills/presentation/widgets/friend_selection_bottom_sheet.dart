@@ -1,9 +1,11 @@
 import 'package:figma_squircle/figma_squircle.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/theme.dart';
 import '../../../friends/models/friend_models.dart';
+import '../../../friends/providers/friend_nickname_provider.dart';
 
-class FriendSelectionBottomSheet extends StatefulWidget {
+class FriendSelectionBottomSheet extends ConsumerStatefulWidget {
   final List<FriendItemModel> allFriends;
   final List<String> initiallySelectedUserIds;
   final ValueChanged<List<FriendItemModel>> onConfirm;
@@ -16,12 +18,12 @@ class FriendSelectionBottomSheet extends StatefulWidget {
   });
 
   @override
-  State<FriendSelectionBottomSheet> createState() =>
+  ConsumerState<FriendSelectionBottomSheet> createState() =>
       _FriendSelectionBottomSheetState();
 }
 
 class _FriendSelectionBottomSheetState
-    extends State<FriendSelectionBottomSheet> {
+    extends ConsumerState<FriendSelectionBottomSheet> {
   late final Set<String> _selectedUserIds;
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
@@ -38,7 +40,7 @@ class _FriendSelectionBottomSheetState
     super.dispose();
   }
 
-  List<FriendItemModel> get _filteredFriends {
+  List<FriendItemModel> _getFilteredFriends(Map<String, String> nicknamesMap) {
     if (_searchQuery.trim().isEmpty) {
       return widget.allFriends;
     }
@@ -46,7 +48,8 @@ class _FriendSelectionBottomSheetState
     return widget.allFriends.where((f) {
       final name = f.user.displayName.toLowerCase();
       final code = f.user.userCode.toLowerCase();
-      return name.contains(q) || code.contains(q);
+      final nick = (nicknamesMap[f.user.id] ?? nicknamesMap[f.user.userCode] ?? '').toLowerCase();
+      return name.contains(q) || code.contains(q) || nick.contains(q);
     }).toList();
   }
 
@@ -64,15 +67,18 @@ class _FriendSelectionBottomSheetState
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final filtered = _filteredFriends;
+    final nicknamesMap = ref.watch(friendNicknameProvider);
+    final filtered = _getFilteredFriends(nicknamesMap);
 
     return Container(
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.surfaceTile1 : AppColors.canvas,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+      decoration: ShapeDecoration(
+        color: isDark ? AppColors.surfaceTile1 : Colors.white,
+        shape: const SmoothRectangleBorder(
+          borderRadius: SmoothBorderRadius.only(
+            topLeft: SmoothRadius(cornerRadius: 24, cornerSmoothing: 1.0),
+            topRight: SmoothRadius(cornerRadius: 24, cornerSmoothing: 1.0),
+          ),
+        ),
       ),
       child: SafeArea(
         top: false,
@@ -201,6 +207,9 @@ class _FriendSelectionBottomSheetState
                         final friend = filtered[idx];
                         final userId = friend.user.id ?? friend.friendshipId;
                         final isSelected = _selectedUserIds.contains(userId);
+                        final nickname = nicknamesMap[friend.user.id] ?? nicknamesMap[friend.user.userCode];
+                        final hasNickname = nickname != null && nickname.trim().isNotEmpty;
+                        final effectiveName = hasNickname ? nickname : friend.user.displayName;
 
                         return Material(
                           color: isSelected
@@ -239,9 +248,8 @@ class _FriendSelectionBottomSheetState
                                     backgroundColor: AppColors.primary
                                         .withValues(alpha: 0.15),
                                     child: Text(
-                                      friend.user.displayName.isNotEmpty
-                                          ? friend.user.displayName[0]
-                                                .toUpperCase()
+                                      effectiveName.isNotEmpty
+                                          ? effectiveName[0].toUpperCase()
                                           : 'U',
                                       style: const TextStyle(
                                         fontWeight: FontWeight.bold,
@@ -256,15 +264,33 @@ class _FriendSelectionBottomSheetState
                                       crossAxisAlignment:
                                           CrossAxisAlignment.start,
                                       children: [
-                                        Text(
-                                          friend.user.displayName,
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 14,
-                                            color: isDark
-                                                ? AppColors.bodyOnDark
-                                                : AppColors.ink,
-                                          ),
+                                        Row(
+                                          children: [
+                                            Flexible(
+                                              child: Text(
+                                                effectiveName,
+                                                style: TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 14,
+                                                  color: isDark
+                                                      ? AppColors.bodyOnDark
+                                                      : AppColors.ink,
+                                                ),
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ),
+                                            if (hasNickname) ...[
+                                              const SizedBox(width: 4),
+                                              Text(
+                                                '(${friend.user.displayName})',
+                                                style: TextStyle(
+                                                  fontSize: 11,
+                                                  color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
+                                                ),
+                                              ),
+                                            ],
+                                          ],
                                         ),
                                         Text(
                                           'User ID: ${friend.user.userCode}',

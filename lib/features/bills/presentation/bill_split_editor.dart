@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/theme.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../friends/providers/friend_nickname_provider.dart';
 import '../providers/bill_provider.dart';
 
 class BillSplitEditor extends ConsumerWidget {
@@ -238,13 +239,17 @@ class BillSplitEditor extends ConsumerWidget {
             ),
             itemBuilder: (ctx, idx) {
               final p = billState.participants[idx];
+              final nicknamesMap = ref.watch(friendNicknameProvider);
+              final nick = (nicknamesMap[p.userId] ?? (p.userCode != null ? nicknamesMap[p.userCode] : null));
+              final effectiveName = (nick != null && nick.trim().isNotEmpty) ? nick : p.displayName;
+
               return Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                 child: Row(
                   children: [
                     _buildUserAvatar(
                       avatarUrl: p.avatarUrl,
-                      displayName: p.displayName,
+                      displayName: effectiveName,
                       isDark: isDark,
                     ),
                     const SizedBox(width: 10),
@@ -253,7 +258,7 @@ class BillSplitEditor extends ConsumerWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            p.displayName,
+                            effectiveName,
                             style: TextStyle(
                               fontWeight: FontWeight.w700,
                               fontSize: 13.5,

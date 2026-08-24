@@ -18,11 +18,12 @@ class FriendDetailScreen extends ConsumerWidget {
 
   void _showSetNicknameDialog(
     BuildContext context,
-    WidgetRef ref,
-    String userId,
-    String currentDisplayName,
+    WidgetRef ref, {
+    String? userId,
+    String? userCode,
+    required String currentDisplayName,
     String? currentNickname,
-  ) {
+  }) {
     final controller = TextEditingController(text: currentNickname ?? '');
 
     showDialog(
@@ -87,7 +88,7 @@ class FriendDetailScreen extends ConsumerWidget {
                 Navigator.pop(ctx);
                 await ref
                     .read(friendNicknameProvider.notifier)
-                    .removeNickname(userId);
+                    .removeNickname(userId: userId, userCode: userCode);
                 if (context.mounted) {
                   AppToast.success(context, 'ล้างชื่อเล่นเรียบร้อยแล้ว');
                 }
@@ -107,7 +108,7 @@ class FriendDetailScreen extends ConsumerWidget {
               Navigator.pop(ctx);
               await ref
                   .read(friendNicknameProvider.notifier)
-                  .setNickname(userId: userId, nickname: newNick);
+                  .setNickname(userId: userId, userCode: userCode, nickname: newNick);
               if (context.mounted) {
                 AppToast.success(
                   context,
@@ -294,9 +295,10 @@ class FriendDetailScreen extends ConsumerWidget {
                             onTap: () => _showSetNicknameDialog(
                               context,
                               ref,
-                              friendKey,
-                              friend.user.displayName,
-                              nickname,
+                              userId: friend.user.id,
+                              userCode: friend.user.userCode,
+                              currentDisplayName: friend.user.displayName,
+                              currentNickname: nickname,
                             ),
                             borderRadius: BorderRadius.circular(8),
                             child: Container(

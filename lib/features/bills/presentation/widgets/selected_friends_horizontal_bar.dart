@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/theme.dart';
 import '../../../friends/models/friend_models.dart';
+import '../../../friends/providers/friend_nickname_provider.dart';
 import '../../services/bill_split_calculator.dart';
 import 'friend_selection_bottom_sheet.dart';
 
-class SelectedFriendsHorizontalBar extends StatefulWidget {
+class SelectedFriendsHorizontalBar extends ConsumerStatefulWidget {
   final List<FriendItemModel> allFriends;
   final List<BillSplitParticipant> selectedParticipants;
   final ValueChanged<List<FriendItemModel>> onFriendsSelected;
@@ -20,12 +22,12 @@ class SelectedFriendsHorizontalBar extends StatefulWidget {
   });
 
   @override
-  State<SelectedFriendsHorizontalBar> createState() =>
+  ConsumerState<SelectedFriendsHorizontalBar> createState() =>
       _SelectedFriendsHorizontalBarState();
 }
 
 class _SelectedFriendsHorizontalBarState
-    extends State<SelectedFriendsHorizontalBar>
+    extends ConsumerState<SelectedFriendsHorizontalBar>
     with SingleTickerProviderStateMixin {
   bool _isEditMode = false;
   late AnimationController _wiggleController;
@@ -38,8 +40,7 @@ class _SelectedFriendsHorizontalBarState
       vsync: this,
       duration: const Duration(milliseconds: 140),
     );
-
-    _wiggleAnimation = Tween<double>(begin: -0.04, end: 0.04).animate(
+    _wiggleAnimation = Tween<double>(begin: -0.05, end: 0.05).animate(
       CurvedAnimation(parent: _wiggleController, curve: Curves.easeInOut),
     );
   }
@@ -51,7 +52,7 @@ class _SelectedFriendsHorizontalBarState
   }
 
   void _enterEditMode() {
-    HapticFeedback.heavyImpact();
+    HapticFeedback.mediumImpact();
     setState(() {
       _isEditMode = true;
     });
@@ -76,9 +77,8 @@ class _SelectedFriendsHorizontalBarState
       backgroundColor: Colors.transparent,
       builder: (ctx) => FriendSelectionBottomSheet(
         allFriends: widget.allFriends,
-        initiallySelectedUserIds: widget.selectedParticipants
-            .map((p) => p.userId)
-            .toList(),
+        initiallySelectedUserIds:
+            widget.selectedParticipants.map((p) => p.userId).toList(),
         onConfirm: widget.onFriendsSelected,
       ),
     );
@@ -87,41 +87,60 @@ class _SelectedFriendsHorizontalBarState
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final nicknamesMap = ref.watch(friendNicknameProvider);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // Header row
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text(
-              'ผู้ร่วมหารบิล (Participants)',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+            Row(
+              children: [
+                Text(
+                  'เพื่อนที่หารบิลนี้',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? AppColors.bodyOnDark : AppColors.ink,
+                  ),
+                ),
+                if (_isEditMode) ...[
+                  const SizedBox(width: 8),
+                  GestureDetector(
+                    onTap: _exitEditMode,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Text(
+                        'เสร็จสิ้น',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ],
             ),
-            if (widget.selectedParticipants.isNotEmpty)
+            if (!_isEditMode)
               Row(
                 children: [
-                  if (_isEditMode)
-                    GestureDetector(
-                      onTap: _exitEditMode,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 2,
-                        ),
-                        margin: const EdgeInsets.only(right: 8),
-                        decoration: BoxDecoration(
-                          color: AppColors.primary.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: const Text(
-                          'เสร็จสิ้น',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.primary,
-                          ),
-                        ),
+                  if (widget.selectedParticipants.isNotEmpty)
+                    Text(
+                      'กดค้างเพื่อลบเพื่อน  •  ',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
                       ),
                     ),
                   Text(
@@ -144,7 +163,7 @@ class _SelectedFriendsHorizontalBarState
             scrollDirection: Axis.horizontal,
             physics: const BouncingScrollPhysics(),
             children: [
-              // Circular '+' Button with label container structure to align exactly with Avatar items
+              // Circular '+' Button
               Semantics(
                 label: 'Add friend to bill',
                 button: true,
@@ -179,10 +198,13 @@ class _SelectedFriendsHorizontalBarState
                 ),
               ),
 
-              // Selected Horizontal Avatar List with Long Press & Wiggle Animation
+              // Selected Horizontal Avatar List
               ...widget.selectedParticipants.map((p) {
+                final nick = (nicknamesMap[p.userId] ?? (p.userCode != null ? nicknamesMap[p.userCode] : null));
+                final effectiveDisplayName = (nick != null && nick.trim().isNotEmpty) ? nick : p.displayName;
+
                 return Semantics(
-                  label: '${p.displayName} selected',
+                  label: '$effectiveDisplayName selected',
                   child: GestureDetector(
                     onLongPress: _enterEditMode,
                     onTap: () {
@@ -193,7 +215,7 @@ class _SelectedFriendsHorizontalBarState
                     child: Container(
                       margin: const EdgeInsets.only(right: 12),
                       width: 56,
-                      height: 80,
+                      height: 82,
                       child: Stack(
                         clipBehavior: Clip.none,
                         alignment: Alignment.topCenter,
@@ -227,8 +249,8 @@ class _SelectedFriendsHorizontalBarState
                                         fit: BoxFit.cover,
                                         errorBuilder: (_, __, ___) => Center(
                                           child: Text(
-                                            p.displayName.isNotEmpty
-                                                ? p.displayName[0].toUpperCase()
+                                            effectiveDisplayName.isNotEmpty
+                                                ? effectiveDisplayName[0].toUpperCase()
                                                 : 'U',
                                             style: const TextStyle(
                                               fontWeight: FontWeight.bold,
@@ -240,8 +262,8 @@ class _SelectedFriendsHorizontalBarState
                                       )
                                     : Center(
                                         child: Text(
-                                          p.displayName.isNotEmpty
-                                              ? p.displayName[0].toUpperCase()
+                                          effectiveDisplayName.isNotEmpty
+                                              ? effectiveDisplayName[0].toUpperCase()
                                               : 'U',
                                           style: const TextStyle(
                                             fontWeight: FontWeight.bold,
@@ -260,7 +282,7 @@ class _SelectedFriendsHorizontalBarState
                             left: 0,
                             right: 0,
                             child: Text(
-                              p.displayName,
+                              effectiveDisplayName,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               textAlign: TextAlign.center,
@@ -271,18 +293,15 @@ class _SelectedFriendsHorizontalBarState
                             ),
                           ),
 
-                          // Absolute Badge 'X' Button: Only visible when in Long Press Edit Mode
+                          // Absolute Badge 'X' Button
                           if (_isEditMode)
                             Positioned(
                               top: -2,
                               right: 0,
                               child: GestureDetector(
                                 onTap: () {
-                                  HapticFeedback.mediumImpact();
+                                  HapticFeedback.lightImpact();
                                   widget.onRemoveParticipant(p.userId);
-                                  if (widget.selectedParticipants.length <= 1) {
-                                    _exitEditMode();
-                                  }
                                 },
                                 child: Container(
                                   width: 20,
@@ -291,25 +310,16 @@ class _SelectedFriendsHorizontalBarState
                                     color: AppColors.error,
                                     shape: BoxShape.circle,
                                     border: Border.all(
-                                      color: isDark
-                                          ? AppColors.surfaceTile1
-                                          : AppColors.canvas,
-                                      width: 1.5,
+                                      color: isDark ? AppColors.surfaceTile1 : Colors.white,
+                                      width: 2,
                                     ),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black.withValues(
-                                          alpha: 0.2,
-                                        ),
-                                        blurRadius: 4,
-                                        offset: const Offset(0, 1),
-                                      ),
-                                    ],
                                   ),
-                                  child: const Icon(
-                                    Icons.close_rounded,
-                                    size: 13,
-                                    color: Colors.white,
+                                  child: const Center(
+                                    child: Icon(
+                                      Icons.close_rounded,
+                                      size: 12,
+                                      color: Colors.white,
+                                    ),
                                   ),
                                 ),
                               ),

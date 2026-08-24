@@ -1,8 +1,17 @@
 import { AdminRepository } from "./admin.repository";
 import { defaultFcmNotificationProvider } from "../notifications/fcm-notification.provider";
 import { db } from "../../db";
-import { deviceTokens, notificationOutbox } from "../../db/schema";
-import { eq } from "drizzle-orm";
+import {
+  deviceTokens,
+  notificationOutbox,
+  billItems,
+  bills,
+  payments,
+  financialTransactions,
+  editLogs,
+} from "../../db/schema";
+import { eq, and } from "drizzle-orm";
+import { BillStatusService } from "../bills/bill-status.service";
 import crypto from "crypto";
 
 export class AdminService {
@@ -287,6 +296,121 @@ export class AdminService {
       resolution.status,
       resolution.note
     );
+
+    const billItem = dispute.billItem;
+    if (billItem) {
+      if (resolution.status === "resolved_paid") {
+        // 1. Mark bill item as paid and locked
+        await db
+          .update(billItems)
+          .set({
+            amountPaid: billItem.currentAmount,
+            status: "paid",
+            isLocked: true,
+            updatedAt: new Date(),
+          })
+          .where(eq(billItems.id, billItem.id));
+
+        // 2. Confirm any pending payments for this item
+        await db
+          .update(payments)
+          .set({
+            status: "confirmed",
+            confirmedByOwnerAt: new Date(),
+            confirmedByOwnerId: adminId,
+            updatedAt: new Date(),
+          })
+          .where(
+            and(
+              eq(payments.billItemId, billItem.id),
+              eq(payments.status, "pending_verification")
+            )
+          );
+
+        // 3. Append financial transaction to ledger
+        await db.insert(financialTransactions).values({
+          billId: billItem.billId,
+          billItemId: billItem.id,
+          type: "payment",
+          amount: billItem.currentAmount,
+          currency: "THB",
+          referenceId: disputeId,
+          createdById: adminId,
+          metadata: { reason: "dispute_determination", note: resolution.note },
+        });
+
+        // 4. Log edit history
+        await db.insert(editLogs).values({
+          action: "bill_item_edited",
+          billId: billItem.billId,
+          billItemId: billItem.id,
+          performedById: adminId,
+          affectedUserId: billItem.debtorId,
+          previousValue: { status: billItem.status, amountPaid: billItem.amountPaid },
+          newValue: { status: "paid", amountPaid: billItem.currentAmount },
+          note: `Dispute resolved as PAID: ${resolution.note}`,
+        });
+      } else if (resolution.status === "resolved_written_off") {
+        // 1. Mark bill item as written off and locked
+        await db
+          .update(billItems)
+          .set({
+            amountWrittenOff: billItem.currentAmount,
+            status: "written_off",
+            isLocked: true,
+            updatedAt: new Date(),
+          })
+          .where(eq(billItems.id, billItem.id));
+
+        // 2. Append write_off to financial ledger
+        await db.insert(financialTransactions).values({
+          billId: billItem.billId,
+          billItemId: billItem.id,
+          type: "write_off",
+          amount: billItem.currentAmount,
+          currency: "THB",
+          referenceId: disputeId,
+          createdById: adminId,
+          metadata: { reason: "dispute_determination", note: resolution.note },
+        });
+
+        // 3. Log edit history
+        await db.insert(editLogs).values({
+          action: "debt_written_off",
+          billId: billItem.billId,
+          billItemId: billItem.id,
+          performedById: adminId,
+          affectedUserId: billItem.debtorId,
+          previousValue: { status: billItem.status, amountWrittenOff: billItem.amountWrittenOff },
+          newValue: { status: "written_off", amountWrittenOff: billItem.currentAmount },
+          note: `Dispute resolved as WRITTEN OFF: ${resolution.note}`,
+        });
+      }
+
+      // Recompute parent bill status
+      const allItems = await db.query.billItems.findMany({
+        where: eq(billItems.billId, billItem.billId),
+      });
+
+      if (allItems.length > 0) {
+        const billStatusRes = BillStatusService.calculateBillStatus({
+          participants: allItems.map((i) => ({
+            originalDebt: Number(i.originalAmount),
+            currentAmount: Number(i.currentAmount),
+            amountPaid: Number(i.amountPaid),
+            amountWrittenOff: Number(i.amountWrittenOff),
+          })),
+        });
+
+        await db
+          .update(bills)
+          .set({
+            status: billStatusRes.status,
+            updatedAt: new Date(),
+          })
+          .where(eq(bills.id, billItem.billId));
+      }
+    }
 
     await this.repo.logAdminAction({
       adminId,

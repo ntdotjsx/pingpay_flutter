@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../bills/providers/bill_provider.dart';
+import '../../../friends/providers/friend_nickname_provider.dart';
 import '../../models/payment_models.dart';
 import '../../providers/payment_providers.dart';
 import '../../services/debt_age_calculator.dart';
@@ -35,6 +36,11 @@ class DebtAcknowledgementDetailSheet extends ConsumerWidget {
     final formattedDate = DebtAgeCalculator.formatThaiDate(debt.debtStartDate);
     final debtAgeText = DebtAgeCalculator.formatDebtAgeThai(debt.debtStartDate);
     final billDetailAsync = ref.watch(billDetailProvider(debt.billId));
+    final nicknamesMap = ref.watch(friendNicknameProvider);
+
+    final creditorNick = nicknamesMap[debt.creditor.id] ?? nicknamesMap[debt.creditor.userCode];
+    final hasCreditorNick = creditorNick != null && creditorNick.trim().isNotEmpty;
+    final effectiveCreditorName = hasCreditorNick ? creditorNick : debt.creditor.displayName;
 
     return Container(
       constraints: BoxConstraints(
@@ -170,8 +176,8 @@ class DebtAcknowledgementDetailSheet extends ConsumerWidget {
                                       fit: BoxFit.cover,
                                       errorBuilder: (_, __, ___) => Center(
                                         child: Text(
-                                          debt.creditor.displayName.isNotEmpty
-                                              ? debt.creditor.displayName[0].toUpperCase()
+                                          effectiveCreditorName.isNotEmpty
+                                              ? effectiveCreditorName[0].toUpperCase()
                                               : 'U',
                                           style: const TextStyle(
                                             fontSize: 16,
@@ -183,8 +189,8 @@ class DebtAcknowledgementDetailSheet extends ConsumerWidget {
                                     )
                                   : Center(
                                       child: Text(
-                                        debt.creditor.displayName.isNotEmpty
-                                            ? debt.creditor.displayName[0].toUpperCase()
+                                        effectiveCreditorName.isNotEmpty
+                                            ? effectiveCreditorName[0].toUpperCase()
                                             : 'U',
                                         style: const TextStyle(
                                           fontSize: 16,
@@ -209,12 +215,30 @@ class DebtAcknowledgementDetailSheet extends ConsumerWidget {
                                   ),
                                 ),
                                 const SizedBox(height: 2),
-                                Text(
-                                  debt.creditor.displayName,
-                                  style: const TextStyle(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                                Row(
+                                  children: [
+                                    Flexible(
+                                      child: Text(
+                                        effectiveCreditorName,
+                                        style: const TextStyle(
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                    if (hasCreditorNick) ...[
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        '(${debt.creditor.displayName})',
+                                        style: TextStyle(
+                                          fontSize: 11.5,
+                                          color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
+                                        ),
+                                      ),
+                                    ],
+                                  ],
                                 ),
                                 if (debt.creditor.userCode.isNotEmpty)
                                   Text(
@@ -379,7 +403,6 @@ class DebtAcknowledgementDetailSheet extends ConsumerWidget {
                                       );
                                     }),
                                   ],
-
                                   // ── Other Participants List Breakdown ──
                                   if (bill.items.length > 1) ...[
                                     const SizedBox(height: 10),
@@ -395,7 +418,12 @@ class DebtAcknowledgementDetailSheet extends ConsumerWidget {
                                     ),
                                     const SizedBox(height: 6),
                                     ...bill.items.map((p) {
-                                      final pName = p.debtor?.displayName ?? 'เพื่อน';
+                                      final pNick = p.debtor != null
+                                          ? (nicknamesMap[p.debtor!.id] ?? nicknamesMap[p.debtor!.userCode])
+                                          : null;
+                                      final pName = (pNick != null && pNick.trim().isNotEmpty)
+                                          ? pNick
+                                          : (p.debtor?.displayName ?? 'เพื่อน');
                                       final isMe = p.debtorId == debt.debtorId;
                                       return Padding(
                                         padding: const EdgeInsets.symmetric(vertical: 2.0),
@@ -466,7 +494,7 @@ class DebtAcknowledgementDetailSheet extends ConsumerWidget {
                                   ),
                                   const SizedBox(height: 2),
                                   Text(
-                                    'บิลนี้ถูกหักล้างกับหนี้เดิมที่คุณเคยค้างกับ ${debt.creditor.displayName} ไปแล้ว ฿${debt.amountWrittenOff.toStringAsFixed(2)} ยอดที่เหลือจ่ายจริงคือ ฿${debt.outstandingAmount.toStringAsFixed(2)}',
+                                    'บิลนี้ถูกหักล้างกับหนี้เดิมที่คุณเคยค้างกับ $effectiveCreditorName ไปแล้ว ฿${debt.amountWrittenOff.toStringAsFixed(2)} ยอดที่เหลือจ่ายจริงคือ ฿${debt.outstandingAmount.toStringAsFixed(2)}',
                                     style: TextStyle(
                                       fontSize: 11,
                                       color: isDark ? AppColors.bodyOnDark : AppColors.ink,

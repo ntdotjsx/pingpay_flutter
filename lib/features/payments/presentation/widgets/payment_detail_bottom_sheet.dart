@@ -13,6 +13,7 @@ import '../../../../core/utils/app_toast.dart';
 import '../../models/payment_models.dart';
 import '../../providers/payment_providers.dart';
 import '../../services/debt_age_calculator.dart';
+import '../../../friends/providers/friend_nickname_provider.dart';
 
 class PaymentDetailBottomSheet extends ConsumerStatefulWidget {
   final DebtItemModel debt;
@@ -276,6 +277,11 @@ class _PaymentDetailBottomSheetState
       billPaymentHistoryProvider(widget.debt.billId),
     );
 
+    final nicknamesMap = ref.watch(friendNicknameProvider);
+    final creditorNick = nicknamesMap[widget.debt.creditor.id] ?? nicknamesMap[widget.debt.creditor.userCode];
+    final hasCreditorNick = creditorNick != null && creditorNick.trim().isNotEmpty;
+    final effectiveCreditorName = hasCreditorNick ? creditorNick : widget.debt.creditor.displayName;
+
     final debtAgeText = DebtAgeCalculator.formatDebtAgeThai(
       widget.debt.debtStartDate,
     );
@@ -361,7 +367,9 @@ class _PaymentDetailBottomSheetState
                         ),
                         const SizedBox(height: 3),
                         Text(
-                          'ต้องจ่ายให้ ${widget.debt.creditor.displayName} • $debtAgeText ($formattedDate)',
+                          hasCreditorNick
+                              ? 'ต้องจ่ายให้ $effectiveCreditorName (${widget.debt.creditor.displayName}) • $debtAgeText ($formattedDate)'
+                              : 'ต้องจ่ายให้ $effectiveCreditorName • $debtAgeText ($formattedDate)',
                           style: TextStyle(
                             fontSize: 11.5,
                             color: isDark
@@ -1145,6 +1153,11 @@ class _PaymentDetailBottomSheetState
     final bankAcc = creditor.bankAccountNumber;
     final enteredAmount = double.tryParse(_amountController.text.trim()) ?? 0.0;
 
+    final nicknamesMap = ref.watch(friendNicknameProvider);
+    final creditorNick = nicknamesMap[creditor.id] ?? nicknamesMap[creditor.userCode];
+    final hasCreditorNick = creditorNick != null && creditorNick.trim().isNotEmpty;
+    final effectiveCreditorName = hasCreditorNick ? creditorNick : creditor.displayName;
+
     String? qrPayload;
     if (promptPayId != null && promptPayId.isNotEmpty) {
       try {
@@ -1213,7 +1226,7 @@ class _PaymentDetailBottomSheetState
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'พร้อมเพย์ / บัญชีรับเงินของ ${creditor.displayName}',
+                        'พร้อมเพย์ / บัญชีรับเงินของ $effectiveCreditorName',
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w700,

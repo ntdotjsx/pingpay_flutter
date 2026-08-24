@@ -1,21 +1,28 @@
 import 'package:figma_squircle/figma_squircle.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../friends/providers/friend_nickname_provider.dart';
 import '../../models/payment_models.dart';
 import '../../services/debt_age_calculator.dart';
 
-class ReceivableFriendCard extends StatelessWidget {
+class ReceivableFriendCard extends ConsumerWidget {
   final ReceivableFriendModel friend;
   final VoidCallback? onTap;
 
   const ReceivableFriendCard({super.key, required this.friend, this.onTap});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final oldestAgeText = DebtAgeCalculator.formatDebtAgeThai(
       friend.oldestDebtStartDate,
     );
+
+    final nicknamesMap = ref.watch(friendNicknameProvider);
+    final nickname = nicknamesMap[friend.debtor.id] ?? nicknamesMap[friend.debtor.userCode];
+    final hasNickname = nickname != null && nickname.trim().isNotEmpty;
+    final effectiveName = hasNickname ? nickname : friend.debtor.displayName;
 
     return Material(
       color: isDark ? AppColors.surfaceTile1 : Colors.white,
@@ -29,7 +36,7 @@ class ReceivableFriendCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   // 1. Debtor Avatar
-                  _buildAvatar(isDark),
+                  _buildAvatar(isDark, effectiveName),
 
                   const SizedBox(width: 12),
 
@@ -43,7 +50,7 @@ class ReceivableFriendCard extends StatelessWidget {
                           children: [
                             Flexible(
                               child: Text(
-                                friend.debtor.displayName,
+                                effectiveName,
                                 style: TextStyle(
                                   fontSize: 14.5,
                                   fontWeight: FontWeight.w600,
@@ -56,6 +63,16 @@ class ReceivableFriendCard extends StatelessWidget {
                                 overflow: TextOverflow.ellipsis,
                               ),
                             ),
+                            if (hasNickname) ...[
+                              const SizedBox(width: 4),
+                              Text(
+                                '(${friend.debtor.displayName})',
+                                style: TextStyle(
+                                  fontSize: 11.5,
+                                  color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
+                                ),
+                              ),
+                            ],
                             if (friend.latestPaymentStatus ==
                                 'pending_owner_confirmation') ...[
                               const SizedBox(width: 6),
@@ -128,55 +145,14 @@ class ReceivableFriendCard extends StatelessWidget {
                             style: const TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.w700,
-                              letterSpacing: -0.3,
+                              letterSpacing: -0.2,
                               color: Color(0xFFFF5000),
                             ),
                           ),
-                        ],
-                      ),
-                      if (friend.totalAmountPaid > 0) ...[
-                        const SizedBox(height: 2),
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Text(
-                              'จ่ายแล้ว',
-                              style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w400,
-                                color: AppColors.inkMuted48,
-                              ),
-                            ),
-                            const SizedBox(width: 3),
-                            Text(
-                              '฿${friend.totalAmountPaid.toStringAsFixed(2)}',
-                              style: TextStyle(
-                                fontSize: 10.5,
-                                fontWeight: FontWeight.w500,
-                                color: isDark
-                                    ? AppColors.bodyMuted
-                                    : AppColors.inkMuted80,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                      const SizedBox(height: 4),
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Text(
-                            'ดูรายละเอียด',
-                            style: TextStyle(
-                              fontSize: 10.5,
-                              fontWeight: FontWeight.w500,
-                              color: Color(0xFFFF5000),
-                            ),
-                          ),
-                          const SizedBox(width: 2),
+                          const SizedBox(width: 4),
                           Icon(
                             Icons.chevron_right_rounded,
-                            size: 14,
+                            size: 18,
                             color: isDark
                                 ? AppColors.bodyMuted
                                 : const Color(0xFFFF5000),
@@ -202,7 +178,7 @@ class ReceivableFriendCard extends StatelessWidget {
     );
   }
 
-  Widget _buildAvatar(bool isDark) {
+  Widget _buildAvatar(bool isDark, String effectiveName) {
     return Container(
       width: 40,
       height: 40,
@@ -223,18 +199,18 @@ class ReceivableFriendCard extends StatelessWidget {
             ? Image.network(
                 friend.debtor.avatarUrl!,
                 fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => _buildAvatarInitial(isDark),
+                errorBuilder: (_, __, ___) => _buildAvatarInitial(isDark, effectiveName),
               )
-            : _buildAvatarInitial(isDark),
+            : _buildAvatarInitial(isDark, effectiveName),
       ),
     );
   }
 
-  Widget _buildAvatarInitial(bool isDark) {
+  Widget _buildAvatarInitial(bool isDark, String effectiveName) {
     return Center(
       child: Text(
-        friend.debtor.displayName.isNotEmpty
-            ? friend.debtor.displayName[0].toUpperCase()
+        effectiveName.isNotEmpty
+            ? effectiveName[0].toUpperCase()
             : 'U',
         style: TextStyle(
           fontSize: 15,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pingpay_mobile/core/theme/light_theme.dart';
 import 'package:pingpay_mobile/features/payments/models/payment_models.dart';
@@ -12,12 +13,13 @@ void main() {
     tester,
   ) async {
     await tester.pumpWidget(
-      MaterialApp(
-        theme: LightTheme.theme,
-        home: const Scaffold(
-          body: PaymentSummaryCard(
-            outstandingCount: 4,
-            totalOutstandingAmount: 2450.0,
+      const ProviderScope(
+        child: MaterialApp(
+          home: Scaffold(
+            body: PaymentSummaryCard(
+              outstandingCount: 4,
+              totalOutstandingAmount: 2450.0,
+            ),
           ),
         ),
       ),
@@ -56,14 +58,16 @@ void main() {
       bool payTapped = false;
 
       await tester.pumpWidget(
-        MaterialApp(
-          theme: LightTheme.theme,
-          home: Scaffold(
-            body: DebtCard(
-              debt: debt,
-              onPayTap: () {
-                payTapped = true;
-              },
+        ProviderScope(
+          child: MaterialApp(
+            theme: LightTheme.theme,
+            home: Scaffold(
+              body: DebtCard(
+                debt: debt,
+                onPayTap: () {
+                  payTapped = true;
+                },
+              ),
             ),
           ),
         ),
@@ -85,12 +89,13 @@ void main() {
     'ReceivableSummaryCard renders debtor count and total receivable correctly',
     (tester) async {
       await tester.pumpWidget(
-        MaterialApp(
-          theme: LightTheme.theme,
-          home: const Scaffold(
-            body: ReceivableSummaryCard(
-              debtorCount: 3,
-              totalOutstandingAmount: 1850.0,
+        const ProviderScope(
+          child: MaterialApp(
+            home: Scaffold(
+              body: ReceivableSummaryCard(
+                debtorCount: 3,
+                totalOutstandingAmount: 1850.0,
+              ),
             ),
           ),
         ),
@@ -132,14 +137,16 @@ void main() {
       bool cardTapped = false;
 
       await tester.pumpWidget(
-        MaterialApp(
-          theme: LightTheme.theme,
-          home: Scaffold(
-            body: ReceivableFriendCard(
-              friend: friend,
-              onTap: () {
-                cardTapped = true;
-              },
+        ProviderScope(
+          child: MaterialApp(
+            theme: LightTheme.theme,
+            home: Scaffold(
+              body: ReceivableFriendCard(
+                friend: friend,
+                onTap: () {
+                  cardTapped = true;
+                },
+              ),
             ),
           ),
         ),
@@ -149,11 +156,8 @@ void main() {
       expect(find.text('3 รายการค้างชำระ'), findsOneWidget);
       expect(find.text('ติดเรา'), findsOneWidget);
       expect(find.text('฿1250.00'), findsOneWidget);
-      expect(find.text('จ่ายแล้ว'), findsOneWidget);
-      expect(find.text('฿250.00'), findsOneWidget);
-      expect(find.text('ดูรายละเอียด'), findsOneWidget);
 
-      await tester.tap(find.text('ดูรายละเอียด'));
+      await tester.tap(find.byType(ReceivableFriendCard));
       expect(cardTapped, isTrue);
     },
   );

@@ -1,23 +1,30 @@
 import 'package:figma_squircle/figma_squircle.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../friends/providers/friend_nickname_provider.dart';
 import '../../models/payment_models.dart';
 import '../../services/debt_age_calculator.dart';
 import 'debt_acknowledgement_detail_sheet.dart';
 
-class DebtCard extends StatelessWidget {
+class DebtCard extends ConsumerWidget {
   final DebtItemModel debt;
   final VoidCallback onPayTap;
 
   const DebtCard({super.key, required this.debt, required this.onPayTap});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final debtAgeText = DebtAgeCalculator.formatDebtAgeThai(debt.debtStartDate);
     final formattedDate = DebtAgeCalculator.formatThaiDate(debt.debtStartDate);
     final days = DebtAgeCalculator.calculateDaysOutstanding(debt.debtStartDate);
+
+    final nicknamesMap = ref.watch(friendNicknameProvider);
+    final creditorNick = nicknamesMap[debt.creditor.id] ?? nicknamesMap[debt.creditor.userCode];
+    final hasCreditorNick = creditorNick != null && creditorNick.trim().isNotEmpty;
+    final effectiveCreditorName = hasCreditorNick ? creditorNick : debt.creditor.displayName;
 
     // Dynamic urgency coloring for debt age badge
     final Color ageBadgeColor = days >= 30
@@ -59,9 +66,9 @@ class DebtCard extends StatelessWidget {
                               debt.creditor.avatarUrl!,
                               fit: BoxFit.cover,
                               errorBuilder: (_, __, ___) =>
-                                  _buildAvatarInitial(debt, isDark),
+                                  _buildAvatarInitial(effectiveCreditorName, isDark),
                             )
-                          : _buildAvatarInitial(debt, isDark),
+                          : _buildAvatarInitial(effectiveCreditorName, isDark),
                     ),
                   ),
 
@@ -78,7 +85,7 @@ class DebtCard extends StatelessWidget {
                           children: [
                             Flexible(
                               child: Text(
-                                debt.creditor.displayName,
+                                effectiveCreditorName,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
@@ -91,6 +98,16 @@ class DebtCard extends StatelessWidget {
                                 ),
                               ),
                             ),
+                            if (hasCreditorNick) ...[
+                              const SizedBox(width: 4),
+                              Text(
+                                '(${debt.creditor.displayName})',
+                                style: TextStyle(
+                                  fontSize: 11.5,
+                                  color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
+                                ),
+                              ),
+                            ],
                             const SizedBox(width: 6),
                             _buildStatusBadge(context),
                           ],
@@ -272,11 +289,11 @@ class DebtCard extends StatelessWidget {
     );
   }
 
-  Widget _buildAvatarInitial(DebtItemModel debt, bool isDark) {
+  Widget _buildAvatarInitial(String effectiveCreditorName, bool isDark) {
     return Center(
       child: Text(
-        debt.creditor.displayName.isNotEmpty
-            ? debt.creditor.displayName[0].toUpperCase()
+        effectiveCreditorName.isNotEmpty
+            ? effectiveCreditorName[0].toUpperCase()
             : 'U',
         style: TextStyle(
           fontSize: 15,

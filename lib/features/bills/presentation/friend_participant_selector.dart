@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/theme.dart';
 import '../../../core/widgets/pingpay_loading.dart';
+import '../../friends/providers/friend_nickname_provider.dart';
 import '../../friends/providers/friends_provider.dart';
 import '../providers/bill_provider.dart';
 
@@ -15,6 +16,7 @@ class FriendParticipantSelector extends ConsumerWidget {
     final billState = ref.watch(billCreationProvider);
     final billNotifier = ref.read(billCreationProvider.notifier);
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final nicknamesMap = ref.watch(friendNicknameProvider);
 
     return friendsAsync.when(
       loading: () => const PingPayLoadingWidget(size: 120),
@@ -36,6 +38,9 @@ class FriendParticipantSelector extends ConsumerWidget {
             final isSelected = billState.participants.any(
               (p) => p.userId == friendUserId,
             );
+            final nickname = nicknamesMap[friend.user.id] ?? nicknamesMap[friend.user.userCode];
+            final hasNickname = nickname != null && nickname.trim().isNotEmpty;
+            final effectiveName = hasNickname ? nickname : friend.user.displayName;
 
             return Material(
               color: isDark
@@ -66,8 +71,8 @@ class FriendParticipantSelector extends ConsumerWidget {
                         radius: 20,
                         backgroundColor: const Color(0xFFFFF0E6),
                         child: Text(
-                          friend.user.displayName.isNotEmpty
-                              ? friend.user.displayName[0].toUpperCase()
+                          effectiveName.isNotEmpty
+                              ? effectiveName[0].toUpperCase()
                               : 'U',
                           style: const TextStyle(
                             fontWeight: FontWeight.bold,
@@ -80,12 +85,30 @@ class FriendParticipantSelector extends ConsumerWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              friend.user.displayName,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                              ),
+                            Row(
+                              children: [
+                                Flexible(
+                                  child: Text(
+                                    effectiveName,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                if (hasNickname) ...[
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    '(${friend.user.displayName})',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
+                                    ),
+                                  ),
+                                ],
+                              ],
                             ),
                             Text(
                               'รหัส: ${friend.user.userCode}',

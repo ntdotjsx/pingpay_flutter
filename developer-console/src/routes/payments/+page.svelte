@@ -231,7 +231,7 @@
       </div>
 
       <!-- Integrated Pagination Component -->
-      <DataTablePagination {table} totalItems={total} />
+      <DataTablePagination {table} />
     {/if}
   </div>
 
