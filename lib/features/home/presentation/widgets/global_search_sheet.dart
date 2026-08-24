@@ -210,8 +210,10 @@ class _GlobalSearchSheetState extends ConsumerState<GlobalSearchSheet> {
                       color: isDark ? AppColors.surfaceTile1 : Colors.white,
                       shape: SmoothRectangleBorder(
                         side: BorderSide(
-                          color: isDark ? Colors.white12 : const Color(0xFFE5E7EB),
-                          width: 0.9,
+                          color: _focusNode.hasFocus
+                              ? const Color(0xFFFF5000)
+                              : (isDark ? Colors.white12 : const Color(0xFFE5E7EB)),
+                          width: _focusNode.hasFocus ? 1.4 : 0.9,
                         ),
                         borderRadius: const SmoothBorderRadius.all(
                           SmoothRadius(cornerRadius: 14, cornerSmoothing: 0.8),
@@ -219,8 +221,10 @@ class _GlobalSearchSheetState extends ConsumerState<GlobalSearchSheet> {
                       ),
                       shadows: [
                         BoxShadow(
-                          color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.03),
-                          blurRadius: 8,
+                          color: _focusNode.hasFocus
+                              ? const Color(0xFFFF5000).withValues(alpha: 0.12)
+                              : Colors.black.withValues(alpha: isDark ? 0.2 : 0.03),
+                          blurRadius: _focusNode.hasFocus ? 10 : 8,
                           offset: const Offset(0, 2),
                         ),
                       ],
@@ -251,8 +255,14 @@ class _GlobalSearchSheetState extends ConsumerState<GlobalSearchSheet> {
                                 color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
                               ),
                               border: InputBorder.none,
+                              enabledBorder: InputBorder.none,
+                              focusedBorder: InputBorder.none,
+                              errorBorder: InputBorder.none,
+                              disabledBorder: InputBorder.none,
+                              focusedErrorBorder: InputBorder.none,
+                              filled: false,
                               isDense: true,
-                              contentPadding: EdgeInsets.zero,
+                              contentPadding: const EdgeInsets.symmetric(vertical: 10),
                             ),
                             onChanged: (val) => setState(() => _query = val),
                           ),
