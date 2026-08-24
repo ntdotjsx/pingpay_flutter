@@ -1077,6 +1077,7 @@ export class PaymentService {
           isLocked: item.isLocked,
           isOutstanding,
           debtStartDate: item.createdAt.toISOString(),
+          receiptImageUrl: bill.receiptImageUrl || null,
           paymentsCount: item.payments.length,
           latestPaymentStatus: item.payments.length > 0 ? item.payments[0].status : null,
         };

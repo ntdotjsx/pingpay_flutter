@@ -1,6 +1,8 @@
+import 'dart:convert';
 import 'package:figma_squircle/figma_squircle.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/app_toast.dart';
 import '../../models/payment_models.dart';
@@ -28,6 +30,57 @@ class FriendReceivableDetailBottomSheet extends ConsumerStatefulWidget {
 
 class _FriendReceivableDetailBottomSheetState
     extends ConsumerState<FriendReceivableDetailBottomSheet> {
+  void _showFullReceiptDialog(BuildContext context, String imageUrl) {
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+        child: Stack(
+          alignment: Alignment.topRight,
+          children: [
+            InteractiveViewer(
+              minScale: 0.5,
+              maxScale: 4.0,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: imageUrl.startsWith('data:image')
+                    ? Image.memory(
+                        base64Decode(
+                          imageUrl.replaceFirst(
+                            RegExp(r'data:image/[^;]+;base64,'),
+                            '',
+                          ),
+                        ),
+                        fit: BoxFit.contain,
+                      )
+                    : Image.network(
+                        imageUrl,
+                        fit: BoxFit.contain,
+                      ),
+              ),
+            ),
+            Positioned(
+              top: 8,
+              right: 8,
+              child: IconButton(
+                onPressed: () => Navigator.pop(ctx),
+                icon: Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.6),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.close_rounded, color: Colors.white, size: 20),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -41,8 +94,8 @@ class _FriendReceivableDetailBottomSheetState
         color: isDark ? AppColors.surfaceTile1 : AppColors.canvas,
         shape: const SmoothRectangleBorder(
           borderRadius: SmoothBorderRadius.only(
-            topLeft: SmoothRadius(cornerRadius: 28, cornerSmoothing: 1.0),
-            topRight: SmoothRadius(cornerRadius: 28, cornerSmoothing: 1.0),
+            topLeft: SmoothRadius(cornerRadius: 24, cornerSmoothing: 0.8),
+            topRight: SmoothRadius(cornerRadius: 24, cornerSmoothing: 0.8),
           ),
         ),
       ),
@@ -53,12 +106,10 @@ class _FriendReceivableDetailBottomSheetState
           Center(
             child: Container(
               margin: const EdgeInsets.only(top: 12, bottom: 8),
-              width: 38,
+              width: 36,
               height: 4,
               decoration: BoxDecoration(
-                color: isDark
-                    ? Colors.white24
-                    : AppColors.inkMuted48.withValues(alpha: 0.3),
+                color: isDark ? Colors.white24 : const Color(0xFFD1D5DB),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -70,7 +121,7 @@ class _FriendReceivableDetailBottomSheetState
             child: Row(
               children: [
                 _buildAvatar(isDark),
-                const SizedBox(width: 14),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -78,17 +129,17 @@ class _FriendReceivableDetailBottomSheetState
                       Text(
                         friend.debtor.displayName,
                         style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
+                          fontSize: 17,
+                          fontWeight: FontWeight.w800,
                           color: isDark ? AppColors.bodyOnDark : AppColors.ink,
                         ),
                       ),
                       const SizedBox(height: 2),
                       Text(
                         'ติดเราทั้งหมด ฿${friend.totalOutstandingAmount.toStringAsFixed(2)} • ${friend.bills.length} รายการ',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 12,
-                          color: AppColors.inkMuted48,
+                          color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -97,8 +148,10 @@ class _FriendReceivableDetailBottomSheetState
                 ),
                 IconButton(
                   onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Icons.close_rounded),
+                  icon: const Icon(Icons.close_rounded, size: 22),
                   color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
                 ),
               ],
             ),
@@ -106,14 +159,14 @@ class _FriendReceivableDetailBottomSheetState
 
           Divider(
             height: 1,
-            thickness: 1,
-            color: isDark ? Colors.white10 : AppColors.dividerSoft,
+            thickness: 0.6,
+            color: isDark ? Colors.white10 : const Color(0xFFE5E7EB),
           ),
 
           // Bills List
           Flexible(
             child: ListView.separated(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
               itemCount: friend.bills.length,
               separatorBuilder: (_, __) => const SizedBox(height: 12),
               itemBuilder: (context, index) {
@@ -134,26 +187,31 @@ class _FriendReceivableDetailBottomSheetState
             decoration: BoxDecoration(
               color: isDark
                   ? AppColors.surfaceTile2
-                  : AppColors.canvasParchment,
+                  : const Color(0xFFF9FAFB),
               border: Border(
                 top: BorderSide(
-                  color: isDark ? Colors.white10 : AppColors.hairline,
+                  color: isDark ? Colors.white10 : const Color(0xFFE5E7EB),
+                  width: 0.8,
                 ),
               ),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
+                Text(
                   'ยอดรวมที่ติดเรา',
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                    color: isDark ? AppColors.bodyOnDark : AppColors.ink,
+                  ),
                 ),
                 Text(
                   '฿${friend.totalOutstandingAmount.toStringAsFixed(2)}',
                   style: const TextStyle(
                     fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.primary,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFFFF5000),
                   ),
                 ),
               ],
@@ -173,137 +231,302 @@ class _FriendReceivableDetailBottomSheetState
     final formattedDate = DebtAgeCalculator.formatThaiDate(item.debtStartDate);
 
     return Container(
-      padding: const EdgeInsets.all(16),
       decoration: ShapeDecoration(
-        color: isDark ? AppColors.surfaceTile2 : AppColors.canvas,
+        color: isDark ? AppColors.surfaceTile2 : const Color(0xFFF9FAFB),
         shape: SmoothRectangleBorder(
-          side: BorderSide(color: isDark ? Colors.white10 : AppColors.hairline),
+          side: BorderSide(
+            color: isDark ? Colors.white10 : const Color(0xFFE5E7EB),
+            width: 0.8,
+          ),
           borderRadius: const SmoothBorderRadius.all(
-            SmoothRadius(cornerRadius: 16, cornerSmoothing: 1.0),
+            SmoothRadius(cornerRadius: 16, cornerSmoothing: 0.8),
           ),
         ),
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: Text(
-                  item.billTitle,
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.bold,
-                    color: isDark ? AppColors.bodyOnDark : AppColors.ink,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+          // 1. Tappable Header to Open Full Bill Details
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+              onTap: () {
+                Navigator.pop(context); // Close bottom sheet
+                context.push('/bills/${item.billId}');
+              },
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(14, 12, 14, 10),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Flexible(
+                                    child: Text(
+                                      item.billTitle,
+                                      style: TextStyle(
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w800,
+                                        color: isDark ? AppColors.bodyOnDark : AppColors.ink,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Icon(
+                                    Icons.chevron_right_rounded,
+                                    size: 18,
+                                    color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 3),
+                              Text(
+                                'ยอดเดิม ฿${item.originalAmount.toStringAsFixed(2)} • จ่ายแล้ว ฿${item.amountPaid.toStringAsFixed(2)}',
+                                style: TextStyle(
+                                  fontSize: 11.5,
+                                  color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text(
+                              item.isOutstanding
+                                  ? 'ติดเรา ฿${item.outstandingAmount.toStringAsFixed(2)}'
+                                  : (item.status == 'written_off'
+                                        ? 'ตัดหนี้แล้ว'
+                                        : 'ชำระแล้ว'),
+                              style: TextStyle(
+                                fontSize: 14.5,
+                                fontWeight: FontWeight.w800,
+                                color: item.isOutstanding
+                                    ? const Color(0xFFFF5000)
+                                    : (item.status == 'written_off'
+                                          ? (isDark ? AppColors.bodyMuted : AppColors.inkMuted48)
+                                          : const Color(0xFF34C759)),
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              '$ageText ($formattedDate)',
+                              style: TextStyle(
+                                fontSize: 10.5,
+                                color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+
+                    // Payment Progress Bar if partially paid
+                    if (item.isPartiallyPaid) ...[
+                      const SizedBox(height: 8),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(4),
+                        child: LinearProgressIndicator(
+                          value: item.paymentProgress,
+                          backgroundColor: isDark ? Colors.white10 : const Color(0xFFE5E7EB),
+                          valueColor: const AlwaysStoppedAnimation<Color>(
+                            Color(0xFF34C759),
+                          ),
+                          minHeight: 4.5,
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ),
-              Text(
-                item.isOutstanding
-                    ? 'ติดเรา ฿${item.outstandingAmount.toStringAsFixed(2)}'
-                    : (item.status == 'written_off'
-                          ? 'ตัดหนี้แล้ว'
-                          : 'ชำระแล้ว'),
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: item.isOutstanding
-                      ? AppColors.primary
-                      : (item.status == 'written_off'
-                            ? AppColors.inkMuted48
-                            : AppColors.success),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'ยอดเดิม ฿${item.originalAmount.toStringAsFixed(2)} • จ่ายแล้ว ฿${item.amountPaid.toStringAsFixed(2)}',
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: AppColors.inkMuted48,
-                ),
-              ),
-              Text(
-                '$ageText ($formattedDate)',
-                style: const TextStyle(
-                  fontSize: 11,
-                  color: AppColors.inkMuted48,
-                ),
-              ),
-            ],
+            ),
           ),
 
-          // Payment Progress Bar if partially paid
-          if (item.isPartiallyPaid) ...[
-            const SizedBox(height: 10),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(4),
-              child: LinearProgressIndicator(
-                value: item.paymentProgress,
-                backgroundColor: isDark ? Colors.white10 : AppColors.hairline,
-                valueColor: const AlwaysStoppedAnimation<Color>(
-                  AppColors.success,
-                ),
-                minHeight: 5,
+          // 2. Receipt / Evidence Image Thumbnail if available
+          if (item.receiptImageUrl != null && item.receiptImageUrl!.isNotEmpty) ...[
+            Divider(
+              height: 1,
+              thickness: 0.6,
+              color: isDark ? Colors.white10 : const Color(0xFFE5E7EB),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 9, 14, 10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.receipt_long_rounded,
+                            size: 14,
+                            color: Color(0xFFFF5000),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            'หลักฐานบิล / รูปใบเสร็จ',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: isDark ? AppColors.bodyOnDark : AppColors.ink,
+                            ),
+                          ),
+                        ],
+                      ),
+                      GestureDetector(
+                        onTap: () => _showFullReceiptDialog(context, item.receiptImageUrl!),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFF5000).withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(5),
+                          ),
+                          child: const Text(
+                            'ดูรูปเต็ม',
+                            style: TextStyle(
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFFFF5000),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 7),
+                  GestureDetector(
+                    onTap: () => _showFullReceiptDialog(context, item.receiptImageUrl!),
+                    child: Container(
+                      height: 72,
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: isDark ? Colors.white10 : const Color(0xFFE5E7EB),
+                          width: 0.8,
+                        ),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: item.receiptImageUrl!.startsWith('data:image')
+                            ? Image.memory(
+                                base64Decode(
+                                  item.receiptImageUrl!.replaceFirst(
+                                    RegExp(r'data:image/[^;]+;base64,'),
+                                    '',
+                                  ),
+                                ),
+                                fit: BoxFit.cover,
+                                errorBuilder: (ctx, _, __) => const Center(
+                                  child: Icon(Icons.broken_image_rounded, color: Colors.grey, size: 24),
+                                ),
+                              )
+                            : Image.network(
+                                item.receiptImageUrl!,
+                                fit: BoxFit.cover,
+                                errorBuilder: (ctx, _, __) => const Center(
+                                  child: Icon(Icons.broken_image_rounded, color: Colors.grey, size: 24),
+                                ),
+                              ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
 
-          // Actions: [ แก้ไขยอด ] & [ ยกเลิกหนี้ (Write-off) ]
-          if (item.isOutstanding) ...[
-            const SizedBox(height: 12),
-            Row(
+          // 3. Action Buttons Row: [ ดูบิลเต็ม ] [ แก้ไขยอด ] [ ยกเลิกหนี้ ]
+          Divider(
+            height: 1,
+            thickness: 0.6,
+            color: isDark ? Colors.white10 : const Color(0xFFE5E7EB),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            child: Row(
               children: [
                 Expanded(
                   child: OutlinedButton.icon(
-                    onPressed: () => _showEditAmountDialog(context, item),
-                    icon: const Icon(Icons.edit_outlined, size: 14),
-                    label: const Text('แก้ไขยอด', style: TextStyle(fontSize: 12)),
+                    onPressed: () {
+                      Navigator.pop(context);
+                      context.push('/bills/${item.billId}');
+                    },
+                    icon: const Icon(Icons.receipt_rounded, size: 13),
+                    label: const Text('ดูบิลเต็ม', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700)),
                     style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      foregroundColor: isDark ? AppColors.bodyOnDark : AppColors.ink,
                       side: BorderSide(
-                        color: isDark ? Colors.white24 : AppColors.hairline,
+                        color: isDark ? Colors.white24 : const Color(0xFFE5E7EB),
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
                       ),
                     ),
                   ),
                 ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () => _showWriteOffDialog(context, item),
-                    icon: const Icon(
-                      Icons.money_off_rounded,
-                      size: 14,
-                      color: AppColors.error,
-                    ),
-                    label: const Text(
-                      'ยกเลิกหนี้',
-                      style: TextStyle(fontSize: 12, color: AppColors.error),
-                    ),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      side: BorderSide(
-                        color: AppColors.error.withValues(alpha: 0.5),
+                if (item.isOutstanding) ...[
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () => _showEditAmountDialog(context, item),
+                      icon: const Icon(Icons.edit_outlined, size: 13),
+                      label: const Text('แก้ไขยอด', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700)),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 6),
+                        foregroundColor: isDark ? AppColors.bodyOnDark : AppColors.ink,
+                        side: BorderSide(
+                          color: isDark ? Colors.white24 : const Color(0xFFE5E7EB),
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
                       ),
                     ),
                   ),
-                ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () => _showWriteOffDialog(context, item),
+                      icon: const Icon(
+                        Icons.money_off_rounded,
+                        size: 13,
+                        color: AppColors.error,
+                      ),
+                      label: const Text(
+                        'ยกเลิกหนี้',
+                        style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: AppColors.error),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 6),
+                        side: BorderSide(
+                          color: AppColors.error.withValues(alpha: 0.35),
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ),
-          ],
+          ),
         ],
       ),
     );

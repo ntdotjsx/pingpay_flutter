@@ -353,6 +353,7 @@ class ReceivableBillItemModel {
   final bool isLocked;
   final bool isOutstanding;
   final DateTime debtStartDate;
+  final String? receiptImageUrl;
   final int paymentsCount;
   final String? latestPaymentStatus;
 
@@ -370,6 +371,7 @@ class ReceivableBillItemModel {
     this.isLocked = false,
     this.isOutstanding = true,
     required this.debtStartDate,
+    this.receiptImageUrl,
     this.paymentsCount = 0,
     this.latestPaymentStatus,
   });
@@ -397,6 +399,7 @@ class ReceivableBillItemModel {
           ? DateTime.tryParse(json['debtStartDate'].toString()) ??
                 DateTime.now()
           : DateTime.now(),
+      receiptImageUrl: json['receiptImageUrl'] as String?,
       paymentsCount: _asInt(json['paymentsCount']),
       latestPaymentStatus: json['latestPaymentStatus'] as String?,
     );
@@ -416,6 +419,7 @@ class ReceivableBillItemModel {
     'isLocked': isLocked,
     'isOutstanding': isOutstanding,
     'debtStartDate': debtStartDate.toIso8601String(),
+    'receiptImageUrl': receiptImageUrl,
     'paymentsCount': paymentsCount,
     'latestPaymentStatus': latestPaymentStatus,
   };
