@@ -24,17 +24,21 @@ class HomeScreen extends ConsumerStatefulWidget {
   ConsumerState<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends ConsumerState<HomeScreen> {
+class _HomeScreenState extends ConsumerState<HomeScreen>
+    with WidgetsBindingObserver {
   final ScrollController _scrollController = ScrollController();
   bool _isPullTriggered = false;
   double _pullDistance = 0.0;
   late DateTime _selectedDate;
+  late DateTime _lastInitDay;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     final now = DateTime.now();
     _selectedDate = DateTime(now.year, now.month, now.day);
+    _lastInitDay = _selectedDate;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(userDebtsProvider.notifier).loadDebts(showLoading: false);
       ref.read(userReceivablesProvider.notifier).loadReceivables(showLoading: false);
@@ -42,7 +46,24 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    if (state == AppLifecycleState.resumed) {
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+      // If the day has changed since last init/resume, auto-select today
+      if (today != _lastInitDay) {
+        setState(() {
+          _selectedDate = today;
+          _lastInitDay = today;
+        });
+      }
+    }
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _scrollController.dispose();
     super.dispose();
   }

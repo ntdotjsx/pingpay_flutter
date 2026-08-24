@@ -31,6 +31,8 @@ class PingPayApp extends ConsumerStatefulWidget {
 }
 
 class _PingPayAppState extends ConsumerState<PingPayApp> with WidgetsBindingObserver {
+  DateTime? _pausedAt;
+
   @override
   void initState() {
     super.initState();
@@ -51,10 +53,18 @@ class _PingPayAppState extends ConsumerState<PingPayApp> with WidgetsBindingObse
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    // When user leaves the app, swipes to home, or locks screen
-    if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive || state == AppLifecycleState.hidden) {
-      ref.read(authStateProvider.notifier).lockApp();
+    // Only track actual backgrounding (paused), avoid locking on system modals / camera / gallery picker
+    if (state == AppLifecycleState.paused) {
+      _pausedAt = DateTime.now();
     } else if (state == AppLifecycleState.resumed) {
+      if (_pausedAt != null) {
+        final elapsed = DateTime.now().difference(_pausedAt!);
+        // Grace period: Only lock if user left app in background for > 60 seconds
+        if (elapsed.inSeconds >= 60) {
+          ref.read(authStateProvider.notifier).lockApp();
+        }
+        _pausedAt = null;
+      }
       ref.read(realtimeControllerProvider).onAppResumed();
     }
   }

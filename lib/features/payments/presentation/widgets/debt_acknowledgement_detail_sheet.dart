@@ -622,3 +622,147 @@ class DebtAcknowledgementDetailSheet extends ConsumerWidget {
     );
   }
 }
+
+class SwipeToAcknowledgeButton extends StatefulWidget {
+  final String label;
+  final Future<void> Function() onAcknowledge;
+
+  const SwipeToAcknowledgeButton({
+    super.key,
+    required this.label,
+    required this.onAcknowledge,
+  });
+
+  @override
+  State<SwipeToAcknowledgeButton> createState() => _SwipeToAcknowledgeButtonState();
+}
+
+class _SwipeToAcknowledgeButtonState extends State<SwipeToAcknowledgeButton> {
+  double _dragPosition = 0.0;
+  bool _isAcknowledging = false;
+
+  @override
+  Widget build(BuildContext context) {
+    const double totalHeight = 52.0;
+    const double thumbSize = 44.0;
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final double maxDrag = constraints.maxWidth - thumbSize - 8.0;
+
+        return Container(
+          height: totalHeight,
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFFFF9500), Color(0xFFFF5000)],
+              begin: Alignment.centerLeft,
+              end: Alignment.centerRight,
+            ),
+            borderRadius: BorderRadius.circular(26),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFFFF9500).withValues(alpha: 0.35),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Stack(
+            alignment: Alignment.centerLeft,
+            children: [
+              // Center Label
+              Center(
+                child: _isAcknowledging
+                    ? const SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.5,
+                          color: Colors.white,
+                        ),
+                      )
+                    : Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            widget.label,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: -0.2,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          const Icon(
+                            Icons.keyboard_double_arrow_right_rounded,
+                            color: Colors.white70,
+                            size: 18,
+                          ),
+                        ],
+                      ),
+              ),
+
+              // Draggable Thumb
+              if (!_isAcknowledging)
+                Positioned(
+                  left: 4.0 + _dragPosition,
+                  child: GestureDetector(
+                    onHorizontalDragUpdate: (details) {
+                      setState(() {
+                        _dragPosition = (_dragPosition + details.delta.dx)
+                            .clamp(0.0, maxDrag);
+                      });
+                    },
+                    onHorizontalDragEnd: (details) async {
+                      if (_dragPosition >= maxDrag * 0.75) {
+                        setState(() {
+                          _dragPosition = maxDrag;
+                          _isAcknowledging = true;
+                        });
+                        HapticFeedback.heavyImpact();
+                        try {
+                          await widget.onAcknowledge();
+                        } catch (_) {
+                          if (mounted) {
+                            setState(() {
+                              _dragPosition = 0.0;
+                              _isAcknowledging = false;
+                            });
+                          }
+                        }
+                      } else {
+                        setState(() {
+                          _dragPosition = 0.0;
+                        });
+                      }
+                    },
+                    child: Container(
+                      width: thumbSize,
+                      height: thumbSize,
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black26,
+                            blurRadius: 6,
+                            offset: Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.arrow_forward_rounded,
+                        color: Color(0xFFFF9500),
+                        size: 22,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}

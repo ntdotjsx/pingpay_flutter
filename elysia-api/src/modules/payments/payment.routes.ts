@@ -10,9 +10,9 @@ const paymentService = new PaymentService();
 
 export const paymentRoutes = new Elysia()
   // 4.13 Submit payment with slip (debtor submits payment)
-  .post("/bills/:billId/payments", async ({ params: { billId }, body, user, set }) => {
+  .post("/:id/payments", async ({ params: { id }, body, user, set }) => {
     try {
-      const result = await paymentService.createPayment(user.id, billId, body);
+      const result = await paymentService.createPayment(user.id, id, body);
       set.status = 201;
       return { success: true, data: result };
     } catch (e: any) {
@@ -34,7 +34,7 @@ export const paymentRoutes = new Elysia()
       return { success: false, error: e.message };
     }
   }, {
-    params: t.Object({ billId: t.String({ format: "uuid" }) }),
+    params: t.Object({ id: t.String({ format: "uuid" }) }),
     body: CreatePaymentSchema,
     detail: {
       tags: ["Payments"],
@@ -44,9 +44,9 @@ export const paymentRoutes = new Elysia()
   })
 
   // 4.15 Get payments history for a bill
-  .get("/bills/:billId/payments", async ({ params: { billId }, user, set }) => {
+  .get("/:id/payments", async ({ params: { id }, user, set }) => {
     try {
-      const history = await paymentService.getBillPaymentsHistory(user.id, billId);
+      const history = await paymentService.getBillPaymentsHistory(user.id, id);
       return { success: true, data: history };
     } catch (e: any) {
       if (e.message.includes("UNAUTHORIZED")) {
@@ -59,7 +59,7 @@ export const paymentRoutes = new Elysia()
       return { success: false, error: e.message };
     }
   }, {
-    params: t.Object({ billId: t.String({ format: "uuid" }) }),
+    params: t.Object({ id: t.String({ format: "uuid" }) }),
     detail: {
       tags: ["Payments"],
       summary: "Get payment history for a bill",

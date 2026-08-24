@@ -479,32 +479,7 @@ class FriendDetailScreen extends ConsumerWidget {
 
                 const SizedBox(height: 24),
 
-                // ── 3. Quick Action: Create Bill With Friend ────────────────
-                ElevatedButton.icon(
-                  onPressed: () {
-                    HapticFeedback.mediumImpact();
-                    ref.read(billCreationProvider.notifier).setSelectedFriends([friend]);
-                    context.push('/bills/create');
-                  },
-                  icon: const Icon(Icons.receipt_long_rounded, size: 20),
-                  label: const Text(
-                    'สร้างบิลหารเงินกับเพื่อนคนนี้',
-                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFFF5000),
-                    foregroundColor: Colors.white,
-                    elevation: 3,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 12),
-
-                // ── 4. Remove Friend Action Button ──────────────────────────
+                // ── 3. Remove Friend Action Button ──────────────────────────
                 OutlinedButton.icon(
                   onPressed: actionState.isLoading
                       ? null

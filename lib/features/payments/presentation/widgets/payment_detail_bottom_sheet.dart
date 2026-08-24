@@ -173,8 +173,8 @@ class _PaymentDetailBottomSheetState
             ),
             const SizedBox(height: 6),
             const Text(
-              'สถานะ: รอเจ้าของบิลยืนยันการรับเงิน\n(ระบบจะอัปเดตยอดหนี้เมื่อเจ้าของบิลกดยืนยัน)',
-              style: TextStyle(fontSize: 13, color: AppColors.inkMuted48),
+              'สถานะ: ชำระเงินสำเร็จ\n(ระบบตรวจสอบสลิปและตัดยอดหนี้อัตโนมัติเรียบร้อยแล้ว)',
+              style: TextStyle(fontSize: 13, color: AppColors.success),
             ),
             const SizedBox(height: 12),
             Container(

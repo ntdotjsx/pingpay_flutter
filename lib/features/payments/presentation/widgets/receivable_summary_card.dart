@@ -23,102 +23,110 @@ class ReceivableSummaryCard extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+      padding: const EdgeInsets.all(22),
       decoration: ShapeDecoration(
-        color: isDark ? AppColors.surfaceTile1 : AppColors.canvas,
+        color: isDark ? AppColors.surfaceTile1 : Colors.white,
         shadows: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.06),
-            blurRadius: 16,
-            offset: const Offset(0, 4),
+            color: Colors.black.withValues(alpha: isDark ? 0.35 : 0.05),
+            blurRadius: 20,
+            offset: const Offset(0, 6),
           ),
         ],
         shape: SmoothRectangleBorder(
           side: BorderSide(
-            color: isDark ? Colors.white10 : AppColors.hairline,
+            color: isDark
+                ? Colors.white10
+                : const Color(0xFF34C759).withValues(alpha: 0.2),
             width: 1,
           ),
           borderRadius: const SmoothBorderRadius.all(
-            SmoothRadius(cornerRadius: 22, cornerSmoothing: 1.0),
+            SmoothRadius(cornerRadius: 24, cornerSmoothing: 0.8),
           ),
         ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Header Row
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(
-                      color: AppColors.success.withValues(alpha: 0.12),
-                      shape: BoxShape.circle,
+                    width: 36,
+                    height: 36,
+                    decoration: ShapeDecoration(
+                      color: const Color(0xFF34C759).withValues(alpha: 0.12),
+                      shape: const SmoothRectangleBorder(
+                        borderRadius: SmoothBorderRadius.all(
+                          SmoothRadius(cornerRadius: 11, cornerSmoothing: 0.8),
+                        ),
+                      ),
                     ),
                     child: const Icon(
                       Icons.call_received_rounded,
-                      size: 16,
-                      color: AppColors.success,
+                      color: Color(0xFF34C759),
+                      size: 19,
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 10),
                   Text(
-                    'เพื่อนติดเรา',
+                    'ยอดที่เพื่อนติดเรา',
                     style: TextStyle(
                       fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: isDark ? AppColors.bodyOnDark : AppColors.ink,
+                      fontWeight: FontWeight.w700,
                       letterSpacing: -0.2,
+                      color: isDark ? AppColors.bodyMuted : AppColors.inkMuted80,
                     ),
                   ),
                 ],
               ),
               Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 4,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
                   color: debtorCount > 0
-                      ? AppColors.primary.withValues(alpha: 0.12)
-                      : (isDark
-                            ? AppColors.surfaceTile2
-                            : AppColors.canvasParchment),
-                  borderRadius: BorderRadius.circular(12),
+                      ? const Color(0xFF34C759).withValues(alpha: 0.12)
+                      : (isDark ? AppColors.surfaceTile2 : const Color(0xFFF4F6F9)),
+                  borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(
-                  '$debtorCount คน',
+                  debtorCount > 0 ? '$debtorCount คนค้างชำระ' : 'ไม่มีลูกหนี้ค้าง 🎉',
                   style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w700,
                     color: debtorCount > 0
-                        ? AppColors.primary
+                        ? const Color(0xFF34C759)
                         : AppColors.inkMuted48,
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
+
+          const SizedBox(height: 16),
+
+          // Large Balance Number
           AnimatedCounterText(
             value: totalOutstandingAmount,
             prefix: '฿',
             style: TextStyle(
-              fontSize: 32,
-              fontWeight: FontWeight.bold,
-              letterSpacing: -0.8,
-              color: totalOutstandingAmount > 0
-                  ? (isDark ? Colors.white : AppColors.ink)
-                  : AppColors.inkMuted48,
+              fontSize: 34,
+              fontWeight: FontWeight.w900,
+              letterSpacing: -1.0,
+              color: isDark ? AppColors.bodyOnDark : AppColors.ink,
             ),
           ),
-          const SizedBox(height: 2),
+
+          const SizedBox(height: 4),
+
+          // Subtitle
           Text(
-            'ยอดที่ยังไม่ได้รับ (เพื่อนยังค้างชำระ)',
+            'ยอดเงินทั้งหมดที่เพื่อนกำลังรอชำระคืนคุณ',
             style: TextStyle(
               fontSize: 12,
+              fontWeight: FontWeight.w500,
               color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
             ),
           ),

@@ -101,31 +101,13 @@ export class SlipOkVerificationService implements SlipVerificationService {
       };
     }
 
-    // Production SlipOK SDK Integration
+    // Strict SlipOK SDK Integration (Reject if credentials not configured)
     if (!this.slipOk) {
-      // Fallback in case no credentials configured: simulation mode for test environments
-      if (!input.qrData && !fileBuffer) {
-        return {
-          verified: false,
-          failureCode: "NO_PAYLOAD",
-          failureMessage: "Neither slip image nor QR data was provided.",
-          slipHash,
-        };
-      }
-
-      // Default safe simulation for unconfigured dev environment
       return {
-        verified: true,
-        transactionReference: "SIMULATED-REF-" + (slipHash ? slipHash.substring(0, 12) : "QR"),
-        amount: input.expectedAmount || 100,
-        sender: { name: "Test Payer" },
-        receiver: {
-          promptPayId: input.expectedReceiverPromptPay,
-          account: input.expectedReceiverAccount,
-        },
-        transactionDate: new Date(),
+        verified: false,
+        failureCode: "SLIPOK_NOT_CONFIGURED",
+        failureMessage: "SlipOK API Key / Branch ID is not configured on server.",
         slipHash,
-        rawResponse: { simulated: true },
       };
     }
 

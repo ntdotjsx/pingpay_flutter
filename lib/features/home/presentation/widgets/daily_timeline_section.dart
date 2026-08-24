@@ -91,9 +91,9 @@ class DailyTimelineSection extends StatelessWidget {
               decoration: ShapeDecoration(
                 color: isDark ? AppColors.surfaceTile1 : AppColors.canvas,
                 shape: SmoothRectangleBorder(
-                  side: BorderSide(
-                    color: isDark ? Colors.white10 : AppColors.hairline,
-                  ),
+                  // side: BorderSide(
+                  //   color: isDark ? Colors.white10 : AppColors.hairline,
+                  // ),
                   borderRadius: const SmoothBorderRadius.all(
                     SmoothRadius(cornerRadius: 16, cornerSmoothing: 1.0),
                   ),
@@ -237,10 +237,7 @@ class DailyTimelineSection extends StatelessWidget {
       decoration: ShapeDecoration(
         color: isDark ? AppColors.surfaceTile1 : AppColors.canvas,
         shape: SmoothRectangleBorder(
-          side: BorderSide(
-            color: const Color(0xFF007AFF).withValues(alpha: 0.3),
-            width: 1,
-          ),
+
           borderRadius: const SmoothBorderRadius.all(
             SmoothRadius(cornerRadius: 16, cornerSmoothing: 1.0),
           ),
@@ -288,7 +285,7 @@ class DailyTimelineSection extends StatelessWidget {
                       style: const TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFF007AFF),
+                        // color: Color(0xFF007AFF),
                       ),
                     ),
                     const SizedBox(height: 2),

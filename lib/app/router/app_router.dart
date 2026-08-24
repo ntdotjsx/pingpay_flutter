@@ -27,6 +27,8 @@ import '../../features/rewards/presentation/rewards_store_screen.dart';
 
 final rootNavigatorKey = GlobalKey<NavigatorState>();
 
+String? _savedLocationBeforeLock;
+
 final routerProvider = Provider<GoRouter>((ref) {
   final authNotifier = ref.watch(authStateProvider.notifier);
 
@@ -191,17 +193,28 @@ final routerProvider = Provider<GoRouter>((ref) {
 
         case OnboardingState.completed:
           if (authState.isLocked) {
+            if (currentLoc != '/pin/lock' &&
+                currentLoc != '/login' &&
+                currentLoc != '/splash' &&
+                currentLoc != '/pdpa' &&
+                currentLoc != '/pin/setup') {
+              _savedLocationBeforeLock = state.uri.toString();
+            }
             return currentLoc == '/pin/lock' ? null : '/pin/lock';
+          }
+          if (currentLoc == '/pin/lock') {
+            final target = _savedLocationBeforeLock ?? '/home';
+            _savedLocationBeforeLock = null;
+            return target;
           }
           if (currentLoc == '/login' ||
               currentLoc == '/splash' ||
               currentLoc == '/pdpa' ||
               currentLoc == '/pin/setup' ||
-              currentLoc == '/pin/lock' ||
               currentLoc == '/profile/setup') {
             return '/home';
           }
-          return null; // allow /home or /bills/create
+          return null; // allow current screen (e.g. /bills/create, /friends/...)
       }
     },
   );

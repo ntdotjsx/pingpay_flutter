@@ -196,11 +196,14 @@ export class PaymentService {
       }
     }
 
-    const installmentNo = await this.repo.getNextInstallmentNumber(item.id);
-    const initialStatus = slipResult.verified
-      ? "pending_owner_confirmation"
-      : "verification_failed";
+    // 4.19 Strict Check: Must be verified by SlipOK
+    if (!slipResult.verified) {
+      throw new Error(`SLIP_VERIFICATION_FAILED: ${slipResult.failureMessage || "Slip verification failed."}`);
+    }
 
+    const installmentNo = await this.repo.getNextInstallmentNumber(item.id);
+
+    // 1. Create Payment as CONFIRMED directly
     const newPayment = await this.repo.createPayment(
       {
         billItemId: item.id,
@@ -211,13 +214,15 @@ export class PaymentService {
         installmentNumber: installmentNo,
         slipHash: slipResult.slipHash || slipHash,
         slipOkReferenceId: slipResult.transactionReference,
-        slipOkVerifiedAt: slipResult.verified ? new Date() : undefined,
+        slipOkVerifiedAt: new Date(),
         slipOkRawResponse: slipResult.rawResponse,
-        status: initialStatus,
+        status: "confirmed",
+        confirmedByOwnerAt: new Date(),
+        confirmedByOwnerId: bill.ownerId,
       },
       {
         provider: "slipok",
-        status: slipResult.verified ? "success" : "failed",
+        status: "success",
         providerReference: slipResult.transactionReference,
         verifiedAmount: slipResult.amount !== undefined ? slipResult.amount.toFixed(2) : undefined,
         senderInfo: slipResult.sender,
@@ -228,40 +233,130 @@ export class PaymentService {
       }
     );
 
-    // 5.2 & 5.26 Enqueue PAYMENT_PENDING_CONFIRMATION to Bill Owner
-    if (initialStatus === "pending_owner_confirmation") {
-      await this.outboxService.enqueue({
-        eventType: "PAYMENT_PENDING_CONFIRMATION",
-        recipientUserId: bill.ownerId,
-        deduplicationKey: `PAYMENT_PENDING_CONFIRMATION:${newPayment.id}:${bill.ownerId}`,
-        payload: {
-          billId: bill.id,
-          billTitle: bill.title || "Bill",
-          paymentId: newPayment.id,
-          participantId: item.id,
-          payerId,
-          payerName: item.debtor.displayName || item.debtor.fullName || "Friend",
-          amount: dto.amount.toFixed(2),
-          currency: bill.currency || "THB",
-          slipVerified: true,
-        },
-      });
+    // 2. Auto Settle Debts & Update Balance immediately
+    const newPaidCents = paidCents + paymentCents;
+    const newPaidAmount = (newPaidCents / 100).toFixed(2);
+    const remainingCents = Math.max(0, currentCents - newPaidCents - writtenOffCents);
+    const isFullySettled = remainingCents === 0;
 
-      // Backward compatibility with mock line notification
-      try {
-        await this.notificationService.notify({
-          userId: bill.ownerId,
-          billId: bill.id,
-          billTitle: bill.title || "Bill",
-          actorName: item.debtor.displayName || item.debtor.fullName || "Friend",
-          type: "update",
-          oldAmount: (outstandingCents / 100).toFixed(2),
-          newAmount: ((outstandingCents - paymentCents) / 100).toFixed(2),
-          reason: `Slip verified (${dto.amount} THB). Please review and confirm receipt.`,
-          timestamp: new Date(),
-        });
-      } catch (err) {}
+    // 3. Insert Immutable Financial Transaction
+    await db.insert(financialTransactions).values({
+      billId: bill.id,
+      billItemId: item.id,
+      type: "payment",
+      amount: dto.amount.toFixed(2),
+      currency: bill.currency,
+      referenceId: newPayment.id,
+      createdById: payerId,
+      metadata: {
+        installmentNumber: installmentNo,
+        slipOkReferenceId: slipResult.transactionReference,
+        autoConfirmed: true,
+        idempotencyKey: dto.idempotencyKey,
+      },
+    });
+
+    // 4. Update Bill Item paid amount and status
+    await db
+      .update(billItems)
+      .set({
+        amountPaid: newPaidAmount,
+        status: isFullySettled ? "paid" : "partially_paid",
+        isLocked: isFullySettled ? true : item.isLocked,
+        updatedAt: new Date(),
+      })
+      .where(eq(billItems.id, item.id));
+
+    // 5. Derive & Recalculate Overall Bill Status
+    const allBillItems = await db.query.billItems.findMany({
+      where: eq(billItems.billId, bill.id),
+    });
+
+    const participantStates = allBillItems.map((bi) => {
+      if (bi.id === item.id) {
+        return {
+          originalDebt: Number(bi.originalAmount),
+          currentAmount: Number(bi.currentAmount),
+          amountPaid: newPaidCents / 100,
+          amountWrittenOff: Number(bi.amountWrittenOff),
+        };
+      }
+      return {
+        originalDebt: Number(bi.originalAmount),
+        currentAmount: Number(bi.currentAmount),
+        amountPaid: Number(bi.amountPaid),
+        amountWrittenOff: Number(bi.amountWrittenOff),
+      };
+    });
+
+    const calculatedBillStatus = BillStatusService.calculateBillStatus({
+      participants: participantStates,
+    });
+
+    await db
+      .update(bills)
+      .set({
+        status: calculatedBillStatus.status,
+        updatedAt: new Date(),
+      })
+      .where(eq(bills.id, bill.id));
+
+    // 6. Award Points upon full debt settlement
+    if (isFullySettled) {
+      let earnedPoints = 10;
+      if (dto.amount > 5000) earnedPoints = 300;
+      else if (dto.amount > 2000) earnedPoints = 150;
+      else if (dto.amount > 500) earnedPoints = 60;
+      else if (dto.amount > 100) earnedPoints = 25;
+
+      const debtorUser = await db.query.users.findFirst({
+        where: eq(users.id, item.debtorId),
+      });
+      if (debtorUser) {
+        await db
+          .update(users)
+          .set({
+            rewardPoints: (debtorUser.rewardPoints ?? 0) + earnedPoints,
+            updatedAt: new Date(),
+          })
+          .where(eq(users.id, item.debtorId));
+      }
     }
+
+    // 7. Enqueue Confirmed Notifications
+    await this.outboxService.enqueue({
+      eventType: "PAYMENT_CONFIRMED",
+      recipientUserId: bill.ownerId,
+      deduplicationKey: `PAYMENT_CONFIRMED_OWNER:${newPayment.id}:${bill.ownerId}`,
+      payload: {
+        billId: bill.id,
+        billTitle: bill.title || "Bill",
+        paymentId: newPayment.id,
+        participantId: item.id,
+        payerId,
+        payerName: item.debtor.displayName || item.debtor.fullName || "Friend",
+        amount: dto.amount.toFixed(2),
+        currency: bill.currency || "THB",
+        remainingDebt: (remainingCents / 100).toFixed(2),
+        autoConfirmed: true,
+      },
+    });
+
+    await this.outboxService.enqueue({
+      eventType: "PAYMENT_CONFIRMED",
+      recipientUserId: payerId,
+      deduplicationKey: `PAYMENT_CONFIRMED_PAYER:${newPayment.id}:${payerId}`,
+      payload: {
+        billId: bill.id,
+        billTitle: bill.title || "Bill",
+        paymentId: newPayment.id,
+        participantId: item.id,
+        amount: dto.amount.toFixed(2),
+        currency: bill.currency || "THB",
+        remainingDebt: (remainingCents / 100).toFixed(2),
+        autoConfirmed: true,
+      },
+    });
 
     const result = {
       id: newPayment.id,
@@ -269,12 +364,10 @@ export class PaymentService {
       participantId: item.id,
       payerId,
       amount: parseFloat(newPayment.amount),
-      status: newPayment.status,
+      status: "confirmed",
       installmentNumber: newPayment.installmentNumber,
-      slipOkVerified: slipResult.verified,
-      message: slipResult.verified
-        ? "Payment submitted and verified by SlipOK. Waiting for bill owner confirmation."
-        : "Slip verification failed. Payment cannot proceed to confirmation.",
+      slipOkVerified: true,
+      message: "Payment verified by SlipOK and confirmed automatically.",
     };
 
     if (dto.idempotencyKey) {
@@ -291,11 +384,13 @@ export class PaymentService {
           participantId: item.id,
           payerId,
           ownerId: bill.ownerId,
-          status: newPayment.status,
+          status: "confirmed",
         },
         { resourceId: bill.id }
       )
     );
+
+    return result;
     if (initialStatus === "pending_owner_confirmation") {
       realtimeService.sendToUser(
         bill.ownerId,

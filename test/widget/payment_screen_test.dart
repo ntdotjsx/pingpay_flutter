@@ -23,10 +23,12 @@ void main() {
       ),
     );
 
-    expect(find.text('ค้างชำระ'), findsOneWidget);
-    expect(find.text('4 รายการ'), findsOneWidget);
-    expect(find.text('฿2450.00'), findsOneWidget);
-    expect(find.text('ยอดที่ต้องชำระทั้งหมด'), findsOneWidget);
+    await tester.pumpAndSettle();
+
+    expect(find.text('ยอดที่เราต้องชำระ'), findsOneWidget);
+    expect(find.text('4 รายการค้าง'), findsOneWidget);
+    expect(find.text('฿2,450.00'), findsOneWidget);
+    expect(find.text('ยอดหนี้ค้างชำระทั้งหมดที่ต้องโอนคืนเพื่อน'), findsOneWidget);
   });
 
   testWidgets(
@@ -94,11 +96,13 @@ void main() {
         ),
       );
 
-      expect(find.text('เพื่อนติดเรา'), findsOneWidget);
-      expect(find.text('3 คน'), findsOneWidget);
-      expect(find.text('1850.00'), findsOneWidget);
+      await tester.pumpAndSettle();
+
+      expect(find.text('ยอดที่เพื่อนติดเรา'), findsOneWidget);
+      expect(find.text('3 คนค้างชำระ'), findsOneWidget);
+      expect(find.text('฿1,850.00'), findsOneWidget);
       expect(
-        find.text('ยอดที่ยังไม่ได้รับ (เพื่อนยังค้างชำระ)'),
+        find.text('ยอดเงินทั้งหมดที่เพื่อนกำลังรอชำระคืนคุณ'),
         findsOneWidget,
       );
     },

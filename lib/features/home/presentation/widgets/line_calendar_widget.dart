@@ -53,7 +53,19 @@ class _LineCalendarWidgetState extends State<LineCalendarWidget> {
   void didUpdateWidget(covariant LineCalendarWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (!_isSameDay(oldWidget.selectedDate, widget.selectedDate)) {
-      _scrollToDate(widget.selectedDate, animated: true);
+      // If the new selected date is outside the current date range, rebuild
+      final inRange = _dates.any((d) => _isSameDay(d, widget.selectedDate));
+      if (!inRange) {
+        final now = DateTime.now();
+        _baseDate = DateTime(now.year, now.month, now.day);
+        _dates = List.generate(
+          _pastDays + _futureDays + 1,
+          (index) => _baseDate.add(Duration(days: index - _pastDays)),
+        );
+      }
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _scrollToDate(widget.selectedDate, animated: true);
+      });
     }
   }
 

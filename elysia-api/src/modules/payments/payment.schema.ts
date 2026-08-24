@@ -2,7 +2,7 @@ import { t } from "elysia";
 
 export const CreatePaymentSchema = t.Object({
   participantId: t.String({ format: "uuid", description: "Bill Item ID (debtor participant ID)" }),
-  amount: t.Number({ minimum: 0.01, description: "Payment amount in THB" }),
+  amount: t.Numeric({ minimum: 0.01, description: "Payment amount in THB" }),
   method: t.Optional(t.Union([t.Literal("full"), t.Literal("installment")], { default: "full" })),
   channel: t.Optional(t.Union([t.Literal("promptpay_qr"), t.Literal("bank_transfer"), t.Literal("cash")], { default: "promptpay_qr" })),
   slip: t.Optional(t.File({ description: "Uploaded slip image (JPEG, PNG, WEBP, HEIC)" })),

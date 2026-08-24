@@ -61,7 +61,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 200));
 
     expect(find.text('ยินดีต้อนรับสู่ PingPay'), findsOneWidget);
-    expect(find.text('AI สแกนบิล'), findsOneWidget);
+    expect(find.text('เข้าสู่ระบบด้วย Google'), findsOneWidget);
   });
 }
 
