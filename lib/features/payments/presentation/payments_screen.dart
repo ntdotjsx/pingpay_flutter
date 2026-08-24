@@ -2,15 +2,18 @@ import 'package:figma_squircle/figma_squircle.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import '../../../core/animations/animated_counter_text.dart';
 import '../../../core/animations/animated_list_item.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_skeleton.dart';
+import '../../home/presentation/widgets/global_search_sheet.dart';
+import '../../rewards/providers/reward_providers.dart';
 import '../models/payment_models.dart';
 import '../providers/payment_providers.dart';
 import 'widgets/debt_acknowledgement_detail_sheet.dart';
 import 'widgets/debt_card.dart';
 import 'widgets/payment_detail_bottom_sheet.dart';
-import 'widgets/payment_summary_card.dart';
 import 'receivables_screen.dart';
 
 class PaymentsScreen extends ConsumerStatefulWidget {
@@ -39,26 +42,29 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
     final debtsNotifier = ref.read(userDebtsProvider.notifier);
     final receivablesNotifier = ref.read(userReceivablesProvider.notifier);
 
+    final currentTotalAmount = _selectedPaymentTab == 0
+        ? debtsState.summary.totalOutstandingAmount
+        : receivablesState.summary.totalOutstandingAmount;
+
+    final currentCount = _selectedPaymentTab == 0
+        ? debtsState.summary.outstandingCount
+        : receivablesState.summary.debtorCount;
+
     return Scaffold(
-      backgroundColor: isDark ? AppColors.surfaceBlack : const Color(0xFFF4F6F9),
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        centerTitle: true,
-        automaticallyImplyLeading: false,
-        title: const Text(
-          'การเงินและหนี้สิน',
-          style: TextStyle(
-            fontSize: 18.5,
-            fontWeight: FontWeight.w800,
-            letterSpacing: -0.4,
-          ),
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh_rounded, size: 22),
-            tooltip: 'รีเฟรชยอดหนี้',
-            onPressed: () {
+      backgroundColor: isDark
+          ? AppColors.surfaceBlack
+          : AppColors.canvasParchment,
+      body: Column(
+        children: [
+          // ── 1. Signature Executive Header (Identical Aesthetic to HomeScreen) ──
+          _buildExecutiveHeader(
+            context,
+            isDark: isDark,
+            debtsState: debtsState,
+            receivablesState: receivablesState,
+            totalAmount: currentTotalAmount,
+            count: currentCount,
+            onRefresh: () {
               HapticFeedback.lightImpact();
               if (_selectedPaymentTab == 0) {
                 debtsNotifier.loadDebts();
@@ -67,49 +73,8 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
               }
             },
           ),
-          const SizedBox(width: 4),
-        ],
-      ),
-      body: Column(
-        children: [
-          // ── 1. Apple/Revolut Segmented Switcher (เราต้องจ่าย vs เพื่อนติดเรา) ──
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Container(
-              height: 46,
-              padding: const EdgeInsets.all(3.5),
-              decoration: BoxDecoration(
-                color: isDark ? AppColors.surfaceTile2 : const Color(0xFFE5E8EE),
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Row(
-                children: [
-                  _buildSegmentTab(
-                    label: 'เราต้องจ่าย',
-                    count: debtsState.summary.outstandingCount,
-                    isSelected: _selectedPaymentTab == 0,
-                    isDark: isDark,
-                    onTap: () {
-                      HapticFeedback.selectionClick();
-                      setState(() => _selectedPaymentTab = 0);
-                    },
-                  ),
-                  _buildSegmentTab(
-                    label: 'เพื่อนติดเรา',
-                    count: receivablesState.summary.debtorCount,
-                    isSelected: _selectedPaymentTab == 1,
-                    isDark: isDark,
-                    onTap: () {
-                      HapticFeedback.selectionClick();
-                      setState(() => _selectedPaymentTab = 1);
-                    },
-                  ),
-                ],
-              ),
-            ),
-          ),
 
-          // ── 2. Body Content depending on selected tab ──────────────────
+          // ── 2. Scrollable Body Content ──────────────────────────────────────────
           Expanded(
             child: _selectedPaymentTab == 0
                 ? RefreshIndicator(
@@ -119,11 +84,264 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
                         ? _buildSkeletonLoading(isDark)
                         : debtsState.errorMessage != null
                             ? _buildErrorState(context, debtsState.errorMessage!)
-                            : _buildContent(context, debtsState),
+                            : _buildDebtsContent(context, debtsState),
                   )
                 : const ReceivablesScreenBody(),
           ),
         ],
+      ),
+    );
+  }
+
+  // =========================================================================
+  // TOP SIGNATURE HEADER (HOMESCREEN MATCHING GRADIENT & SQUIRCLES)
+  // =========================================================================
+  Widget _buildExecutiveHeader(
+    BuildContext context, {
+    required bool isDark,
+    required UserDebtsState debtsState,
+    required UserReceivablesState receivablesState,
+    required double totalAmount,
+    required int count,
+    required VoidCallback onRefresh,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: isDark
+              ? [
+                  AppColors.surfaceTile1,
+                  AppColors.surfaceTile2,
+                  AppColors.surfaceTile3,
+                ]
+              : [
+                  const Color(0xFFFF5000),
+                  const Color(0xFFFF6A00),
+                  const Color(0xFFFF8500),
+                ],
+        ),
+        borderRadius: const BorderRadius.only(
+          bottomLeft: Radius.circular(28),
+          bottomRight: Radius.circular(28),
+        ),
+      ),
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 18),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // 1. Top Action Bar: Search Pill + Rewards Coin + Refresh
+              Row(
+                children: [
+                  // Clickable Search Bar Squircle
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () {
+                        HapticFeedback.lightImpact();
+                        GlobalSearchSheet.show(context);
+                      },
+                      child: Container(
+                        height: 40,
+                        decoration: ShapeDecoration(
+                          color: Colors.white.withValues(alpha: isDark ? 0.15 : 0.22),
+                          shape: const SmoothRectangleBorder(
+                            borderRadius: SmoothBorderRadius.all(
+                              SmoothRadius(cornerRadius: 20, cornerSmoothing: 1.0),
+                            ),
+                          ),
+                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 14),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.search_rounded,
+                              size: 19,
+                              color: Colors.white,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'ค้นหาเจ้าหนี้ หรือ รายการบิล...',
+                              style: TextStyle(
+                                color: Colors.white.withValues(alpha: 0.95),
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+
+                  // Coin Points Capsule
+                  Consumer(
+                    builder: (context, ref, _) {
+                      final storeState = ref.watch(rewardStoreProvider);
+                      final points = storeState.points;
+
+                      return GestureDetector(
+                        onTap: () => context.push('/rewards'),
+                        child: Container(
+                          height: 38,
+                          padding: const EdgeInsets.symmetric(horizontal: 10),
+                          decoration: ShapeDecoration(
+                            color: Colors.white.withValues(alpha: 0.18),
+                            shape: const SmoothRectangleBorder(
+                              borderRadius: SmoothBorderRadius.all(
+                                SmoothRadius(cornerRadius: 19, cornerSmoothing: 1.0),
+                              ),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.monetization_on,
+                                size: 17,
+                                color: Color(0xFFFFD700),
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                '$points',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12.5,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(width: 8),
+
+                  // Refresh Button
+                  GestureDetector(
+                    onTap: onRefresh,
+                    child: Container(
+                      width: 38,
+                      height: 38,
+                      decoration: ShapeDecoration(
+                        color: Colors.white.withValues(alpha: 0.18),
+                        shape: const SmoothRectangleBorder(
+                          borderRadius: SmoothBorderRadius.all(
+                            SmoothRadius(cornerRadius: 19, cornerSmoothing: 1.0),
+                          ),
+                        ),
+                      ),
+                      child: const Icon(
+                        Icons.refresh_rounded,
+                        size: 20,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 18),
+
+              // 2. Integrated Financial Balance Display
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _selectedPaymentTab == 0
+                            ? 'ยอดรวมที่เราต้องชำระ (Total Payable)'
+                            : 'ยอดรวมที่เพื่อนติดเรา (Receivable)',
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.9),
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      AnimatedCounterText(
+                        value: totalAmount,
+                        prefix: '฿',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 32,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: -1.0,
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  // Status Pill
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    decoration: ShapeDecoration(
+                      color: Colors.white.withValues(alpha: 0.22),
+                      shape: const SmoothRectangleBorder(
+                        borderRadius: SmoothBorderRadius.all(
+                          SmoothRadius(cornerRadius: 12, cornerSmoothing: 1.0),
+                        ),
+                      ),
+                    ),
+                    child: Text(
+                      _selectedPaymentTab == 0
+                          ? (count > 0 ? '$count รายการค้าง' : 'ไม่มีหนี้ค้าง 🎉')
+                          : (count > 0 ? '$count คนค้างชำระ' : 'ไม่มีลูกหนี้ค้าง 🎉'),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 16),
+
+              // 3. Frosted Segmented Switcher Pill
+              Container(
+                height: 44,
+                padding: const EdgeInsets.all(3.5),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.15),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Row(
+                  children: [
+                    _buildSegmentTab(
+                      label: 'เราต้องจ่าย',
+                      count: debtsState.summary.outstandingCount,
+                      isSelected: _selectedPaymentTab == 0,
+                      isDark: isDark,
+                      onTap: () {
+                        HapticFeedback.selectionClick();
+                        setState(() => _selectedPaymentTab = 0);
+                      },
+                    ),
+                    _buildSegmentTab(
+                      label: 'เพื่อนติดเรา',
+                      count: receivablesState.summary.debtorCount,
+                      isSelected: _selectedPaymentTab == 1,
+                      isDark: isDark,
+                      onTap: () {
+                        HapticFeedback.selectionClick();
+                        setState(() => _selectedPaymentTab = 1);
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -149,7 +367,7 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
             boxShadow: isSelected
                 ? [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: isDark ? 0.35 : 0.08),
+                      color: Colors.black.withValues(alpha: 0.12),
                       blurRadius: 6,
                       offset: const Offset(0, 2),
                     ),
@@ -162,31 +380,29 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
               Text(
                 label,
                 style: TextStyle(
-                  fontSize: 13.5,
+                  fontSize: 13,
                   fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
                   letterSpacing: -0.2,
                   color: isSelected
                       ? (isDark ? Colors.white : AppColors.ink)
-                      : (isDark ? AppColors.bodyMuted : AppColors.inkMuted48),
+                      : Colors.white.withValues(alpha: 0.85),
                 ),
               ),
               const SizedBox(width: 6),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 6.5, vertical: 2),
                 decoration: BoxDecoration(
                   color: isSelected
-                      ? (count > 0
-                          ? const Color(0xFFFF5000)
-                          : const Color(0xFF34C759))
-                      : (isDark ? Colors.white10 : Colors.black12),
-                  borderRadius: BorderRadius.circular(10),
+                      ? (count > 0 ? const Color(0xFFFF5000) : const Color(0xFF34C759))
+                      : Colors.white.withValues(alpha: 0.25),
+                  borderRadius: BorderRadius.circular(9),
                 ),
                 child: Text(
                   '$count',
-                  style: TextStyle(
-                    fontSize: 11,
+                  style: const TextStyle(
+                    fontSize: 10.5,
                     fontWeight: FontWeight.bold,
-                    color: isSelected ? Colors.white : (isDark ? Colors.white70 : AppColors.ink),
+                    color: Colors.white,
                   ),
                 ),
               ),
@@ -197,7 +413,10 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
     );
   }
 
-  Widget _buildContent(BuildContext context, UserDebtsState state) {
+  // =========================================================================
+  // BODY: DEBTS LIST & FILTERS
+  // =========================================================================
+  Widget _buildDebtsContent(BuildContext context, UserDebtsState state) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final filteredDebts = state.filteredDebts;
     final pendingDebts = state.pendingAcceptanceDebts;
@@ -206,19 +425,10 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
       physics: const AlwaysScrollableScrollPhysics(
         parent: BouncingScrollPhysics(),
       ),
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
       children: [
-        // 1. Payment Summary Card (Header)
-        PaymentSummaryCard(
-          outstandingCount: state.summary.outstandingCount,
-          totalOutstandingAmount: state.summary.totalOutstandingAmount,
-          currency: state.summary.currency,
-          onRefresh: () => ref.read(userDebtsProvider.notifier).loadDebts(),
-        ),
-
-        // 2. Pending Debt Requests Callout
+        // 1. Pending Debt Requests Banner (if any)
         if (pendingDebts.isNotEmpty && state.currentFilter != DebtFilter.pendingAcceptance) ...[
-          const SizedBox(height: 16),
           Container(
             padding: const EdgeInsets.all(16),
             decoration: ShapeDecoration(
@@ -379,16 +589,15 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
               ],
             ),
           ),
+          const SizedBox(height: 16),
         ],
 
-        const SizedBox(height: 18),
-
-        // 3. Horizontal Filter Chips Bar
+        // 2. Horizontal Filter Bar
         _buildFilterBar(context, state),
 
         const SizedBox(height: 16),
 
-        // 4. Section Title with Count
+        // 3. Section Title with Count
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -414,7 +623,7 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
 
         const SizedBox(height: 12),
 
-        // 5. Debt List or Empty State
+        // 4. Debt List or Empty State
         if (filteredDebts.isEmpty)
           _buildEmptyState(context, state.currentFilter)
         else
@@ -483,16 +692,22 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
                             offset: const Offset(0, 2),
                           ),
                         ]
-                      : null,
+                      : [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.03),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
                   shape: SmoothRectangleBorder(
                     side: BorderSide(
                       color: isSelected
                           ? Colors.transparent
-                          : (isDark ? Colors.white10 : const Color(0xFFE2E6EC)),
+                          : (isDark ? Colors.white10 : AppColors.hairline),
                       width: 1,
                     ),
                     borderRadius: const SmoothBorderRadius.all(
-                      SmoothRadius(cornerRadius: 14, cornerSmoothing: 0.8),
+                      SmoothRadius(cornerRadius: 14, cornerSmoothing: 1.0),
                     ),
                   ),
                 ),
@@ -583,7 +798,6 @@ class _PaymentsScreenState extends ConsumerState<PaymentsScreen> {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: const [
-        AppSkeleton(width: double.infinity, height: 110, cornerRadius: 22, margin: EdgeInsets.only(bottom: 16)),
         AppSkeleton(width: double.infinity, height: 44, cornerRadius: 14, margin: EdgeInsets.only(bottom: 16)),
         DebtCardSkeleton(),
         DebtCardSkeleton(),
