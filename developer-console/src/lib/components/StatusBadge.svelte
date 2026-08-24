@@ -65,7 +65,11 @@
     SKIPPED: 'bg-[#f0efed] text-[#45423f]',
     // Security events
     pin_brute_force: 'bg-[#fde8e8] text-[#c53030]',
+    pin_brute_force_locked: 'bg-[#fde8e8] text-[#c53030]',
+    pin_lockout: 'bg-[#fde8e8] text-[#c53030]',
+    unauthorized_access: 'bg-[#fde8e8] text-[#c53030]',
     suspicious_login: 'bg-[#faeee3] text-[#793400]',
+    pin_changed: 'bg-[#e8f3fc] text-[#005bab]',
   };
 
   let sizeClass = $derived(size === 'md' ? 'px-3 py-1 text-xs font-semibold' : 'px-2.5 py-0.5 text-[11px] font-medium');

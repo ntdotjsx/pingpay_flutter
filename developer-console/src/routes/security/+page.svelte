@@ -67,6 +67,17 @@
       <!-- Integrated Filters -->
       <div class="flex flex-wrap items-center gap-2.5">
         <div class="flex items-center gap-1.5">
+          <span class="text-[11px] font-medium text-[#615d59]">User ID:</span>
+          <input
+            type="text"
+            bind:value={filters.userId}
+            placeholder="User UUID (optional)"
+            onchange={load}
+            class="rounded-[4px] border border-[#e6e6e6] bg-white px-2 py-1 text-xs text-[#000000] focus:border-[#0075de] focus:outline-none w-44 font-mono"
+          />
+        </div>
+
+        <div class="flex items-center gap-1.5">
           <span class="text-[11px] font-medium text-[#615d59]">Event:</span>
           <select
             bind:value={filters.event}
@@ -74,8 +85,10 @@
             class="rounded-[4px] border border-[#e6e6e6] bg-white px-2 py-1 text-xs text-[#000000] focus:border-[#0075de] focus:outline-none"
           >
             <option value="">All Events</option>
-            <option value="pin_brute_force">PIN Brute Force</option>
+            <option value="pin_brute_force_locked">PIN Brute Force Locked</option>
+            <option value="pin_changed">PIN Changed</option>
             <option value="pin_lockout">PIN Lockout</option>
+            <option value="pin_brute_force">PIN Brute Force</option>
             <option value="suspicious_login">Suspicious Login</option>
             <option value="unauthorized_access">Unauthorized Access</option>
           </select>

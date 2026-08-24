@@ -81,6 +81,7 @@ async function run() {
       ALTER TABLE IF EXISTS "bill_items" ADD COLUMN IF NOT EXISTS "is_locked" boolean DEFAULT false NOT NULL;
 
       -- 3. bills table columns
+      ALTER TABLE IF EXISTS "bills" ADD COLUMN IF NOT EXISTS "original_total_amount" numeric(12, 2);
       ALTER TABLE IF EXISTS "bills" ADD COLUMN IF NOT EXISTS "items_breakdown" jsonb;
       ALTER TABLE IF EXISTS "bills" ADD COLUMN IF NOT EXISTS "cancelled_at" timestamp;
 
