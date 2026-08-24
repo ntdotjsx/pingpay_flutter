@@ -41,7 +41,7 @@
   <div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
     <div>
       <h1 class="text-2xl font-bold tracking-tight text-[#000000]">Dispute Cases</h1>
-      <p class="mt-0.5 text-xs text-[#615d59]">Investigate payment conflicts, check SlipOK verification logs, and record determinations with interactive DataTables.</p>
+      <p class="mt-0.5 text-xs text-[#615d59]">Investigate payment conflicts, check EasySlip v2 verification logs, and record determinations with interactive DataTables.</p>
     </div>
   </div>
 
