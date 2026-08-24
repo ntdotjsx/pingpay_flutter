@@ -1,31 +1,43 @@
 import 'dart:async';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/realtime/realtime_event.dart';
 import '../../../core/realtime/realtime_providers.dart';
+import '../../../core/services/notification_service.dart';
+import '../../auth/providers/auth_provider.dart';
 import '../../payments/models/payment_models.dart';
 import '../../payments/providers/payment_providers.dart';
 import '../models/app_notification_model.dart';
+import '../repositories/notification_repository.dart';
 
 class NotificationState {
-  final List<AppNotificationItem> customNotifications;
+  final List<AppNotificationItem> backendNotifications;
+  final List<AppNotificationItem> pushNotifications;
   final Set<String> readNotificationIds;
   final NotificationCategory selectedCategory;
+  final bool isLoading;
 
   const NotificationState({
-    this.customNotifications = const [],
+    this.backendNotifications = const [],
+    this.pushNotifications = const [],
     this.readNotificationIds = const {},
     this.selectedCategory = NotificationCategory.all,
+    this.isLoading = false,
   });
 
   NotificationState copyWith({
-    List<AppNotificationItem>? customNotifications,
+    List<AppNotificationItem>? backendNotifications,
+    List<AppNotificationItem>? pushNotifications,
     Set<String>? readNotificationIds,
     NotificationCategory? selectedCategory,
+    bool? isLoading,
   }) {
     return NotificationState(
-      customNotifications: customNotifications ?? this.customNotifications,
+      backendNotifications: backendNotifications ?? this.backendNotifications,
+      pushNotifications: pushNotifications ?? this.pushNotifications,
       readNotificationIds: readNotificationIds ?? this.readNotificationIds,
       selectedCategory: selectedCategory ?? this.selectedCategory,
+      isLoading: isLoading ?? this.isLoading,
     );
   }
 }
@@ -33,50 +45,93 @@ class NotificationState {
 class NotificationNotifier extends StateNotifier<NotificationState> {
   final Ref _ref;
   StreamSubscription<RealtimeEvent>? _realtimeSubscription;
+  StreamSubscription<RemoteMessage>? _pushSubscription;
 
-  NotificationNotifier(this._ref)
-      : super(NotificationState(
-          customNotifications: [
-            AppNotificationItem(
-              id: 'sys-welcome',
-              title: 'ยินดีต้อนรับสู่ PingPay 🎉',
-              body: 'เริ่มต้นหารบิลค่าอาหาร ทริปเที่ยว หรือชำระหนี้กับเพื่อนได้ทันที',
-              type: NotificationType.systemGeneral,
-              createdAt: DateTime.now().subtract(const Duration(minutes: 30)),
-              isRead: false,
-            ),
-            AppNotificationItem(
-              id: 'sys-security',
-              title: 'เซสชันการเข้าสู่ระบบปลอดภัย 🛡️',
-              body: 'บัญชีของคุณเชื่อมต่อกับเซิร์ฟเวอร์แบบ Real-time และจำกัด 1 อุปกรณ์',
-              type: NotificationType.systemSecurity,
-              createdAt: DateTime.now().subtract(const Duration(hours: 2)),
-              isRead: false,
-            ),
-            AppNotificationItem(
-              id: 'reward-bonus',
-              title: 'แต้มสะสมเริ่มต้น +27 แต้ม 🪙',
-              body: 'คุณได้รับแต้มเริ่มต้นเพื่อนำไปแลกของรางวัลในเมนู แลกคอยน์',
-              type: NotificationType.rewardPointsEarned,
-              createdAt: DateTime.now().subtract(const Duration(hours: 4)),
-              isRead: false,
-            ),
-          ],
-        )) {
+  NotificationNotifier(this._ref) : super(const NotificationState()) {
     _listenToRealtime();
+    _listenToPushNotifications();
+    _listenToAuthAndFetch();
   }
 
-  void _listenToRealtime() {
-    final realtimeService = _ref.read(realtimeServiceProvider);
-    _realtimeSubscription = realtimeService.events.listen((event) {
-      _handleIncomingRealtimeEvent(event);
+  void _listenToAuthAndFetch() {
+    _ref.listen<AuthState>(authStateProvider, (prev, next) {
+      if (next.status == AuthStatus.authenticated && next.user?.id != null) {
+        fetchBackendNotifications();
+      }
+    }, fireImmediately: true);
+  }
+
+  Future<void> fetchBackendNotifications() async {
+    final user = _ref.read(authStateProvider).user;
+    if (user == null || user.id.isEmpty) return;
+
+    state = state.copyWith(isLoading: true);
+    try {
+      final repo = _ref.read(notificationRepositoryProvider);
+      final items = await repo.getUserNotifications(user.id);
+      state = state.copyWith(
+        backendNotifications: items,
+        isLoading: false,
+      );
+    } catch (_) {
+      state = state.copyWith(isLoading: false);
+    }
+  }
+
+  void _listenToPushNotifications() {
+    _pushSubscription = NotificationService.onPushMessage.listen((message) {
+      _handleIncomingPushMessage(message);
     });
   }
 
-  @override
-  void dispose() {
-    _realtimeSubscription?.cancel();
-    super.dispose();
+  void _handleIncomingPushMessage(RemoteMessage message) {
+    final now = DateTime.now();
+    final data = message.data;
+    final notification = message.notification;
+
+    final id = message.messageId ?? 'push-${now.millisecondsSinceEpoch}';
+    final title = notification?.title ?? data['title'] ?? 'การแจ้งเตือนใหม่';
+    final body = notification?.body ?? data['body'] ?? '';
+    final eventType = data['type'] ?? data['eventType'] ?? '';
+    final amount = (data['amount'] is num)
+        ? (data['amount'] as num).toDouble()
+        : double.tryParse(data['amount']?.toString() ?? '');
+
+    NotificationType type = NotificationType.systemGeneral;
+    if (eventType.contains('debt') || eventType.contains('bill') || eventType == 'BILL_CREATED') {
+      type = NotificationType.debtRequest;
+    } else if (eventType.contains('payment') || eventType == 'PAYMENT_PENDING_CONFIRMATION') {
+      type = NotificationType.paymentReceived;
+    } else if (eventType.contains('friend')) {
+      type = NotificationType.friendAdded;
+    } else if (eventType.contains('reward')) {
+      type = NotificationType.rewardPointsEarned;
+    }
+
+    final item = AppNotificationItem(
+      id: id,
+      title: title,
+      body: body,
+      type: type,
+      createdAt: now,
+      isRead: false,
+      amount: amount,
+      relatedId: data['billId'] ?? data['paymentId'] ?? data['friendshipId'],
+      metadata: data,
+    );
+
+    state = state.copyWith(
+      pushNotifications: [item, ...state.pushNotifications],
+    );
+  }
+
+  void _listenToRealtime() {
+    try {
+      final realtimeService = _ref.read(realtimeServiceProvider);
+      _realtimeSubscription = realtimeService.events.listen((event) {
+        _handleIncomingRealtimeEvent(event);
+      });
+    } catch (_) {}
   }
 
   void _handleIncomingRealtimeEvent(RealtimeEvent event) {
@@ -147,7 +202,7 @@ class NotificationNotifier extends StateNotifier<NotificationState> {
 
     if (item != null) {
       state = state.copyWith(
-        customNotifications: [item, ...state.customNotifications],
+        pushNotifications: [item, ...state.pushNotifications],
       );
     }
   }
@@ -163,15 +218,24 @@ class NotificationNotifier extends StateNotifier<NotificationState> {
 
   void markAllAsRead() {
     final allIds = <String>{};
-    for (final item in state.customNotifications) {
+    for (final item in state.backendNotifications) {
       allIds.add(item.id);
     }
-    // Also include pending debts
+    for (final item in state.pushNotifications) {
+      allIds.add(item.id);
+    }
     final debts = _ref.read(pendingDebtRequestsProvider);
     for (final d in debts) {
       allIds.add('debt-${d.id}');
     }
     state = state.copyWith(readNotificationIds: allIds);
+  }
+
+  @override
+  void dispose() {
+    _realtimeSubscription?.cancel();
+    _pushSubscription?.cancel();
+    super.dispose();
   }
 }
 
@@ -181,44 +245,50 @@ final notificationNotifierProvider =
 });
 
 /// Aggregated all notifications combining:
-/// 1. Pending Debt Acknowledgement Requests (live from debt provider)
-/// 2. General alerts, payments, friend activities, reward bonuses, and realtime alerts
+/// 1. Real push notifications (FCM & Realtime Events)
+/// 2. Real backend Outbox notifications (from /api/v1/notifications/user/:id)
+/// 3. Live pending Debt Acknowledgement Requests (from userDebtsProvider)
 final allNotificationsProvider = Provider<List<AppNotificationItem>>((ref) {
   final notifState = ref.watch(notificationNotifierProvider);
   final pendingDebts = ref.watch(pendingDebtRequestsProvider);
 
-  final List<AppNotificationItem> list = [];
+  final Map<String, AppNotificationItem> merged = {};
 
-  // Convert live pending debts into top-priority notifications
+  // 1. Live Pending Debts (highest priority)
   for (final debt in pendingDebts) {
     final id = 'debt-${debt.id}';
     final isRead = notifState.readNotificationIds.contains(id);
 
-    list.add(
-      AppNotificationItem(
-        id: id,
-        title: 'คำร้องขอรับสภาพหนี้ใหม่ 🧾',
-        body: '${debt.creditor.displayName} เพิ่มคุณในบิล "${debt.billTitle}" ยอดค้าง ฿${debt.outstandingAmount.toStringAsFixed(2)}',
-        type: NotificationType.debtRequest,
-        createdAt: debt.debtStartDate,
-        isRead: isRead,
-        amount: debt.outstandingAmount,
-        relatedId: debt.id,
-        metadata: {'debtItem': debt},
-      ),
+    merged[id] = AppNotificationItem(
+      id: id,
+      title: 'คำร้องขอรับสภาพหนี้ใหม่ 🧾',
+      body: '${debt.creditor.displayName} เพิ่มคุณในบิล "${debt.billTitle}" ยอดค้าง ฿${debt.outstandingAmount.toStringAsFixed(2)}',
+      type: NotificationType.debtRequest,
+      createdAt: debt.debtStartDate,
+      isRead: isRead,
+      amount: debt.outstandingAmount,
+      relatedId: debt.id,
+      metadata: {'debtItem': debt},
     );
   }
 
-  // Add custom / realtime notifications
-  for (final item in notifState.customNotifications) {
+  // 2. Real Push Notifications (FCM / Realtime)
+  for (final item in notifState.pushNotifications) {
     final isRead = item.isRead || notifState.readNotificationIds.contains(item.id);
-    list.add(item.copyWith(isRead: isRead));
+    merged[item.id] = item.copyWith(isRead: isRead);
   }
 
-  // Sort descending by createdAt
+  // 3. Real Backend Outbox History
+  for (final item in notifState.backendNotifications) {
+    if (!merged.containsKey(item.id)) {
+      final isRead = item.isRead || notifState.readNotificationIds.contains(item.id);
+      merged[item.id] = item.copyWith(isRead: isRead);
+    }
+  }
+
+  final list = merged.values.toList();
   list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
-  // Filter by category if selected
   if (notifState.selectedCategory == NotificationCategory.all) {
     return list;
   }
@@ -229,10 +299,7 @@ final allNotificationsProvider = Provider<List<AppNotificationItem>>((ref) {
 /// Total Unread Notifications Count for Bell Badge
 final totalUnreadNotificationCountProvider = Provider<int>((ref) {
   final notifState = ref.watch(notificationNotifierProvider);
-  final pendingDebts = ref.watch(pendingDebtRequestsProvider);
+  final allNotifs = ref.watch(allNotificationsProvider);
 
-  int unreadDebts = pendingDebts.where((d) => !notifState.readNotificationIds.contains('debt-${d.id}')).length;
-  int unreadCustom = notifState.customNotifications.where((n) => !n.isRead && !notifState.readNotificationIds.contains(n.id)).length;
-
-  return unreadDebts + unreadCustom;
+  return allNotifs.where((n) => !n.isRead && !notifState.readNotificationIds.contains(n.id)).length;
 });

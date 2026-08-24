@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -39,6 +40,8 @@ class NotificationService {
   static String? currentFcmToken;
   String? _fcmToken;
   bool _didScheduleTokenRetry = false;
+  static final StreamController<RemoteMessage> _pushStreamController = StreamController<RemoteMessage>.broadcast();
+  static Stream<RemoteMessage> get onPushMessage => _pushStreamController.stream;
 
   NotificationService(this._client);
 
@@ -134,6 +137,7 @@ class NotificationService {
       // 4. Foreground message listener
       FirebaseMessaging.onMessage.listen((RemoteMessage message) {
         debugPrint('Got a foreground message: ${message.notification?.title} - ${message.notification?.body}');
+        _pushStreamController.add(message);
         final notification = message.notification;
         final title = notification?.title ?? message.data['title'] ?? 'การแจ้งเตือนใหม่';
         final body = notification?.body ?? message.data['body'] ?? '';
@@ -173,6 +177,7 @@ class NotificationService {
       // Message opened app from background
       FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
         debugPrint('User opened app from notification: ${message.data}');
+        _pushStreamController.add(message);
       });
     } catch (e) {
       debugPrint('Error initializing Firebase Messaging: $e');
