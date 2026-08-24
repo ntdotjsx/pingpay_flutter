@@ -504,7 +504,7 @@ class _FriendReceivableDetailBottomSheetState
                     ),
                   ),
                 ),
-                if (item.isOutstanding) ...[
+                if (item.isOutstanding && item.amountPaid <= 0 && !item.isLocked) ...[
                   const SizedBox(width: 6),
                   Expanded(
                     child: OutlinedButton.icon(
@@ -561,6 +561,11 @@ class _FriendReceivableDetailBottomSheetState
     ReceivableBillItemModel item,
     String effectiveName,
   ) {
+    if (item.amountPaid > 0) {
+      AppToast.warning(context, 'มีการชำระเงินงวดแรกเข้ามาแล้ว จึงไม่สามารถแก้ไขยอดได้');
+      return;
+    }
+
     final controller = TextEditingController(
       text: item.currentAmount.toStringAsFixed(2),
     );
@@ -579,9 +584,9 @@ class _FriendReceivableDetailBottomSheetState
               style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
             ),
             const SizedBox(height: 4),
-            const Text(
-              'เมื่อเปลี่ยนยอดของคนนี้ ระบบจะเฉลี่ยยอดที่เหลือให้เพื่อนคนอื่นที่ยังไม่จ่ายในบิลนี้โดยอัตโนมัติ',
-              style: TextStyle(fontSize: 12, color: AppColors.inkMuted48),
+            Text(
+              'ยอดเดิม: ฿${item.currentAmount.toStringAsFixed(2)}\n* ระบบอนุญาตเฉพาะการปรับลดยอดเงิน (ห้ามปรับสูงกว่าเดิม) และจะเฉลี่ยส่วนต่างให้อัตโนมัติ',
+              style: const TextStyle(fontSize: 12, color: AppColors.inkMuted48, height: 1.35),
             ),
             const SizedBox(height: 14),
             TextField(
@@ -604,7 +609,17 @@ class _FriendReceivableDetailBottomSheetState
           ElevatedButton(
             onPressed: () async {
               final newAmt = double.tryParse(controller.text.trim());
-              if (newAmt == null || newAmt < 0) return;
+              if (newAmt == null || newAmt < 0) {
+                AppToast.warning(ctx, 'กรุณาระบุจำนวนเงินที่ถูกต้อง (ตั้งแต่ 0 ขึ้นไป)');
+                return;
+              }
+              if (newAmt > item.currentAmount) {
+                AppToast.warning(
+                  ctx,
+                  'ไม่สามารถปรับยอดเงินสูงกว่ายอดเดิม (฿${item.currentAmount.toStringAsFixed(2)}) ได้',
+                );
+                return;
+              }
 
               Navigator.pop(ctx);
               final success = await ref

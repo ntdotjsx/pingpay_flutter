@@ -188,10 +188,14 @@ export class BillService {
     const bill = await this.repo.getBillById(id);
     if (!bill) throw new Error("BILL_NOT_FOUND: Bill not found.");
 
-    BillPolicy.canEditBill(userId, bill.ownerId);
+    const hasAnyPayment = (bill.items || []).some(
+      (it) => Number(it.amountPaid) > 0 || it.isLocked || it.status !== "unpaid"
+    ) || bill.status !== "unpaid";
 
-    if (bill.status !== "unpaid" && dto.totalAmount !== undefined) {
-      throw new Error("PAID_DEBT_LOCKED: Cannot edit total amount of a bill that is partially or fully paid.");
+    BillPolicy.canEditBill(userId, bill.ownerId, hasAnyPayment);
+
+    if (dto.totalAmount !== undefined && dto.totalAmount > Number(bill.totalAmount)) {
+      throw new Error(`INVALID_AMOUNT: Cannot increase bill total amount higher than original total (฿${Number(bill.totalAmount).toFixed(2)}).`);
     }
 
     const updated = await this.repo.updateBill(id, userId, {
@@ -228,17 +232,24 @@ export class BillService {
     const bill = await this.repo.getBillById(billId);
     if (!bill) throw new Error("BILL_NOT_FOUND: Bill not found.");
 
-    BillPolicy.canEditBill(userId, bill.ownerId);
+    const hasAnyPayment = (bill.items || []).some(
+      (it) => Number(it.amountPaid) > 0 || it.isLocked || it.status !== "unpaid"
+    ) || bill.status !== "unpaid";
+
+    BillPolicy.canEditBill(userId, bill.ownerId, hasAnyPayment);
 
     const item = bill.items.find((i) => i.id === participantId || i.debtorId === participantId);
     if (!item) throw new Error("PARTICIPANT_NOT_FOUND: Participant not found in this bill.");
 
-    if (item.isLocked || Number(item.amountPaid) >= Number(item.currentAmount)) {
-      throw new Error("PAID_DEBT_LOCKED: This debt has already been fully paid and cannot be edited directly.");
-    }
+    BillPolicy.canEditBillItem(userId, bill.ownerId, item.status, item.isLocked, item.amountPaid);
 
     if (newAmount < 0) {
       throw new Error("INVALID_AMOUNT: Participant amount cannot be negative.");
+    }
+
+    const currentItemAmount = Number(item.currentAmount);
+    if (newAmount > currentItemAmount) {
+      throw new Error(`INVALID_AMOUNT: Cannot increase debt amount higher than original amount (฿${currentItemAmount.toFixed(2)}).`);
     }
 
     const billTotalCents = Math.round(Number(bill.totalAmount) * 100);

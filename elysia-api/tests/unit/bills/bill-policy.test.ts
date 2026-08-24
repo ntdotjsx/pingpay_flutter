@@ -11,7 +11,7 @@ describe("Unit: Bill Policy", () => {
   });
 
   it("should reject editing locked bill items", () => {
-    expect(() => BillPolicy.canEditBillItem("user-1", "user-1", "paid", true)).toThrow("locked");
+    expect(() => BillPolicy.canEditBillItem("user-1", "user-1", "paid", true)).toThrow(/locked/i);
   });
 
   it("should reject editing paid or written-off items directly", () => {
@@ -20,7 +20,15 @@ describe("Unit: Bill Policy", () => {
   });
 
   it("should allow editing unpaid and unlocked items by bill owner", () => {
-    expect(() => BillPolicy.canEditBillItem("user-1", "user-1", "unpaid", false)).not.toThrow();
+    expect(() => BillPolicy.canEditBillItem("user-1", "user-1", "unpaid", false, 0)).not.toThrow();
+  });
+
+  it("should forbid editing bill once any installment has been paid", () => {
+    expect(() => BillPolicy.canEditBill("user-1", "user-1", true)).toThrow("PAID_DEBT_LOCKED");
+  });
+
+  it("should forbid editing bill item once first payment/installment is made", () => {
+    expect(() => BillPolicy.canEditBillItem("user-1", "user-1", "unpaid", false, 50.0)).toThrow("PAID_DEBT_LOCKED");
   });
 
   it("should forbid debtors from writing off debt they owe to someone else", () => {

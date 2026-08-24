@@ -596,7 +596,9 @@ class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
                                 final hasNick = nick != null && nick.trim().isNotEmpty;
                                 final debtorName = hasNick ? nick : (item.debtor?.displayName ?? 'เพื่อน');
                                 final avatarUrl = item.debtor?.avatarUrl;
-                                final isPaidLocked = item.isFullyPaid || item.isLocked;
+                                final hasAnyPayment = bill.items.any((i) => i.amountPaid > 0) || bill.totalPaidAmount > 0;
+                                final isItemPaid = item.amountPaid > 0 || item.isFullyPaid || item.isLocked;
+                                final isPaidLocked = hasAnyPayment || isItemPaid;
 
                                 return Padding(
                                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
@@ -1065,6 +1067,11 @@ class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
     final nick = item.debtor != null
         ? (nicknamesMap[item.debtor!.id] ?? nicknamesMap[item.debtor!.userCode])
         : null;
+    if (item.amountPaid > 0) {
+      AppToast.warning(context, 'มีการชำระเงินงวดแรกเข้ามาแล้ว จึงไม่สามารถแก้ไขยอดได้');
+      return;
+    }
+
     final effectiveDebtorName = (nick != null && nick.trim().isNotEmpty)
         ? nick
         : (item.debtor?.displayName ?? 'ผู้ใช้');
@@ -1082,9 +1089,9 @@ class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'เมื่อเปลี่ยนยอดของคนนี้ ระบบจะเฉลี่ยยอดที่เหลือให้เพื่อนคนอื่นที่ยังไม่จ่ายโดยอัตโนมัติ',
-              style: TextStyle(fontSize: 12, color: Colors.grey),
+            Text(
+              'ยอดเดิม: ฿${item.currentAmount.toStringAsFixed(2)}\n* ระบบอนุญาตเฉพาะการปรับลดยอดเงิน (ห้ามปรับสูงกว่าเดิม) และจะเฉลี่ยส่วนต่างให้อัตโนมัติ',
+              style: const TextStyle(fontSize: 12, color: Colors.grey, height: 1.35),
             ),
             const SizedBox(height: 14),
             TextField(
@@ -1111,6 +1118,13 @@ class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
               final newAmt = double.tryParse(controller.text.trim());
               if (newAmt == null || newAmt < 0) {
                 AppToast.warning(ctx, 'กรุณาระบุจำนวนเงินที่ถูกต้อง (ตั้งแต่ 0 ขึ้นไป)');
+                return;
+              }
+              if (newAmt > item.currentAmount) {
+                AppToast.warning(
+                  ctx,
+                  'ไม่สามารถปรับยอดเงินสูงกว่ายอดเดิม (฿${item.currentAmount.toStringAsFixed(2)}) ได้',
+                );
                 return;
               }
 
