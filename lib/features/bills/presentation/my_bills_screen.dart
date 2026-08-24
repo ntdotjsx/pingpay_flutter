@@ -764,7 +764,7 @@ class MyBillsScreen extends ConsumerWidget {
                               ),
                             ),
                             if (totalDebtorsCount > 0) ...[
-                              const SizedBox(width: 6),
+                              const SizedBox(width: 5),
                               Text(
                                 '• $paidDebtorsCount/$totalDebtorsCount จ่ายแล้ว',
                                 style: TextStyle(
@@ -775,13 +775,13 @@ class MyBillsScreen extends ConsumerWidget {
                                   fontWeight: FontWeight.w500,
                                 ),
                               ),
+                              if (bill.items.isNotEmpty) ...[
+                                const SizedBox(width: 6),
+                                _buildDebtorsPreview(bill.items, isDark),
+                              ],
                             ],
                           ],
                         ),
-                        if (bill.items.isNotEmpty) ...[
-                          const SizedBox(height: 6),
-                          _buildDebtorsPreview(bill.items, isDark),
-                        ],
                       ],
                     ),
                   ),
@@ -846,53 +846,97 @@ class MyBillsScreen extends ConsumerWidget {
   }
 
   Widget _buildDebtorsPreview(List<BillItemParticipantModel> items, bool isDark) {
-    const maxVisible = 4;
+    const maxVisible = 3;
     final visibleItems = items.take(maxVisible).toList();
+    if (visibleItems.isEmpty) return const SizedBox.shrink();
 
-    return Row(
-      children: [
-        SizedBox(
-          height: 22,
-          width: (visibleItems.length * 16.0) + 8,
-          child: Stack(
-            children: List.generate(visibleItems.length, (idx) {
-              final participant = visibleItems[idx];
-              final debtor = participant.debtor;
-              final name = debtor?.displayName ?? 'เพื่อน';
-              final initial = name.isNotEmpty ? name[0].toUpperCase() : 'U';
-              final isPaid = participant.isFullyPaid;
+    final extraCount = items.length - visibleItems.length;
 
-              return Positioned(
-                left: idx * 14.0,
-                child: Container(
-                  width: 22,
-                  height: 22,
-                  decoration: BoxDecoration(
-                    color: isPaid
-                        ? const Color(0xFF34C759).withValues(alpha: 0.18)
-                        : (isDark ? const Color(0xFF2C2D32) : const Color(0xFFFFECE5)),
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: isDark ? AppColors.surfaceTile1 : Colors.white,
-                      width: 1.5,
-                    ),
+    return SizedBox(
+      height: 18,
+      width: (visibleItems.length * 13.0) + (extraCount > 0 ? 18.0 : 6.0),
+      child: Stack(
+        children: [
+          ...List.generate(visibleItems.length, (idx) {
+            final participant = visibleItems[idx];
+            final debtor = participant.debtor;
+            final avatarUrl = debtor?.avatarUrl;
+            final name = debtor?.displayName ?? 'เพื่อน';
+            final initial = name.isNotEmpty ? name[0].toUpperCase() : 'U';
+            final isPaid = participant.isFullyPaid;
+
+            return Positioned(
+              left: idx * 12.0,
+              child: Container(
+                width: 18,
+                height: 18,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: isDark ? AppColors.surfaceTile1 : Colors.white,
+                    width: 1.2,
                   ),
-                  child: Center(
-                    child: Text(
-                      initial,
-                      style: TextStyle(
-                        fontSize: 9.5,
-                        fontWeight: FontWeight.w600,
-                        color: isPaid ? const Color(0xFF34C759) : const Color(0xFFFF5000),
-                      ),
-                    ),
+                  color: isPaid
+                      ? const Color(0xFF34C759).withValues(alpha: 0.2)
+                      : (isDark ? const Color(0xFF2C2D32) : const Color(0xFFFFECE5)),
+                ),
+                child: ClipOval(
+                  child: (avatarUrl != null && avatarUrl.trim().isNotEmpty)
+                      ? Image.network(
+                          avatarUrl,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => Center(
+                            child: Text(
+                              initial,
+                              style: TextStyle(
+                                fontSize: 8,
+                                fontWeight: FontWeight.w700,
+                                color: isPaid ? const Color(0xFF34C759) : const Color(0xFFFF5000),
+                              ),
+                            ),
+                          ),
+                        )
+                      : Center(
+                          child: Text(
+                            initial,
+                            style: TextStyle(
+                              fontSize: 8,
+                              fontWeight: FontWeight.w700,
+                              color: isPaid ? const Color(0xFF34C759) : const Color(0xFFFF5000),
+                            ),
+                          ),
+                        ),
+                ),
+              ),
+            );
+          }),
+          if (extraCount > 0)
+            Positioned(
+              left: visibleItems.length * 12.0,
+              child: Container(
+                width: 18,
+                height: 18,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: isDark ? Colors.white24 : const Color(0xFFE5E7EB),
+                  border: Border.all(
+                    color: isDark ? AppColors.surfaceTile1 : Colors.white,
+                    width: 1.2,
                   ),
                 ),
-              );
-            }),
-          ),
-        ),
-      ],
+                alignment: Alignment.center,
+                child: Text(
+                  '+$extraCount',
+                  style: TextStyle(
+                    fontSize: 7.5,
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? AppColors.bodyOnDark : AppColors.ink,
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 
