@@ -110,9 +110,7 @@ class _PaymentDetailBottomSheetState
 
     HapticFeedback.heavyImpact();
 
-    final result = await ref
-        .read(paymentFlowProvider.notifier)
-        .submitPayment(
+    final result = await ref.read(paymentFlowProvider.notifier).submitPayment(
           billId: widget.debt.billId,
           participantId: widget.debt.id,
           amount: enteredAmount,
@@ -209,7 +207,8 @@ class _PaymentDetailBottomSheetState
             onPressed: () => Navigator.pop(ctx),
             child: const Text(
               'ตกลง',
-              style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFFFF5000)),
+              style: TextStyle(
+                  fontWeight: FontWeight.bold, color: Color(0xFFFF5000)),
             ),
           ),
         ],
@@ -258,7 +257,8 @@ class _PaymentDetailBottomSheetState
                     color: Colors.black.withValues(alpha: 0.6),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.close_rounded, color: Colors.white, size: 20),
+                  child: const Icon(Icons.close_rounded,
+                      color: Colors.white, size: 20),
                 ),
               ),
             ),
@@ -330,7 +330,8 @@ class _PaymentDetailBottomSheetState
             // Group 1: Bill & Creditor Summary Card (Clean Inset-Grouped Card)
             Container(
               decoration: ShapeDecoration(
-                color: isDark ? AppColors.surfaceTile2 : const Color(0xFFF9FAFB),
+                color:
+                    isDark ? AppColors.surfaceTile2 : const Color(0xFFF9FAFB),
                 shape: SmoothRectangleBorder(
                   side: BorderSide(
                     color: isDark ? Colors.white10 : const Color(0xFFE5E7EB),
@@ -354,7 +355,8 @@ class _PaymentDetailBottomSheetState
                           style: TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w800,
-                            color: isDark ? AppColors.bodyOnDark : AppColors.ink,
+                            color:
+                                isDark ? AppColors.bodyOnDark : AppColors.ink,
                           ),
                         ),
                         const SizedBox(height: 3),
@@ -378,7 +380,8 @@ class _PaymentDetailBottomSheetState
                   ),
 
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 10),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -390,7 +393,8 @@ class _PaymentDetailBottomSheetState
                         Container(
                           width: 0.6,
                           height: 24,
-                          color: isDark ? Colors.white10 : const Color(0xFFE5E7EB),
+                          color:
+                              isDark ? Colors.white10 : const Color(0xFFE5E7EB),
                         ),
                         _buildMiniInfo(
                           'ชำระแล้ว',
@@ -400,7 +404,8 @@ class _PaymentDetailBottomSheetState
                         Container(
                           width: 0.6,
                           height: 24,
-                          color: isDark ? Colors.white10 : const Color(0xFFE5E7EB),
+                          color:
+                              isDark ? Colors.white10 : const Color(0xFFE5E7EB),
                         ),
                         _buildMiniInfo(
                           'ยอดค้าง',
@@ -441,17 +446,22 @@ class _PaymentDetailBottomSheetState
                                     style: TextStyle(
                                       fontSize: 12,
                                       fontWeight: FontWeight.w700,
-                                      color: isDark ? AppColors.bodyOnDark : AppColors.ink,
+                                      color: isDark
+                                          ? AppColors.bodyOnDark
+                                          : AppColors.ink,
                                     ),
                                   ),
                                 ],
                               ),
                               GestureDetector(
-                                onTap: () => _showFullReceiptDialog(context, widget.debt.receiptImageUrl!),
+                                onTap: () => _showFullReceiptDialog(
+                                    context, widget.debt.receiptImageUrl!),
                                 child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 7, vertical: 3),
                                   decoration: BoxDecoration(
-                                    color: const Color(0xFFFF5000).withValues(alpha: 0.1),
+                                    color: const Color(0xFFFF5000)
+                                        .withValues(alpha: 0.1),
                                     borderRadius: BorderRadius.circular(5),
                                   ),
                                   child: const Text(
@@ -468,37 +478,50 @@ class _PaymentDetailBottomSheetState
                           ),
                           const SizedBox(height: 7),
                           GestureDetector(
-                            onTap: () => _showFullReceiptDialog(context, widget.debt.receiptImageUrl!),
+                            onTap: () => _showFullReceiptDialog(
+                                context, widget.debt.receiptImageUrl!),
                             child: Container(
                               height: 80,
                               width: double.infinity,
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(10),
                                 border: Border.all(
-                                  color: isDark ? Colors.white10 : const Color(0xFFE5E7EB),
+                                  color: isDark
+                                      ? Colors.white10
+                                      : const Color(0xFFE5E7EB),
                                   width: 0.8,
                                 ),
                               ),
                               child: ClipRRect(
                                 borderRadius: BorderRadius.circular(10),
-                                child: widget.debt.receiptImageUrl!.startsWith('data:image')
+                                child: widget.debt.receiptImageUrl!
+                                        .startsWith('data:image')
                                     ? Image.memory(
                                         base64Decode(
-                                          widget.debt.receiptImageUrl!.replaceFirst(
+                                          widget.debt.receiptImageUrl!
+                                              .replaceFirst(
                                             RegExp(r'data:image/[^;]+;base64,'),
                                             '',
                                           ),
                                         ),
                                         fit: BoxFit.cover,
-                                        errorBuilder: (ctx, _, __) => const Center(
-                                          child: Icon(Icons.broken_image_rounded, color: Colors.grey, size: 24),
+                                        errorBuilder: (ctx, _, __) =>
+                                            const Center(
+                                          child: Icon(
+                                              Icons.broken_image_rounded,
+                                              color: Colors.grey,
+                                              size: 24),
                                         ),
                                       )
                                     : Image.network(
                                         widget.debt.receiptImageUrl!,
                                         fit: BoxFit.cover,
-                                        errorBuilder: (ctx, _, __) => const Center(
-                                          child: Icon(Icons.broken_image_rounded, color: Colors.grey, size: 24),
+                                        errorBuilder: (ctx, _, __) =>
+                                            const Center(
+                                          child: Icon(
+                                              Icons.broken_image_rounded,
+                                              color: Colors.grey,
+                                              size: 24),
                                         ),
                                       ),
                               ),
@@ -514,10 +537,11 @@ class _PaymentDetailBottomSheetState
 
             const SizedBox(height: 12),
 
-            // Group 2: Payment Selector & List Input (Clean iOS/FinTech List Input)
+            // Group 2: Payment Selector & Hero Amount Input
             Container(
               decoration: ShapeDecoration(
-                color: isDark ? AppColors.surfaceTile2 : const Color(0xFFF9FAFB),
+                color:
+                    isDark ? AppColors.surfaceTile2 : const Color(0xFFF9FAFB),
                 shape: SmoothRectangleBorder(
                   side: BorderSide(
                     color: isDark ? Colors.white10 : const Color(0xFFE5E7EB),
@@ -537,7 +561,8 @@ class _PaymentDetailBottomSheetState
                     child: Container(
                       padding: const EdgeInsets.all(3),
                       decoration: BoxDecoration(
-                        color: isDark ? Colors.black26 : const Color(0xFFE5E7EB),
+                        color:
+                            isDark ? Colors.black26 : const Color(0xFFE5E7EB),
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Row(
@@ -546,16 +571,20 @@ class _PaymentDetailBottomSheetState
                             child: GestureDetector(
                               onTap: _selectFullPayment,
                               child: Container(
-                                padding: const EdgeInsets.symmetric(vertical: 7),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 7),
                                 decoration: BoxDecoration(
                                   color: _isFullPayment
-                                      ? (isDark ? AppColors.surfaceTile1 : Colors.white)
+                                      ? (isDark
+                                          ? AppColors.surfaceTile1
+                                          : Colors.white)
                                       : Colors.transparent,
                                   borderRadius: BorderRadius.circular(8),
                                   boxShadow: _isFullPayment
                                       ? [
                                           BoxShadow(
-                                            color: Colors.black.withValues(alpha: 0.05),
+                                            color: Colors.black
+                                                .withValues(alpha: 0.05),
                                             blurRadius: 3,
                                             offset: const Offset(0, 1),
                                           ),
@@ -567,10 +596,14 @@ class _PaymentDetailBottomSheetState
                                   'จ่ายเต็มจำนวน',
                                   style: TextStyle(
                                     fontSize: 12.5,
-                                    fontWeight: _isFullPayment ? FontWeight.w800 : FontWeight.w600,
+                                    fontWeight: _isFullPayment
+                                        ? FontWeight.w800
+                                        : FontWeight.w600,
                                     color: _isFullPayment
                                         ? const Color(0xFFFF5000)
-                                        : (isDark ? AppColors.bodyMuted : AppColors.inkMuted48),
+                                        : (isDark
+                                            ? AppColors.bodyMuted
+                                            : AppColors.inkMuted48),
                                   ),
                                 ),
                               ),
@@ -580,16 +613,20 @@ class _PaymentDetailBottomSheetState
                             child: GestureDetector(
                               onTap: _selectPartialPayment,
                               child: Container(
-                                padding: const EdgeInsets.symmetric(vertical: 7),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 7),
                                 decoration: BoxDecoration(
                                   color: !_isFullPayment
-                                      ? (isDark ? AppColors.surfaceTile1 : Colors.white)
+                                      ? (isDark
+                                          ? AppColors.surfaceTile1
+                                          : Colors.white)
                                       : Colors.transparent,
                                   borderRadius: BorderRadius.circular(8),
                                   boxShadow: !_isFullPayment
                                       ? [
                                           BoxShadow(
-                                            color: Colors.black.withValues(alpha: 0.05),
+                                            color: Colors.black
+                                                .withValues(alpha: 0.05),
                                             blurRadius: 3,
                                             offset: const Offset(0, 1),
                                           ),
@@ -601,10 +638,14 @@ class _PaymentDetailBottomSheetState
                                   'จ่ายบางส่วน',
                                   style: TextStyle(
                                     fontSize: 12.5,
-                                    fontWeight: !_isFullPayment ? FontWeight.w800 : FontWeight.w600,
+                                    fontWeight: !_isFullPayment
+                                        ? FontWeight.w800
+                                        : FontWeight.w600,
                                     color: !_isFullPayment
                                         ? const Color(0xFFFF5000)
-                                        : (isDark ? AppColors.bodyMuted : AppColors.inkMuted48),
+                                        : (isDark
+                                            ? AppColors.bodyMuted
+                                            : AppColors.inkMuted48),
                                   ),
                                 ),
                               ),
@@ -621,93 +662,107 @@ class _PaymentDetailBottomSheetState
                     color: isDark ? Colors.white10 : const Color(0xFFE5E7EB),
                   ),
 
-                  // Clean List Input Row (Eliminated nested child-like boxes)
+                  // Spacious, Clean FinTech Hero Amount Row
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Container(
-                          width: 26,
-                          height: 26,
-                          decoration: const ShapeDecoration(
-                            color: Color(0x1FFF5000),
-                            shape: SmoothRectangleBorder(
-                              borderRadius: SmoothBorderRadius.all(
-                                SmoothRadius(cornerRadius: 7, cornerSmoothing: 0.8),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'ยอดเงินที่ต้องการชำระ (บาท)',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: isDark
+                                    ? AppColors.bodyMuted
+                                    : AppColors.inkMuted48,
                               ),
                             ),
-                          ),
-                          alignment: Alignment.center,
-                          child: const Text(
-                            '฿',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFFFF5000),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
+                            if (!_isFullPayment)
                               Text(
-                                'ยอดชำระครั้งนี้ (บาท)',
-                                style: TextStyle(
+                                'ยอดค้าง ฿${widget.debt.outstandingAmount.toStringAsFixed(2)}',
+                                style: const TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w600,
-                                  color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
+                                  color: Color(0xFFFF5000),
                                 ),
                               ),
-                              const SizedBox(height: 1),
-                              Text(
-                                _isFullPayment ? 'ยอดคงค้างเต็มจำนวน' : 'แตะเพื่อแก้ไขยอดที่ต้องการโอน',
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
-                                ),
-                              ),
-                            ],
-                          ),
+                          ],
                         ),
-                        const SizedBox(width: 8),
-                        IntrinsicWidth(
-                          child: ConstrainedBox(
-                            constraints: const BoxConstraints(minWidth: 90, maxWidth: 150),
-                            child: TextField(
-                              controller: _amountController,
-                              readOnly: _isFullPayment,
-                              textAlign: TextAlign.end,
-                              keyboardType: const TextInputType.numberWithOptions(
-                                decimal: true,
-                              ),
+                        const SizedBox(height: 6),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.baseline,
+                          textBaseline: TextBaseline.alphabetic,
+                          children: [
+                            const Text(
+                              '฿ ',
                               style: TextStyle(
-                                fontSize: 18,
+                                fontSize: 24,
                                 fontWeight: FontWeight.w800,
-                                letterSpacing: -0.3,
-                                color: _isFullPayment
-                                    ? (isDark ? AppColors.bodyOnDark : AppColors.ink)
-                                    : const Color(0xFFFF5000),
+                                color: Color(0xFFFF5000),
                               ),
-                              decoration: InputDecoration(
-                                isDense: true,
-                                border: InputBorder.none,
-                                contentPadding: EdgeInsets.zero,
-                                suffixText: ' ฿',
-                                suffixStyle: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                  color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
+                            ),
+                            Expanded(
+                              child: TextField(
+                                controller: _amountController,
+                                readOnly: _isFullPayment,
+                                keyboardType:
+                                    const TextInputType.numberWithOptions(
+                                  decimal: true,
+                                ),
+                                style: const TextStyle(
+                                  fontSize: 26,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: -0.5,
+                                  color: Color(0xFFFF5000),
+                                ),
+                                decoration: InputDecoration(
+                                  isDense: true,
+                                  filled: false,
+                                  fillColor: Colors.transparent,
+                                  border: InputBorder.none,
+                                  enabledBorder: InputBorder.none,
+                                  focusedBorder: InputBorder.none,
+                                  disabledBorder: InputBorder.none,
+                                  contentPadding: EdgeInsets.zero,
+                                  hintText: '0.00',
+                                  hintStyle: TextStyle(
+                                    fontSize: 26,
+                                    fontWeight: FontWeight.w800,
+                                    color: (isDark
+                                            ? AppColors.bodyMuted
+                                            : AppColors.inkMuted48)
+                                        .withValues(alpha: 0.4),
+                                  ),
+                                ),
+                                onChanged: (_) {
+                                  setState(
+                                      () {}); // Re-generate dynamic QR on amount edit
+                                },
+                              ),
+                            ),
+                            if (_isFullPayment)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFF5000)
+                                      .withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: const Text(
+                                  'เต็มจำนวน',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                    color: Color(0xFFFF5000),
+                                  ),
                                 ),
                               ),
-                              onChanged: (_) {
-                                setState(() {}); // Re-generate dynamic QR on amount edit
-                              },
-                            ),
-                          ),
+                          ],
                         ),
                       ],
                     ),
@@ -726,7 +781,8 @@ class _PaymentDetailBottomSheetState
             // Group 4: Slip Upload Section (Clean Dropzone)
             Container(
               decoration: ShapeDecoration(
-                color: isDark ? AppColors.surfaceTile2 : const Color(0xFFF9FAFB),
+                color:
+                    isDark ? AppColors.surfaceTile2 : const Color(0xFFF9FAFB),
                 shape: SmoothRectangleBorder(
                   side: BorderSide(
                     color: _selectedSlipFile != null
@@ -757,7 +813,8 @@ class _PaymentDetailBottomSheetState
                           style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w700,
-                            color: isDark ? AppColors.bodyOnDark : AppColors.ink,
+                            color:
+                                isDark ? AppColors.bodyOnDark : AppColors.ink,
                           ),
                         ),
                       ],
@@ -787,7 +844,8 @@ class _PaymentDetailBottomSheetState
                                 const SizedBox(width: 12),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       const Row(
                                         children: [
@@ -812,16 +870,21 @@ class _PaymentDetailBottomSheetState
                                         'แตะเพื่อเลือกรูปใหม่หรือถ่ายใหม่',
                                         style: TextStyle(
                                           fontSize: 11,
-                                          color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
+                                          color: isDark
+                                              ? AppColors.bodyMuted
+                                              : AppColors.inkMuted48,
                                         ),
                                       ),
                                     ],
                                   ),
                                 ),
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8, vertical: 4),
                                   decoration: BoxDecoration(
-                                    color: isDark ? Colors.white10 : const Color(0xFFE5E7EB),
+                                    color: isDark
+                                        ? Colors.white10
+                                        : const Color(0xFFE5E7EB),
                                     borderRadius: BorderRadius.circular(6),
                                   ),
                                   child: const Text(
@@ -840,7 +903,9 @@ class _PaymentDetailBottomSheetState
                                 Icon(
                                   Icons.cloud_upload_outlined,
                                   size: 24,
-                                  color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
+                                  color: isDark
+                                      ? AppColors.bodyMuted
+                                      : AppColors.inkMuted48,
                                 ),
                                 const SizedBox(width: 8),
                                 Text(
@@ -848,7 +913,9 @@ class _PaymentDetailBottomSheetState
                                   style: TextStyle(
                                     fontSize: 12.5,
                                     fontWeight: FontWeight.w600,
-                                    color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
+                                    color: isDark
+                                        ? AppColors.bodyMuted
+                                        : AppColors.inkMuted48,
                                   ),
                                 ),
                               ],
@@ -862,7 +929,8 @@ class _PaymentDetailBottomSheetState
             if (paymentFlow.errorMessage != null) ...[
               const SizedBox(height: 10),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
                   color: AppColors.error.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
@@ -879,36 +947,6 @@ class _PaymentDetailBottomSheetState
             ],
 
             const SizedBox(height: 16),
-
-            // Submit Button (High-End FinTech CTA)
-            ElevatedButton(
-              onPressed: paymentFlow.isSubmitting ? null : _executePayment,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFFF5000),
-                foregroundColor: Colors.white,
-                minimumSize: const Size(double.infinity, 48),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                elevation: 0,
-              ),
-              child: paymentFlow.isSubmitting
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2.2,
-                        color: Colors.white,
-                      ),
-                    )
-                  : const Text(
-                      'ดำเนินการชำระเงิน',
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-            ),
 
             // Payment History / Installments Section
             const SizedBox(height: 20),
@@ -931,9 +969,8 @@ class _PaymentDetailBottomSheetState
                       'ยังไม่มีประวัติการชำระเงินสำหรับบิลนี้',
                       style: TextStyle(
                         fontSize: 12,
-                        color: isDark
-                            ? AppColors.bodyMuted
-                            : AppColors.inkMuted48,
+                        color:
+                            isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
                       ),
                     ),
                   );
@@ -941,10 +978,13 @@ class _PaymentDetailBottomSheetState
 
                 return Container(
                   decoration: ShapeDecoration(
-                    color: isDark ? AppColors.surfaceTile2 : const Color(0xFFF9FAFB),
+                    color: isDark
+                        ? AppColors.surfaceTile2
+                        : const Color(0xFFF9FAFB),
                     shape: SmoothRectangleBorder(
                       side: BorderSide(
-                        color: isDark ? Colors.white10 : const Color(0xFFE5E7EB),
+                        color:
+                            isDark ? Colors.white10 : const Color(0xFFE5E7EB),
                         width: 0.8,
                       ),
                       borderRadius: const SmoothBorderRadius.all(
@@ -993,7 +1033,9 @@ class _PaymentDetailBottomSheetState
                                 ),
                                 const SizedBox(height: 1),
                                 Text(
-                                  isConfirmed ? 'ยืนยันแล้ว' : 'รอเจ้าของยืนยัน',
+                                  isConfirmed
+                                      ? 'ยืนยันแล้ว'
+                                      : 'รอเจ้าของยืนยัน',
                                   style: TextStyle(
                                     fontSize: 11,
                                     fontWeight: FontWeight.w600,
@@ -1024,6 +1066,38 @@ class _PaymentDetailBottomSheetState
               loading: () => const PingPayLoadingWidget(size: 60),
               error: (_, __) => const SizedBox.shrink(),
             ),
+
+            const SizedBox(height: 16),
+
+            // Submit Button (High-End FinTech CTA)
+            ElevatedButton(
+              onPressed: paymentFlow.isSubmitting ? null : _executePayment,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFFF5000),
+                foregroundColor: Colors.white,
+                minimumSize: const Size(double.infinity, 48),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                elevation: 0,
+              ),
+              child: paymentFlow.isSubmitting
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Text(
+                      'ดำเนินการชำระเงิน',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+            ),
           ],
         ),
       ),
@@ -1040,16 +1114,20 @@ class _PaymentDetailBottomSheetState
         child: Wrap(
           children: [
             ListTile(
-              leading: const Icon(Icons.photo_library_rounded, color: Color(0xFFFF5000)),
-              title: const Text('เลือกจากอัลบั้มรูป', style: TextStyle(fontWeight: FontWeight.w600)),
+              leading: const Icon(Icons.photo_library_rounded,
+                  color: Color(0xFFFF5000)),
+              title: const Text('เลือกจากอัลบั้มรูป',
+                  style: TextStyle(fontWeight: FontWeight.w600)),
               onTap: () {
                 Navigator.pop(ctx);
                 _pickSlipImage(ImageSource.gallery);
               },
             ),
             ListTile(
-              leading: const Icon(Icons.camera_alt_rounded, color: Color(0xFFFF5000)),
-              title: const Text('ถ่ายรูปสลิป', style: TextStyle(fontWeight: FontWeight.w600)),
+              leading: const Icon(Icons.camera_alt_rounded,
+                  color: Color(0xFFFF5000)),
+              title: const Text('ถ่ายรูปสลิป',
+                  style: TextStyle(fontWeight: FontWeight.w600)),
               onTap: () {
                 Navigator.pop(ctx);
                 _pickSlipImage(ImageSource.camera);
@@ -1072,7 +1150,7 @@ class _PaymentDetailBottomSheetState
       try {
         final cleanId = promptPayId.replaceAll(RegExp(r'[^0-9]'), '');
         final satang = enteredAmount > 0 ? (enteredAmount * 100).round() : null;
-        
+
         if (cleanId.length == 13) {
           qrPayload = encodePromptPay(
             target: PromptPayTarget(PromptPayType.nationalId, cleanId),
@@ -1146,7 +1224,9 @@ class _PaymentDetailBottomSheetState
                         'สแกน QR ผ่านแอปธนาคารเพื่อโอนเงิน',
                         style: TextStyle(
                           fontSize: 11,
-                          color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
+                          color: isDark
+                              ? AppColors.bodyMuted
+                              : AppColors.inkMuted48,
                         ),
                       ),
                     ],
@@ -1182,7 +1262,8 @@ class _PaymentDetailBottomSheetState
                   child: Column(
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 3),
                         decoration: BoxDecoration(
                           color: const Color(0xFF003D6B),
                           borderRadius: BorderRadius.circular(5),
