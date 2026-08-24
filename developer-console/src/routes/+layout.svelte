@@ -13,8 +13,10 @@
   let currentUser = $state<any>(null);
   let mobileMenuOpen = $state(false);
 
-  const navItems: { label: string; href: string; icon: 'dashboard' | 'transactions' | 'activity' | 'suspicious' | 'users' | 'disputes' | 'rewards' | 'notifications' | 'security' | 'audit' | 'maintenance' }[] = [
+  const navItems: { label: string; href: string; icon: 'dashboard' | 'bills' | 'payments' | 'transactions' | 'activity' | 'suspicious' | 'users' | 'disputes' | 'rewards' | 'notifications' | 'security' | 'audit' | 'maintenance' }[] = [
     { label: 'Dashboard', href: '/', icon: 'dashboard' },
+    { label: 'Bills', href: '/bills', icon: 'bills' },
+    { label: 'Payments', href: '/payments', icon: 'payments' },
     { label: 'Transactions', href: '/transactions', icon: 'transactions' },
     { label: 'Rewards Store', href: '/rewards', icon: 'rewards' },
     { label: 'Notifications', href: '/notifications', icon: 'notifications' },
