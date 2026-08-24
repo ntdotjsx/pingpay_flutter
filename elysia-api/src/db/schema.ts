@@ -847,17 +847,6 @@ export const authSessions = pgTable(
   })
 );
 
-export const authOauthStates = pgTable(
-  "auth_oauth_states",
-  {
-    state: varchar("state", { length: 64 }).primaryKey(),
-    codeVerifier: text("code_verifier"),
-    redirectUri: text("redirect_uri"),
-    expiresAt: timestamp("expires_at").notNull(),
-    createdAt: timestamp("created_at").notNull().defaultNow(),
-  }
-);
-
 export const securityEvents = pgTable(
   "security_events",
   {

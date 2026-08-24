@@ -187,26 +187,31 @@ class MyBillsScreen extends ConsumerWidget {
                   data: (allBills) {
                     final currentUserId = ref.read(authStateProvider).user?.id;
                     final bills = allBills.where((b) => b.ownerId == currentUserId).toList();
-                    final totalBillAmount = bills.fold(0.0, (acc, b) => acc + b.totalAmount);
-                    final totalOutstanding = bills.fold(0.0, (acc, b) => acc + b.totalOutstandingAmount);
-                    final totalPaid = bills.fold(0.0, (acc, b) => acc + b.totalPaidAmount);
+
+                    // Exclude cancelled and fully written-off bills from summary analytics
+                    final activeBills = bills.where((b) => !b.isCancelled && !b.isFullyWrittenOff).toList();
+
+                    final totalBillAmount = activeBills.fold(
+                      0.0,
+                      (acc, b) => acc + (b.totalAmount - b.totalWrittenOffAmount),
+                    );
+                    final totalOutstanding = activeBills.fold(0.0, (acc, b) => acc + b.totalOutstandingAmount);
+                    final totalPaid = activeBills.fold(0.0, (acc, b) => acc + b.totalPaidAmount);
 
                     final uniqueDebtorIds = <String>{};
-                    for (final b in bills) {
+                    for (final b in activeBills) {
                       for (final item in b.items) {
-                        if (item.debtorId.isNotEmpty) {
+                        if (item.debtorId.isNotEmpty && !item.isFullyWrittenOff) {
                           uniqueDebtorIds.add(item.debtorId);
                         }
                       }
                     }
                     final totalDebtors = uniqueDebtorIds.length;
-                    final unpaidBillsCount = bills.where((b) =>
-                      !b.isCancelled &&
-                      !b.isFullyWrittenOff &&
+                    final unpaidBillsCount = activeBills.where((b) =>
                       !b.isFullyPaid &&
                       b.totalOutstandingAmount > 0
                     ).length;
-                    final fullyPaidBillsCount = bills.where((b) => b.isFullyPaid).length;
+                    final fullyPaidBillsCount = activeBills.where((b) => b.isFullyPaid).length;
 
                     return _buildHeader(
                       context,
@@ -215,7 +220,7 @@ class MyBillsScreen extends ConsumerWidget {
                       totalBillAmount: totalBillAmount,
                       totalPaid: totalPaid,
                       totalOutstanding: totalOutstanding,
-                      totalBillsCount: bills.length,
+                      totalBillsCount: activeBills.length,
                       unpaidBillsCount: unpaidBillsCount,
                       paidBillsCount: fullyPaidBillsCount,
                       totalDebtors: totalDebtors,
@@ -237,9 +242,9 @@ class MyBillsScreen extends ConsumerWidget {
                         case MyBillsFilter.unpaid:
                           return b.status == 'unpaid' && !b.isCancelled && !b.isFullyWrittenOff;
                         case MyBillsFilter.partiallyPaid:
-                          return b.status == 'partially_paid' || b.status == 'partially_written_off';
+                          return (b.status == 'partially_paid' || b.status == 'partially_written_off') && !b.isFullyWrittenOff;
                         case MyBillsFilter.paid:
-                          return b.status == 'paid' || b.status == 'fully_paid' || b.status == 'fully_written_off';
+                          return (b.status == 'paid' || b.status == 'fully_paid') && !b.isFullyWrittenOff;
                         case MyBillsFilter.all:
                           return true;
                       }
@@ -276,7 +281,7 @@ class MyBillsScreen extends ConsumerWidget {
                                 const SizedBox(width: 6),
                                 _buildFilterChip(
                                   ref: ref,
-                                  label: 'ชำระบางส่วน (${bills.where((b) => b.status == 'partially_paid').length})',
+                                  label: 'ชำระบางส่วน (${bills.where((b) => (b.status == 'partially_paid' || b.status == 'partially_written_off') && !b.isFullyWrittenOff).length})',
                                   filter: MyBillsFilter.partiallyPaid,
                                   current: selectedFilter,
                                   isDark: isDark,
@@ -284,7 +289,7 @@ class MyBillsScreen extends ConsumerWidget {
                                 const SizedBox(width: 6),
                                 _buildFilterChip(
                                   ref: ref,
-                                  label: 'ครบแล้ว (${bills.where((b) => b.status == 'paid' || b.status == 'fully_paid').length})',
+                                  label: 'ครบแล้ว (${bills.where((b) => (b.status == 'paid' || b.status == 'fully_paid') && !b.isFullyWrittenOff).length})',
                                   filter: MyBillsFilter.paid,
                                   current: selectedFilter,
                                   isDark: isDark,
