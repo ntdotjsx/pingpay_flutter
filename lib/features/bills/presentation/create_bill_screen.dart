@@ -1383,13 +1383,9 @@ class _CreateBillScreenState extends ConsumerState<CreateBillScreen>
                                 : const Row(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
-                                      Icon(
-                                        Icons.check_circle_outline_rounded,
-                                        size: 20,
-                                      ),
                                       SizedBox(width: 8),
                                       Text(
-                                        'สร้างบิลและบันทึกหนี้ (Create Bill)',
+                                        'สร้างบิล',
                                         style: TextStyle(
                                           fontWeight: FontWeight.bold,
                                           fontSize: 15,

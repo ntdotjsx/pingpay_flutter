@@ -4,7 +4,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/animations/animated_counter_text.dart';
 import '../../../core/animations/animated_list_item.dart';
-import '../../../core/animations/animated_pressable.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/app_toast.dart';
 import '../../../core/utils/input_validators.dart';
@@ -19,21 +18,8 @@ class RewardsStoreScreen extends ConsumerStatefulWidget {
   ConsumerState<RewardsStoreScreen> createState() => _RewardsStoreScreenState();
 }
 
-class _RewardsStoreScreenState extends ConsumerState<RewardsStoreScreen>
-    with SingleTickerProviderStateMixin {
-  late TabController _tabController;
-
-  @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 2, vsync: this);
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
-  }
+class _RewardsStoreScreenState extends ConsumerState<RewardsStoreScreen> {
+  int _selectedTab = 0; // 0: ของรางวัลทั้งหมด, 1: ประวัติการแลก
 
   @override
   Widget build(BuildContext context) {
@@ -42,292 +28,470 @@ class _RewardsStoreScreenState extends ConsumerState<RewardsStoreScreen>
     final catalogAsync = ref.watch(rewardCatalogProvider);
 
     return Scaffold(
-      backgroundColor: isDark ? AppColors.surfaceBlack : const Color(0xFFF7F8FA),
-      appBar: AppBar(
-        title: const Text(
-          'แลกของรางวัล',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-        ),
-        centerTitle: true,
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        automaticallyImplyLeading: false,
-      ),
-      body: Column(
-        children: [
-          // 1. Points Balance & Dynamic Level Card
-          Container(
-            margin: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-            padding: const EdgeInsets.all(20),
-            decoration: ShapeDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFFFF9500), Color(0xFFFF5E3A)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              shadows: [
-                BoxShadow(
-                  color: const Color(0xFFFF9500).withValues(alpha: 0.35),
-                  blurRadius: 16,
-                  offset: const Offset(0, 6),
-                ),
-              ],
-              shape: const SmoothRectangleBorder(
-                borderRadius: SmoothBorderRadius.all(
-                  SmoothRadius(cornerRadius: 24, cornerSmoothing: 1.0),
-                ),
-              ),
-            ),
+      backgroundColor: isDark ? AppColors.surfaceBlack : Colors.white,
+      body: RefreshIndicator(
+        onRefresh: () async {
+          HapticFeedback.lightImpact();
+          ref.invalidate(rewardStoreProvider);
+          ref.invalidate(rewardCatalogProvider);
+          ref.invalidate(redemptionHistoryProvider);
+        },
+        color: const Color(0xFFFF5000),
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(
+            parent: BouncingScrollPhysics(),
+          ),
+          child: Container(
+            color: isDark ? AppColors.surfaceBlack : Colors.white,
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Row(
-                  children: [
-                    Container(
-                      width: 52,
-                      height: 52,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.25),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.monetization_on_rounded,
-                        size: 32,
-                        color: Color(0xFFFFD700),
-                      ),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'แต้มสะสมของคุณ',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.baseline,
-                            textBaseline: TextBaseline.alphabetic,
-                            children: [
-                              Text(
-                                '${storeState.points}',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 32,
-                                  fontWeight: FontWeight.bold,
-                                  letterSpacing: -0.5,
-                                ),
-                              ),
-                              const SizedBox(width: 6),
-                              const Text(
-                                'แต้ม',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                    GestureDetector(
-                      onTap: () => _showLevelDetailsDialog(context),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.25),
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              storeState.tier.badge,
-                              style: const TextStyle(fontSize: 14),
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              'Lv.${storeState.tier.level}',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+                // ── 1. Signature Executive Header & Points Hero ───────────
+                _buildExecutiveHeader(context, isDark, storeState),
+
                 const SizedBox(height: 14),
 
-                // Level Progress Bar & Info
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(16),
+                // ── 2. Segmented Capsule Switcher ─────────────────────────
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: Container(
+                    height: 40,
+                    padding: const EdgeInsets.all(3),
+                    decoration: BoxDecoration(
+                      color: isDark ? AppColors.surfaceTile1 : const Color(0xFFF3F4F6),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      children: [
+                        _buildSegmentTab(
+                          label: 'ของรางวัลทั้งหมด',
+                          icon: Icons.card_giftcard_rounded,
+                          isSelected: _selectedTab == 0,
+                          isDark: isDark,
+                          onTap: () {
+                            HapticFeedback.selectionClick();
+                            setState(() => _selectedTab = 0);
+                          },
+                        ),
+                        _buildSegmentTab(
+                          label: 'ประวัติการแลก',
+                          icon: Icons.history_rounded,
+                          isSelected: _selectedTab == 1,
+                          isDark: isDark,
+                          onTap: () {
+                            HapticFeedback.selectionClick();
+                            setState(() => _selectedTab = 1);
+                          },
+                        ),
+                      ],
+                    ),
                   ),
-                  child: Column(
+                ),
+
+                const SizedBox(height: 14),
+
+                // ── 3. Tab Content ────────────────────────────────────────
+                _selectedTab == 0
+                    ? _buildCatalogSection(context, isDark, storeState, catalogAsync)
+                    : _buildRedemptionHistorySection(isDark),
+
+                const SizedBox(height: 48),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // =========================================================================
+  // TOP SIGNATURE HEADER
+  // =========================================================================
+  Widget _buildExecutiveHeader(
+    BuildContext context,
+    bool isDark,
+    RewardStoreState storeState,
+  ) {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: isDark
+              ? [
+                  AppColors.surfaceTile1,
+                  AppColors.surfaceTile2,
+                  AppColors.surfaceTile3,
+                ]
+              : [
+                  const Color(0xFFFF5000),
+                  const Color(0xFFFF6A00),
+                  const Color(0xFFFF8500),
+                ],
+        ),
+        borderRadius: const BorderRadius.only(
+          bottomLeft: Radius.circular(24),
+          bottomRight: Radius.circular(24),
+        ),
+      ),
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // 1. Top Title + Level Badge Row
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            'ระดับ: ${storeState.tier.title}',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          Text(
-                            'ได้แต้มสูงสุด +${storeState.tier.rewardPointsEarned} แต้ม/บิล',
-                            style: const TextStyle(
-                              color: Color(0xFFFFD700),
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
+                      const Text(
+                        'แลกของรางวัล',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: -0.4,
+                          color: Colors.white,
+                        ),
                       ),
-                      const SizedBox(height: 6),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(6),
-                        child: LinearProgressIndicator(
-                          value: storeState.tier.nextTierProgress,
-                          backgroundColor: Colors.white.withValues(alpha: 0.2),
-                          valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFFFD700)),
-                          minHeight: 6,
+                      const SizedBox(height: 1),
+                      Text(
+                        'ใช้แต้มสะสมแลกรับของรางวัลส่งตรงถึงบ้าน',
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w400,
+                          color: Colors.white.withValues(alpha: 0.88),
                         ),
                       ),
                     ],
                   ),
-                ),
-              ],
-            ),
-          ),
 
-          // 2. Custom Tabs (Catalog vs History)
-          Container(
-            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-            decoration: BoxDecoration(
-              color: isDark ? AppColors.surfaceTile1 : Colors.black.withValues(alpha: 0.05),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: TabBar(
-              controller: _tabController,
-              dividerColor: Colors.transparent,
-              indicator: BoxDecoration(
-                color: AppColors.primary,
-                borderRadius: BorderRadius.circular(14),
-              ),
-              indicatorSize: TabBarIndicatorSize.tab,
-              labelColor: Colors.white,
-              unselectedLabelColor: isDark ? AppColors.bodyMuted : AppColors.inkMuted80,
-              labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-              tabs: const [
-                Tab(text: 'ของรางวัลทั้งหมด'),
-                Tab(text: 'ประวัติการแลก'),
-              ],
-            ),
-          ),
-          const SizedBox(height: 8),
-
-          // 3. Tab Views
-          Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: [
-                // Tab 1: Reward Catalog Grid
-                catalogAsync.when(
-                  loading: () => const PingPayLoadingWidget(
-                    message: 'กำลังโหลดรายการของรางวัล...',
-                    size: 130,
-                  ),
-                  error: (err, _) => Center(
-                    child: Text('เกิดข้อผิดพลาด: $err'),
-                  ),
-                  data: (items) {
-                    if (items.isEmpty) {
-                      return const Center(child: Text('ไม่มีของรางวัลในขณะนี้'));
-                    }
-
-                    return GridView.builder(
-                      physics: const BouncingScrollPhysics(),
-                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
-                        childAspectRatio: 0.68,
-                        crossAxisSpacing: 12,
-                        mainAxisSpacing: 12,
+                  // Level Tier Capsule Button
+                  GestureDetector(
+                    onTap: () {
+                      HapticFeedback.lightImpact();
+                      _showLevelDetailsDialog(context);
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      decoration: ShapeDecoration(
+                        color: Colors.white.withValues(alpha: 0.22),
+                        shape: const SmoothRectangleBorder(
+                          borderRadius: SmoothBorderRadius.all(
+                            SmoothRadius(cornerRadius: 12, cornerSmoothing: 0.8),
+                          ),
+                        ),
                       ),
-                      itemCount: items.length,
-                      itemBuilder: (context, index) {
-                        final item = items[index];
-                        final canAfford = storeState.points >= item.pointsCost;
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            storeState.tier.badge,
+                            style: const TextStyle(fontSize: 13),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Lv.${storeState.tier.level}',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
 
-                        return _buildRewardItemCard(
-                          context: context,
-                          item: item,
-                          canAfford: canAfford,
-                          isDark: isDark,
-                        );
-                      },
-                    );
-                  },
+              const SizedBox(height: 14),
+
+              // 2. Points Balance Hero Row
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'แต้มสะสมของคุณ',
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.9),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.baseline,
+                        textBaseline: TextBaseline.alphabetic,
+                        children: [
+                          const Icon(
+                            Icons.monetization_on_rounded,
+                            size: 24,
+                            color: Color(0xFFFFD700),
+                          ),
+                          const SizedBox(width: 6),
+                          AnimatedCounterText(
+                            value: storeState.points.toDouble(),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 28,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: -0.6,
+                            ),
+                          ),
+                          const SizedBox(width: 5),
+                          const Text(
+                            'แต้ม',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+
+                  // Tier Title Tag
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                    decoration: ShapeDecoration(
+                      color: Colors.white.withValues(alpha: 0.22),
+                      shape: const SmoothRectangleBorder(
+                        borderRadius: SmoothBorderRadius.all(
+                          SmoothRadius(cornerRadius: 10, cornerSmoothing: 1.0),
+                        ),
+                      ),
+                    ),
+                    child: Text(
+                      storeState.tier.title,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 12),
+
+              // 3. Level Progression & Benefits Bar in Frosted Box
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.12),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-
-                // Tab 2: Redemption History
-                _buildRedemptionHistoryTab(isDark),
-              ],
-            ),
+                child: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'ระดับ: ${storeState.tier.title}',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white.withValues(alpha: 0.9),
+                          ),
+                        ),
+                        Text(
+                          'รับแต้มสูงสุด +${storeState.tier.rewardPointsEarned} แต้ม/บิล',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFFFFD700),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: LinearProgressIndicator(
+                        value: storeState.tier.nextTierProgress,
+                        backgroundColor: Colors.white.withValues(alpha: 0.2),
+                        valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFFFD700)),
+                        minHeight: 5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
+    );
+  }
+
+  Widget _buildSegmentTab({
+    required String label,
+    required IconData icon,
+    required bool isSelected,
+    required bool isDark,
+    required VoidCallback onTap,
+  }) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: isSelected
+                ? (isDark ? AppColors.surfaceTile2 : Colors.white)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(10),
+            boxShadow: isSelected
+                ? [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.08),
+                      blurRadius: 4,
+                      offset: const Offset(0, 1),
+                    ),
+                  ]
+                : null,
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                icon,
+                size: 15,
+                color: isSelected
+                    ? const Color(0xFFFF5000)
+                    : (isDark ? AppColors.bodyMuted : AppColors.inkMuted48),
+              ),
+              const SizedBox(width: 5),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                  letterSpacing: -0.2,
+                  color: isSelected
+                      ? (isDark ? Colors.white : AppColors.ink)
+                      : (isDark ? AppColors.bodyMuted : AppColors.inkMuted48),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // =========================================================================
+  // REWARDS CATALOG GRID SECTION
+  // =========================================================================
+  Widget _buildCatalogSection(
+    BuildContext context,
+    bool isDark,
+    RewardStoreState storeState,
+    AsyncValue<List<RewardItemModel>> catalogAsync,
+  ) {
+    return catalogAsync.when(
+      loading: () => const Padding(
+        padding: EdgeInsets.symmetric(vertical: 48),
+        child: PingPayLoadingWidget(
+          message: 'กำลังโหลดรายการของรางวัล...',
+          size: 110,
+        ),
+      ),
+      error: (err, _) => Padding(
+        padding: const EdgeInsets.all(32),
+        child: Center(
+          child: Text('เกิดข้อผิดพลาด: $err'),
+        ),
+      ),
+      data: (items) {
+        if (items.isEmpty) {
+          return const Padding(
+            padding: EdgeInsets.all(48),
+            child: Center(child: Text('ไม่มีของรางวัลในขณะนี้')),
+          );
+        }
+
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              childAspectRatio: 0.72,
+              crossAxisSpacing: 12,
+              mainAxisSpacing: 12,
+            ),
+            itemCount: items.length,
+            itemBuilder: (context, index) {
+              final item = items[index];
+              final canAfford = storeState.points >= item.pointsCost;
+
+              return AnimatedListItem(
+                index: index,
+                child: _buildRewardItemCard(
+                  context: context,
+                  item: item,
+                  storePoints: storeState.points,
+                  canAfford: canAfford,
+                  isDark: isDark,
+                ),
+              );
+            },
+          ),
+        );
+      },
     );
   }
 
   Widget _buildRewardItemCard({
     required BuildContext context,
     required RewardItemModel item,
+    required int storePoints,
     required bool canAfford,
     required bool isDark,
   }) {
+    final deficit = item.pointsCost - storePoints;
+
     return Container(
       decoration: ShapeDecoration(
         color: isDark ? AppColors.surfaceTile1 : Colors.white,
         shadows: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
-            blurRadius: 10,
+            color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.04),
+            blurRadius: 12,
             offset: const Offset(0, 3),
           ),
         ],
         shape: SmoothRectangleBorder(
           side: BorderSide(
-            color: isDark ? Colors.white10 : AppColors.hairline,
-            width: 1,
+            color: isDark ? Colors.white10 : const Color(0xFFF0F2F5),
+            width: 0.8,
           ),
           borderRadius: const SmoothBorderRadius.all(
-            SmoothRadius(cornerRadius: 20, cornerSmoothing: 1.0),
+            SmoothRadius(cornerRadius: 18, cornerSmoothing: 0.9),
           ),
         ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Image / Placeholder
+          // 1. Product Image / Cover
           Expanded(
             child: ClipRRect(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
               child: item.imageUrl != null && item.imageUrl!.isNotEmpty
                   ? Image.network(
                       item.imageUrl!,
@@ -338,62 +502,89 @@ class _RewardsStoreScreenState extends ConsumerState<RewardsStoreScreen>
             ),
           ),
 
+          // 2. Details & Action Button
           Padding(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(10),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   item.title,
-                  maxLines: 2,
+                  maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontSize: 13,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: -0.2,
                     color: isDark ? AppColors.bodyOnDark : AppColors.ink,
                   ),
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 4),
+
+                // Points Tag
                 Row(
                   children: [
                     const Icon(
-                      Icons.monetization_on,
-                      size: 16,
+                      Icons.monetization_on_rounded,
+                      size: 15,
                       color: Color(0xFFFFD700),
                     ),
                     const SizedBox(width: 4),
                     Text(
                       '${item.pointsCost} แต้ม',
                       style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.primary,
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFFFF5000),
+                        letterSpacing: -0.3,
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 10),
+
+                const SizedBox(height: 8),
+
+                // Action Button
                 SizedBox(
                   width: double.infinity,
-                  height: 36,
+                  height: 34,
                   child: ElevatedButton(
                     onPressed: item.inStock > 0
-                        ? () => _showRedeemBottomSheet(context, item)
+                        ? () {
+                            if (canAfford) {
+                              HapticFeedback.mediumImpact();
+                              _showRedeemBottomSheet(context, item);
+                            } else {
+                              HapticFeedback.lightImpact();
+                              AppToast.info(context, 'คุณยังขาดอีก $deficit แต้มในการแลกรับของรางวัลนี้');
+                            }
+                          }
                         : null,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: canAfford ? AppColors.primary : const Color(0xFFB0B0B0),
-                      foregroundColor: Colors.white,
+                      backgroundColor: item.inStock <= 0
+                          ? (isDark ? Colors.white12 : const Color(0xFFE5E7EB))
+                          : (canAfford
+                              ? const Color(0xFFFF5000)
+                              : (isDark ? AppColors.surfaceTile2 : const Color(0xFFF3F4F6))),
+                      foregroundColor: item.inStock <= 0
+                          ? AppColors.inkMuted48
+                          : (canAfford
+                              ? Colors.white
+                              : (isDark ? AppColors.bodyMuted : AppColors.inkMuted80)),
                       elevation: 0,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(10),
                       ),
                       padding: EdgeInsets.zero,
                     ),
                     child: Text(
                       item.inStock <= 0
                           ? 'สินค้าหมด'
-                          : (canAfford ? 'แลกรับของรางวัล' : 'แต้มไม่พอ'),
-                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                          : (canAfford ? 'แลกรางวัล' : 'ขาดอีก $deficit แต้ม'),
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        fontWeight: canAfford ? FontWeight.w600 : FontWeight.w500,
+                      ),
                     ),
                   ),
                 ),
@@ -407,40 +598,70 @@ class _RewardsStoreScreenState extends ConsumerState<RewardsStoreScreen>
 
   Widget _buildFallbackImage() {
     return Container(
-      color: AppColors.primary.withValues(alpha: 0.1),
+      color: const Color(0xFFFF5000).withValues(alpha: 0.08),
       child: const Center(
         child: Icon(
           Icons.card_giftcard_rounded,
-          size: 40,
-          color: AppColors.primary,
+          size: 36,
+          color: Color(0xFFFF5000),
         ),
       ),
     );
   }
 
-  Widget _buildRedemptionHistoryTab(bool isDark) {
+  // =========================================================================
+  // REDEMPTION HISTORY SECTION
+  // =========================================================================
+  Widget _buildRedemptionHistorySection(bool isDark) {
     final historyAsync = ref.watch(redemptionHistoryProvider);
 
     return historyAsync.when(
-      loading: () => const PingPayLoadingWidget(
-        message: 'กำลังโหลดประวัติการแลก...',
-        size: 130,
+      loading: () => const Padding(
+        padding: EdgeInsets.symmetric(vertical: 48),
+        child: PingPayLoadingWidget(
+          message: 'กำลังโหลดประวัติการแลก...',
+          size: 110,
+        ),
       ),
-      error: (err, _) => Center(child: Text('เกิดข้อผิดพลาด: $err')),
+      error: (err, _) => Padding(
+        padding: const EdgeInsets.all(32),
+        child: Center(child: Text('เกิดข้อผิดพลาด: $err')),
+      ),
       data: (items) {
         if (items.isEmpty) {
-          return Center(
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 48, horizontal: 24),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.history_rounded, size: 50, color: AppColors.inkMuted48),
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFF5000).withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.history_rounded,
+                    size: 38,
+                    color: Color(0xFFFF5000),
+                  ),
+                ),
                 const SizedBox(height: 12),
                 Text(
                   'ยังไม่มีประวัติการแลกของรางวัล',
                   style: TextStyle(
-                    fontSize: 14,
+                    fontSize: 14.5,
+                    color: isDark ? AppColors.bodyOnDark : AppColors.ink,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'เมื่อคุณแลกของรางวัล รายการและสถานะจัดส่งจะปรากฏที่นี่',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 12,
                     color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
-                    fontWeight: FontWeight.bold,
                   ),
                 ),
               ],
@@ -449,15 +670,16 @@ class _RewardsStoreScreenState extends ConsumerState<RewardsStoreScreen>
         }
 
         return ListView.separated(
-          physics: const BouncingScrollPhysics(),
-          padding: const EdgeInsets.all(16),
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          padding: const EdgeInsets.symmetric(horizontal: 16),
           itemCount: items.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 12),
+          separatorBuilder: (_, __) => const SizedBox(height: 10),
           itemBuilder: (context, index) {
             final redemption = items[index];
 
             return Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(14),
               decoration: ShapeDecoration(
                 color: isDark ? AppColors.surfaceTile1 : Colors.white,
                 shadows: [
@@ -469,11 +691,11 @@ class _RewardsStoreScreenState extends ConsumerState<RewardsStoreScreen>
                 ],
                 shape: SmoothRectangleBorder(
                   side: BorderSide(
-                    color: isDark ? Colors.white10 : AppColors.hairline,
-                    width: 1,
+                    color: isDark ? Colors.white10 : const Color(0xFFF0F2F5),
+                    width: 0.8,
                   ),
                   borderRadius: const SmoothBorderRadius.all(
-                    SmoothRadius(cornerRadius: 18, cornerSmoothing: 1.0),
+                    SmoothRadius(cornerRadius: 16, cornerSmoothing: 0.8),
                   ),
                 ),
               ),
@@ -483,15 +705,15 @@ class _RewardsStoreScreenState extends ConsumerState<RewardsStoreScreen>
                   Row(
                     children: [
                       Container(
-                        padding: const EdgeInsets.all(8),
+                        padding: const EdgeInsets.all(7),
                         decoration: BoxDecoration(
-                          color: AppColors.success.withValues(alpha: 0.15),
+                          color: const Color(0xFF34C759).withValues(alpha: 0.15),
                           shape: BoxShape.circle,
                         ),
                         child: const Icon(
                           Icons.local_shipping_rounded,
-                          color: AppColors.success,
-                          size: 20,
+                          color: Color(0xFF34C759),
+                          size: 18,
                         ),
                       ),
                       const SizedBox(width: 10),
@@ -502,58 +724,57 @@ class _RewardsStoreScreenState extends ConsumerState<RewardsStoreScreen>
                             Text(
                               redemption.rewardItem.title,
                               style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
+                                fontSize: 13.5,
+                                fontWeight: FontWeight.w600,
                                 color: isDark ? AppColors.bodyOnDark : AppColors.ink,
                               ),
                             ),
+                            const SizedBox(height: 2),
                             Text(
-                              'ใช้ไป ${redemption.pointsSpent} แต้ม',
-                              style: const TextStyle(
-                                fontSize: 12,
-                                color: AppColors.primary,
-                                fontWeight: FontWeight.w600,
+                              'แลกเมื่อ ${_formatDate(redemption.createdAt)}',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
                               ),
                             ),
                           ],
                         ),
                       ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: AppColors.primary.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Text(
-                          'เตรียมจัดส่ง',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.primary,
-                          ),
-                        ),
-                      ),
+                      _buildStatusBadge(redemption.status, isDark),
                     ],
                   ),
-                  const SizedBox(height: 10),
-                  const Divider(height: 1),
-                  const SizedBox(height: 8),
-                  Text(
-                    'ผู้รับ: ${redemption.recipientName} (${redemption.phoneNumber})',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: isDark ? AppColors.bodyOnDark : AppColors.ink,
+                  if (redemption.trackingNumber != null && redemption.trackingNumber!.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Divider(height: 1, color: isDark ? Colors.white10 : const Color(0xFFF0F2F5)),
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'เลขพัสดุ: ${redemption.trackingNumber}',
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w500,
+                            color: isDark ? AppColors.bodyMuted : AppColors.ink,
+                          ),
+                        ),
+                        GestureDetector(
+                          onTap: () {
+                            Clipboard.setData(ClipboardData(text: redemption.trackingNumber!));
+                            AppToast.success(context, 'คัดลอกเลขพัสดุแล้ว');
+                          },
+                          child: const Text(
+                            'คัดลอก',
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFFFF5000),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'ที่อยู่จัดส่ง: ${redemption.shippingAddress}',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: isDark ? AppColors.bodyMuted : AppColors.inkMuted80,
-                    ),
-                  ),
+                  ],
                 ],
               ),
             );
@@ -563,469 +784,317 @@ class _RewardsStoreScreenState extends ConsumerState<RewardsStoreScreen>
     );
   }
 
-  void _showRedeemBottomSheet(BuildContext context, RewardItemModel item) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final storeState = ref.read(rewardStoreProvider);
+  Widget _buildStatusBadge(String status, bool isDark) {
+    Color bg;
+    Color fg;
+    String label;
 
-    final nameController = TextEditingController(
-      text: storeState.shippingRecipientName ?? '',
-    );
-    final phoneController = TextEditingController(
-      text: storeState.shippingPhone ?? '',
-    );
-    final addressController = TextEditingController(
-      text: storeState.shippingAddress ?? '',
-    );
+    switch (status) {
+      case 'delivered':
+        bg = const Color(0xFF34C759).withValues(alpha: 0.12);
+        fg = const Color(0xFF34C759);
+        label = 'จัดส่งสำเร็จ';
+        break;
+      case 'shipped':
+        bg = const Color(0xFF007AFF).withValues(alpha: 0.12);
+        fg = const Color(0xFF007AFF);
+        label = 'กำลังจัดส่ง';
+        break;
+      case 'cancelled':
+        bg = AppColors.error.withValues(alpha: 0.1);
+        fg = AppColors.error;
+        label = 'ยกเลิกแล้ว';
+        break;
+      default:
+        bg = const Color(0xFFFF9500).withValues(alpha: 0.12);
+        fg = const Color(0xFFFF9500);
+        label = 'กำลังเตรียมของ';
+        break;
+    }
 
-    final formKey = GlobalKey<FormState>();
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) {
-        return StatefulBuilder(
-          builder: (context, setModalState) {
-            final isRedeeming = ref.watch(rewardStoreProvider).isRedeeming;
-
-            return Container(
-              constraints: BoxConstraints(
-                maxHeight: MediaQuery.of(context).size.height * 0.85,
-              ),
-              decoration: BoxDecoration(
-                color: isDark ? AppColors.surfaceTile1 : Colors.white,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-              ),
-              padding: EdgeInsets.only(
-                bottom: MediaQuery.of(context).viewInsets.bottom + 20,
-                top: 16,
-                left: 20,
-                right: 20,
-              ),
-              child: SafeArea(
-                top: false,
-                child: SingleChildScrollView(
-                  child: Form(
-                    key: formKey,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Center(
-                          child: Container(
-                            width: 36,
-                            height: 4,
-                            decoration: BoxDecoration(
-                              color: isDark ? Colors.white24 : AppColors.hairline,
-                              borderRadius: BorderRadius.circular(2),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: AppColors.primary.withValues(alpha: 0.15),
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(
-                                Icons.card_giftcard_rounded,
-                                color: AppColors.primary,
-                                size: 20,
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text(
-                                    'ยืนยันการแลกรับของรางวัล',
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  Text(
-                                    'ใช้ ${item.pointsCost} แต้ม เพื่อแลกรับสิ่งนี้',
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      color: AppColors.primary,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 14),
-
-                        // Item preview card
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: isDark ? AppColors.surfaceTile2 : AppColors.canvasParchment,
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          child: Row(
-                            children: [
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(10),
-                                child: SizedBox(
-                                  width: 50,
-                                  height: 50,
-                                  child: item.imageUrl != null
-                                      ? Image.network(item.imageUrl!, fit: BoxFit.cover)
-                                      : _buildFallbackImage(),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      item.title,
-                                      style: const TextStyle(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                    if (item.description != null) ...[
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        item.description!,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: const TextStyle(
-                                          fontSize: 11,
-                                          color: AppColors.inkMuted48,
-                                        ),
-                                      ),
-                                    ],
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-
-                        const Text(
-                          'ที่อยู่จัดส่งของรางวัล (บันทึกลงระบบทันที)',
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-
-                        // Recipient Name
-                        TextFormField(
-                          controller: nameController,
-                          autovalidateMode: AutovalidateMode.onUserInteraction,
-                          decoration: InputDecoration(
-                            labelText: 'ชื่อ-นามสกุลผู้รับ *',
-                            prefixIcon: const Icon(Icons.person_outline, size: 20),
-                            filled: true,
-                            fillColor: isDark ? AppColors.surfaceTile2 : const Color(0xFFF6F7F9),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(14),
-                              borderSide: BorderSide.none,
-                            ),
-                          ),
-                          validator: (val) => InputValidators.validateRequired(
-                            val,
-                            fieldName: 'ชื่อผู้รับ',
-                            minLength: 2,
-                            maxLength: 100,
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-
-                        // Phone Number
-                        TextFormField(
-                          controller: phoneController,
-                          keyboardType: TextInputType.phone,
-                          autovalidateMode: AutovalidateMode.onUserInteraction,
-                          inputFormatters: [
-                            FilteringTextInputFormatter.digitsOnly,
-                            LengthLimitingTextInputFormatter(10),
-                          ],
-                          decoration: InputDecoration(
-                            labelText: 'เบอร์โทรศัพท์ติดต่อ (10 หลัก) *',
-                            prefixIcon: const Icon(Icons.phone_outlined, size: 20),
-                            filled: true,
-                            fillColor: isDark ? AppColors.surfaceTile2 : const Color(0xFFF6F7F9),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(14),
-                              borderSide: BorderSide.none,
-                            ),
-                          ),
-                          validator: (val) => InputValidators.validatePhoneNumber(val, required: true),
-                        ),
-                        const SizedBox(height: 10),
-
-                        // Full Address
-                        TextFormField(
-                          controller: addressController,
-                          maxLines: 3,
-                          autovalidateMode: AutovalidateMode.onUserInteraction,
-                          decoration: InputDecoration(
-                            labelText: 'ที่อยู่จัดส่ง (บ้านเลขที่, ถนน, ตำบล, อำเภอ, จังหวัด, รหัสไปรษณีย์) *',
-                            prefixIcon: const Padding(
-                              padding: EdgeInsets.only(bottom: 40),
-                              child: Icon(Icons.location_on_outlined, size: 20),
-                            ),
-                            filled: true,
-                            fillColor: isDark ? AppColors.surfaceTile2 : const Color(0xFFF6F7F9),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(14),
-                              borderSide: BorderSide.none,
-                            ),
-                          ),
-                          validator: (val) => InputValidators.validateRequired(
-                            val,
-                            fieldName: 'ที่อยู่จัดส่ง',
-                            minLength: 8,
-                            maxLength: 250,
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-
-                        // Submit Button
-                        ElevatedButton(
-                          onPressed: isRedeeming
-                              ? null
-                              : () async {
-                                  if (!formKey.currentState!.validate()) return;
-
-                                  final success = await ref
-                                      .read(rewardStoreProvider.notifier)
-                                      .redeemReward(
-                                        rewardItemId: item.id,
-                                        recipientName: nameController.text.trim(),
-                                        phoneNumber: phoneController.text.trim(),
-                                        shippingAddress: addressController.text.trim(),
-                                      );
-
-                                  if (context.mounted) {
-                                    Navigator.pop(ctx);
-                                    if (success) {
-                                      AppToast.success(
-                                        context,
-                                        'แลกรับ "${item.title}" สำเร็จ! ทางเราจะจัดส่งให้เร็วที่สุด',
-                                      );
-                                    } else {
-                                      final err = ref.read(rewardStoreProvider).errorMessage;
-                                      AppToast.error(
-                                        context,
-                                        err ?? 'ไม่สามารถแลกของรางวัลได้',
-                                      );
-                                    }
-                                  }
-                                },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.primary,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                          ),
-                          child: isRedeeming
-                              ? const SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: Colors.white,
-                                  ),
-                                )
-                              : const Text(
-                                  'ยืนยันแลกรับของรางวัล',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            );
-          },
-        );
-      },
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: fg),
+      ),
     );
   }
 
+  String _formatDate(DateTime date) {
+    return '${date.day}/${date.month}/${date.year + 543}';
+  }
+
+  // =========================================================================
+  // DIALOGS & BOTTOM SHEETS
+  // =========================================================================
   void _showLevelDetailsDialog(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final storeState = ref.read(rewardStoreProvider);
+    final tiers = [
+      UserTierLevel.calculateFromPoints(0),
+      UserTierLevel.calculateFromPoints(50),
+      UserTierLevel.calculateFromPoints(200),
+      UserTierLevel.calculateFromPoints(500),
+      UserTierLevel.calculateFromPoints(1000),
+    ];
 
     showModalBottomSheet(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: isDark ? AppColors.surfaceTile1 : AppColors.canvas,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (ctx) {
-        final tiers = [
-          const {'lv': 1, 'badge': '🥉', 'name': 'Bronze', 'amount': '0 - 100 บาท', 'points': '+10 แต้ม/บิล'},
-          const {'lv': 2, 'badge': '🥈', 'name': 'Silver', 'amount': '101 - 500 บาท', 'points': '+25 แต้ม/บิล'},
-          const {'lv': 3, 'badge': '🥇', 'name': 'Gold', 'amount': '501 - 2,000 บาท', 'points': '+60 แต้ม/บิล'},
-          const {'lv': 4, 'badge': '👑', 'name': 'Platinum', 'amount': '2,001 - 5,000 บาท', 'points': '+150 แต้ม/บิล'},
-          const {'lv': 5, 'badge': '💎', 'name': 'Diamond', 'amount': 'มากกว่า 5,000 บาท', 'points': '+300 แต้ม/บิล'},
-        ];
-
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Center(
-                  child: Container(
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: isDark ? Colors.white24 : AppColors.hairline,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+        decoration: ShapeDecoration(
+          color: isDark ? AppColors.surfaceTile1 : Colors.white,
+          shape: const SmoothRectangleBorder(
+            borderRadius: SmoothBorderRadius.vertical(
+              top: SmoothRadius(cornerRadius: 24, cornerSmoothing: 0.8),
+            ),
+          ),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Center(
+              child: Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: isDark ? Colors.white24 : const Color(0xFFE5E7EB),
+                  borderRadius: BorderRadius.circular(2),
                 ),
-                const SizedBox(height: 16),
-                Row(
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'ระดับสมาชิก PingPay Tiers',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: isDark ? AppColors.bodyOnDark : AppColors.ink,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'ยิ่งชำระบิลตรงเวลา ยิ่งได้แต้มสะสมต่อบิลสูงขึ้น',
+              style: TextStyle(
+                fontSize: 12,
+                color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
+              ),
+            ),
+            const SizedBox(height: 14),
+            ...tiers.map((t) {
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 6),
+                child: Row(
                   children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFF9500).withValues(alpha: 0.15),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.military_tech_rounded,
-                        color: Color(0xFFFF9500),
-                        size: 24,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    const Expanded(
+                    Text(t.badge, style: const TextStyle(fontSize: 20)),
+                    const SizedBox(width: 10),
+                    Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'ระดับสมาชิกและสิทธิพิเศษ',
+                            '${t.title} (Lv.${t.level})',
                             style: TextStyle(
-                              fontSize: 17,
-                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: isDark ? AppColors.bodyOnDark : AppColors.ink,
                             ),
                           ),
                           Text(
-                            'ได้แต้มเมื่อคืนเงิน หรือเพื่อนจ่ายเงินครบตามยอดบิล',
+                            'สะสม ${t.minAmount} แต้มขึ้นไป',
                             style: TextStyle(
-                              fontSize: 12,
-                              color: AppColors.inkMuted48,
+                              fontSize: 11,
+                              color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
                             ),
                           ),
                         ],
                       ),
                     ),
-                  ],
-                ),
-                const SizedBox(height: 18),
-                ...tiers.map((t) {
-                  final isCurrent = storeState.tier.level == t['lv'];
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 8),
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                    decoration: BoxDecoration(
-                      color: isCurrent
-                          ? const Color(0xFFFF9500).withValues(alpha: isDark ? 0.2 : 0.1)
-                          : (isDark ? AppColors.surfaceTile2 : AppColors.canvasParchment),
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(
-                        color: isCurrent
-                            ? const Color(0xFFFF9500)
-                            : (isDark ? Colors.white10 : AppColors.dividerSoft),
-                        width: isCurrent ? 1.5 : 1.0,
+                    Text(
+                      '+${t.rewardPointsEarned} แต้ม/บิล',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFFFF5000),
                       ),
                     ),
-                    child: Row(
-                      children: [
-                        Text(
-                          t['badge'] as String,
-                          style: const TextStyle(fontSize: 24),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Text(
-                                    'Lv.${t['lv']} ${t['name']}',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 14,
-                                      color: isCurrent ? const Color(0xFFFF9500) : null,
-                                    ),
-                                  ),
-                                  if (isCurrent) ...[
-                                    const SizedBox(width: 6),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFFFF9500),
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      child: const Text(
-                                        'ระดับปัจจุบัน',
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 9,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ],
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                'ยอดบิล: ${t['amount']}',
-                                style: const TextStyle(fontSize: 11, color: AppColors.inkMuted48),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Text(
-                          t['points'] as String,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 13,
-                            color: Color(0xFFFF9500),
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                }),
-                const SizedBox(height: 12),
-              ],
+                  ],
+                ),
+              );
+            }),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showRedeemBottomSheet(BuildContext context, RewardItemModel item) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final formKey = GlobalKey<FormState>();
+    final nameCtrl = TextEditingController();
+    final phoneCtrl = TextEditingController();
+    final addressCtrl = TextEditingController();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+          decoration: ShapeDecoration(
+            color: isDark ? AppColors.surfaceTile1 : Colors.white,
+            shape: const SmoothRectangleBorder(
+              borderRadius: SmoothBorderRadius.vertical(
+                top: SmoothRadius(cornerRadius: 24, cornerSmoothing: 0.8),
+              ),
             ),
           ),
-        );
-      },
+          child: Form(
+            key: formKey,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 36,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: isDark ? Colors.white24 : const Color(0xFFE5E7EB),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Container(
+                        width: 44,
+                        height: 44,
+                        decoration: ShapeDecoration(
+                          color: const Color(0xFFFF5000).withValues(alpha: 0.1),
+                          shape: const SmoothRectangleBorder(
+                            borderRadius: SmoothBorderRadius.all(
+                              SmoothRadius(cornerRadius: 12, cornerSmoothing: 0.8),
+                            ),
+                          ),
+                        ),
+                        child: const Icon(
+                          Icons.card_giftcard_rounded,
+                          color: Color(0xFFFF5000),
+                          size: 22,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              item.title,
+                              style: TextStyle(
+                                fontSize: 14.5,
+                                fontWeight: FontWeight.w700,
+                                color: isDark ? AppColors.bodyOnDark : AppColors.ink,
+                              ),
+                            ),
+                            Text(
+                              'ใช้ ${item.pointsCost} แต้มในการแลก',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Color(0xFFFF5000),
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: nameCtrl,
+                    decoration: const InputDecoration(
+                      labelText: 'ชื่อผู้รับ',
+                      prefixIcon: Icon(Icons.person_outline_rounded, size: 18),
+                      isDense: true,
+                    ),
+                    validator: (v) => (v == null || v.trim().isEmpty) ? 'กรุณากรอกชื่อผู้รับ' : null,
+                  ),
+                  const SizedBox(height: 10),
+                  TextFormField(
+                    controller: phoneCtrl,
+                    keyboardType: TextInputType.phone,
+                    decoration: const InputDecoration(
+                      labelText: 'เบอร์โทรศัพท์ติดต่อ',
+                      prefixIcon: Icon(Icons.phone_outlined, size: 18),
+                      isDense: true,
+                    ),
+                    validator: InputValidators.validatePhoneNumber,
+                  ),
+                  const SizedBox(height: 10),
+                  TextFormField(
+                    controller: addressCtrl,
+                    maxLines: 2,
+                    decoration: const InputDecoration(
+                      labelText: 'ที่อยู่จัดส่งและรหัสไปรษณีย์',
+                      prefixIcon: Icon(Icons.home_outlined, size: 18),
+                      isDense: true,
+                    ),
+                    validator: (v) => (v == null || v.trim().isEmpty) ? 'กรุณากรอกที่อยู่จัดส่ง' : null,
+                  ),
+                  const SizedBox(height: 20),
+                  ElevatedButton(
+                    onPressed: () async {
+                      if (!formKey.currentState!.validate()) return;
+                      Navigator.pop(ctx);
+
+                      final success = await ref
+                          .read(rewardStoreProvider.notifier)
+                          .redeemReward(
+                            rewardItemId: item.id,
+                            recipientName: nameCtrl.text.trim(),
+                            phoneNumber: phoneCtrl.text.trim(),
+                            shippingAddress: addressCtrl.text.trim(),
+                          );
+
+                      if (context.mounted) {
+                        if (success) {
+                          AppToast.success(context, 'แลกของรางวัลสำเร็จ! กำลังเตรียมการจัดส่ง');
+                          ref.invalidate(redemptionHistoryProvider);
+                        } else {
+                          AppToast.error(context, 'เกิดข้อผิดพลาดในการแลกของรางวัล');
+                        }
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFFF5000),
+                      foregroundColor: Colors.white,
+                      minimumSize: const Size(double.infinity, 44),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text(
+                      'ยืนยันการแลกของรางวัล',
+                      style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
