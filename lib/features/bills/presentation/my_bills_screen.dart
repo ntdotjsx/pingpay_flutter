@@ -9,9 +9,7 @@ import '../../../core/theme/theme.dart';
 import '../../../core/widgets/app_skeleton.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../friends/providers/friends_provider.dart';
-import '../../home/presentation/widgets/global_search_sheet.dart';
 import '../../payments/services/debt_age_calculator.dart';
-import '../../rewards/providers/reward_providers.dart';
 import '../models/bill_models.dart';
 import '../providers/bill_provider.dart';
 
@@ -22,7 +20,8 @@ enum MyBillsFilter {
   paid,
 }
 
-final myBillsFilterProvider = StateProvider<MyBillsFilter>((ref) => MyBillsFilter.all);
+final myBillsFilterProvider =
+    StateProvider<MyBillsFilter>((ref) => MyBillsFilter.all);
 
 class MyBillsScreen extends ConsumerWidget {
   const MyBillsScreen({super.key});
@@ -30,7 +29,8 @@ class MyBillsScreen extends ConsumerWidget {
   Future<void> _handleCreateBill(BuildContext context, WidgetRef ref) async {
     HapticFeedback.mediumImpact();
     final friendsAsync = ref.read(friendsListProvider);
-    final friends = friendsAsync.valueOrNull ?? await ref.read(friendsRepositoryProvider).getFriends();
+    final friends = friendsAsync.valueOrNull ??
+        await ref.read(friendsRepositoryProvider).getFriends();
     if (friends.isEmpty && context.mounted) {
       final isDark = Theme.of(context).brightness == Brightness.dark;
       showModalBottomSheet(
@@ -133,482 +133,484 @@ class MyBillsScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: isDark ? AppColors.surfaceBlack : Colors.white,
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _handleCreateBill(context, ref),
-        backgroundColor: const Color(0xFFFF5000),
-        foregroundColor: Colors.white,
-        elevation: 4,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        icon: const Icon(Icons.add_rounded, size: 20),
-        label: const Text(
-          'สร้างบิลใหม่',
-          style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5),
-        ),
-      ),
-      body: RefreshIndicator(
-        onRefresh: () async {
-          HapticFeedback.lightImpact();
-          return ref.refresh(myBillsProvider.future);
-        },
-        color: const Color(0xFFFF5000),
-        child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(
-            parent: BouncingScrollPhysics(),
-          ),
-          child: Container(
-            color: isDark ? AppColors.surfaceBlack : Colors.white,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // ── 1. Top Executive Gradient Header ────────────────────────
-                billsAsync.when(
-                  loading: () => _buildHeader(
-                    context,
-                    ref: ref,
-                    isDark: isDark,
-                    totalBillAmount: 0,
-                    totalBillsCount: 0,
-                    unpaidBillsCount: 0,
-                    totalDebtors: 0,
-                  ),
-                  error: (_, __) => _buildHeader(
-                    context,
-                    ref: ref,
-                    isDark: isDark,
-                    totalBillAmount: 0,
-                    totalBillsCount: 0,
-                    unpaidBillsCount: 0,
-                    totalDebtors: 0,
-                  ),
-                  data: (allBills) {
-                    final currentUserId = ref.read(authStateProvider).user?.id;
-                    final bills = allBills.where((b) => b.ownerId == currentUserId).toList();
-                    final totalBillAmount = bills.fold(0.0, (acc, b) => acc + b.totalAmount);
-                    final uniqueDebtorIds = <String>{};
-                    for (final b in bills) {
-                      for (final item in b.items) {
-                        if (item.debtorId.isNotEmpty) {
-                          uniqueDebtorIds.add(item.debtorId);
-                        }
-                      }
-                    }
-                    final totalDebtors = uniqueDebtorIds.length;
-                    final unpaidBillsCount = bills.where((b) =>
-                      !b.isCancelled &&
-                      !b.isFullyWrittenOff &&
-                      !b.isFullyPaid &&
-                      b.totalOutstandingAmount > 0
-                    ).length;
-
-                    return _buildHeader(
-                      context,
-                      ref: ref,
-                      isDark: isDark,
-                      totalBillAmount: totalBillAmount,
-                      totalBillsCount: bills.length,
-                      unpaidBillsCount: unpaidBillsCount,
-                      totalDebtors: totalDebtors,
-                    );
-                  },
-                ),
-
-                // ── 2. Content & Bills List ───────────────────────────────────
-                billsAsync.when(
-                  loading: () => _buildSkeletonLoading(isDark),
-                  error: (err, _) => _buildErrorState(context, ref, err.toString(), isDark),
-                  data: (allBills) {
-                    final currentUserId = ref.read(authStateProvider).user?.id;
-                    final bills = allBills.where((b) => b.ownerId == currentUserId).toList();
-
-                    // Filter bills
-                    final filteredBills = bills.where((b) {
-                      switch (selectedFilter) {
-                        case MyBillsFilter.unpaid:
-                          return b.status == 'unpaid' && !b.isCancelled && !b.isFullyWrittenOff;
-                        case MyBillsFilter.partiallyPaid:
-                          return b.status == 'partially_paid' || b.status == 'partially_written_off';
-                        case MyBillsFilter.paid:
-                          return b.status == 'paid' || b.status == 'fully_paid' || b.status == 'fully_written_off';
-                        case MyBillsFilter.all:
-                          return true;
-                      }
-                    }).toList();
-
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
+      body: SafeArea(
+        bottom: false,
+        child: RefreshIndicator(
+          onRefresh: () async {
+            HapticFeedback.lightImpact();
+            return ref.refresh(myBillsProvider.future);
+          },
+          color: const Color(0xFFFF5000),
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(
+              parent: BouncingScrollPhysics(),
+            ),
+            child: Container(
+              color: isDark ? AppColors.surfaceBlack : Colors.white,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // ── 1. Creative Minimalist App Header ───────────────────
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 16, 16, 12),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        const SizedBox(height: 14),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'บิลของฉัน',
+                              style: TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: -0.6,
+                                color: isDark ? AppColors.bodyOnDark : AppColors.ink,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'จัดการบิล ตรวจสอบสถานะการเก็บเงิน',
+                              style: TextStyle(
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w400,
+                                color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
+                              ),
+                            ),
+                          ],
+                        ),
 
-                        // Filter Chips Bar
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                          child: SingleChildScrollView(
-                            scrollDirection: Axis.horizontal,
-                            physics: const BouncingScrollPhysics(),
-                            child: Row(
+                        // Quick Create Bill Pill Button
+                        InkWell(
+                          onTap: () => _handleCreateBill(context, ref),
+                          borderRadius: BorderRadius.circular(20),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                            decoration: ShapeDecoration(
+                              color: const Color(0xFFFF5000),
+                              shadows: [
+                                BoxShadow(
+                                  color: const Color(0xFFFF5000).withValues(alpha: 0.28),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 3),
+                                ),
+                              ],
+                              shape: const SmoothRectangleBorder(
+                                borderRadius: SmoothBorderRadius.all(
+                                  SmoothRadius(cornerRadius: 14, cornerSmoothing: 0.8),
+                                ),
+                              ),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
                               children: [
-                                _buildFilterChip(
-                                  ref: ref,
-                                  label: 'ทั้งหมด (${bills.length})',
-                                  filter: MyBillsFilter.all,
-                                  current: selectedFilter,
-                                  isDark: isDark,
-                                ),
-                                const SizedBox(width: 6),
-                                _buildFilterChip(
-                                  ref: ref,
-                                  label: 'ยังไม่ชำระ (${bills.where((b) => b.status == 'unpaid').length})',
-                                  filter: MyBillsFilter.unpaid,
-                                  current: selectedFilter,
-                                  isDark: isDark,
-                                ),
-                                const SizedBox(width: 6),
-                                _buildFilterChip(
-                                  ref: ref,
-                                  label: 'ชำระบางส่วน (${bills.where((b) => b.status == 'partially_paid').length})',
-                                  filter: MyBillsFilter.partiallyPaid,
-                                  current: selectedFilter,
-                                  isDark: isDark,
-                                ),
-                                const SizedBox(width: 6),
-                                _buildFilterChip(
-                                  ref: ref,
-                                  label: 'ครบแล้ว (${bills.where((b) => b.status == 'paid' || b.status == 'fully_paid').length})',
-                                  filter: MyBillsFilter.paid,
-                                  current: selectedFilter,
-                                  isDark: isDark,
+                                Icon(Icons.add_rounded, size: 17, color: Colors.white),
+                                SizedBox(width: 4),
+                                Text(
+                                  'สร้างบิล',
+                                  style: TextStyle(
+                                    fontSize: 12.5,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.white,
+                                  ),
                                 ),
                               ],
                             ),
                           ),
                         ),
-
-                        const SizedBox(height: 14),
-
-                        // Section Title
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                _getFilterSectionTitle(selectedFilter),
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                  letterSpacing: -0.2,
-                                  color: isDark ? AppColors.bodyOnDark : AppColors.ink,
-                                ),
-                              ),
-                              Text(
-                                '${filteredBills.length} รายการ',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w500,
-                                  color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-
-                        const SizedBox(height: 10),
-
-                        // Bills Contiguous List
-                        if (filteredBills.isEmpty)
-                          _buildEmptyState(isDark)
-                        else
-                          Column(
-                            children: filteredBills.asMap().entries.map((entry) {
-                              return AnimatedListItem(
-                                index: entry.key,
-                                child: _buildBillListItem(context, entry.value, isDark),
-                              );
-                            }).toList(),
-                          ),
-
-                        const SizedBox(height: 80),
                       ],
-                    );
-                  },
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  // =========================================================================
-  // TOP SIGNATURE HEADER
-  // =========================================================================
-  Widget _buildHeader(
-    BuildContext context, {
-    required WidgetRef ref,
-    required bool isDark,
-    required double totalBillAmount,
-    required int totalBillsCount,
-    required int unpaidBillsCount,
-    required int totalDebtors,
-  }) {
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: isDark
-              ? [
-                  AppColors.surfaceTile1,
-                  AppColors.surfaceTile2,
-                  AppColors.surfaceTile3,
-                ]
-              : [
-                  const Color(0xFFFF5000),
-                  const Color(0xFFFF6A00),
-                  const Color(0xFFFF8500),
-                ],
-        ),
-        borderRadius: const BorderRadius.only(
-          bottomLeft: Radius.circular(24),
-          bottomRight: Radius.circular(24),
-        ),
-      ),
-      child: SafeArea(
-        bottom: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // 1. Action Bar: Search Bar + Coins Points + Refresh
-              Row(
-                children: [
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: () {
-                        HapticFeedback.lightImpact();
-                        GlobalSearchSheet.show(context);
-                      },
-                      child: Container(
-                        height: 38,
-                        decoration: ShapeDecoration(
-                          color: Colors.white.withValues(alpha: isDark ? 0.15 : 0.22),
-                          shape: const SmoothRectangleBorder(
-                            borderRadius: SmoothBorderRadius.all(
-                              SmoothRadius(cornerRadius: 19, cornerSmoothing: 1.0),
-                            ),
-                          ),
-                        ),
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                        child: Row(
-                          children: [
-                            const Icon(
-                              Icons.search_rounded,
-                              size: 18,
-                              color: Colors.white,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              'ค้นหาบิลที่คุณสร้าง...',
-                              style: TextStyle(
-                                color: Colors.white.withValues(alpha: 0.95),
-                                fontSize: 13,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
                     ),
                   ),
-                  const SizedBox(width: 8),
 
-                  // Coin Points Capsule
-                  Consumer(
-                    builder: (context, ref, _) {
-                      final storeState = ref.watch(rewardStoreProvider);
-                      final points = storeState.points;
+                  // ── 2. Creative Financial Bento Card ────────────────────
+                  billsAsync.when(
+                    loading: () => _buildBentoCardSkeleton(isDark),
+                    error: (_, __) => const SizedBox.shrink(),
+                    data: (allBills) {
+                      final currentUserId = ref.read(authStateProvider).user?.id;
+                      final bills = allBills.where((b) => b.ownerId == currentUserId).toList();
+                      final totalBillAmount = bills.fold(0.0, (acc, b) => acc + b.totalAmount);
+                      final totalOutstanding = bills.fold(0.0, (acc, b) => acc + b.totalOutstandingAmount);
+                      final totalPaid = bills.fold(0.0, (acc, b) => acc + b.totalPaidAmount);
 
-                      return GestureDetector(
-                        onTap: () => context.push('/rewards'),
-                        child: Container(
-                          height: 38,
-                          padding: const EdgeInsets.symmetric(horizontal: 10),
-                          decoration: ShapeDecoration(
-                            color: Colors.white.withValues(alpha: 0.18),
-                            shape: const SmoothRectangleBorder(
-                              borderRadius: SmoothBorderRadius.all(
-                                SmoothRadius(cornerRadius: 19, cornerSmoothing: 1.0),
-                              ),
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              const Icon(
-                                Icons.monetization_on,
-                                size: 16,
-                                color: Color(0xFFFFD700),
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                '$points',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ],
-                          ),
+                      final uniqueDebtorIds = <String>{};
+                      for (final b in bills) {
+                        for (final item in b.items) {
+                          if (item.debtorId.isNotEmpty) {
+                            uniqueDebtorIds.add(item.debtorId);
+                          }
+                        }
+                      }
+                      final totalDebtors = uniqueDebtorIds.length;
+                      final unpaidBillsCount = bills.where((b) =>
+                        !b.isCancelled &&
+                        !b.isFullyWrittenOff &&
+                        !b.isFullyPaid &&
+                        b.totalOutstandingAmount > 0
+                      ).length;
+                      final fullyPaidBillsCount = bills.where((b) => b.isFullyPaid).length;
+
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 6.0),
+                        child: _buildBentoHeroCard(
+                          isDark: isDark,
+                          totalAmount: totalBillAmount,
+                          totalPaid: totalPaid,
+                          totalOutstanding: totalOutstanding,
+                          totalBills: bills.length,
+                          unpaidBills: unpaidBillsCount,
+                          paidBills: fullyPaidBillsCount,
+                          totalDebtors: totalDebtors,
                         ),
                       );
                     },
                   ),
-                  const SizedBox(width: 8),
 
-                  // Refresh Button
-                  GestureDetector(
-                    onTap: () {
-                      HapticFeedback.lightImpact();
-                      ref.invalidate(myBillsProvider);
-                    },
-                    child: Container(
-                      width: 38,
-                      height: 38,
-                      decoration: ShapeDecoration(
-                        color: Colors.white.withValues(alpha: 0.18),
-                        shape: const SmoothRectangleBorder(
-                          borderRadius: SmoothBorderRadius.all(
-                            SmoothRadius(cornerRadius: 19, cornerSmoothing: 1.0),
+                  const SizedBox(height: 12),
+
+                  // ── 3. Content: Filter Chips + Bills List ───────────────
+                  billsAsync.when(
+                    loading: () => _buildSkeletonLoading(isDark),
+                    error: (err, _) => _buildErrorState(context, ref, err.toString(), isDark),
+                    data: (allBills) {
+                      final currentUserId = ref.read(authStateProvider).user?.id;
+                      final bills = allBills.where((b) => b.ownerId == currentUserId).toList();
+
+                      // Filter bills
+                      final filteredBills = bills.where((b) {
+                        switch (selectedFilter) {
+                          case MyBillsFilter.unpaid:
+                            return b.status == 'unpaid' && !b.isCancelled && !b.isFullyWrittenOff;
+                          case MyBillsFilter.partiallyPaid:
+                            return b.status == 'partially_paid' || b.status == 'partially_written_off';
+                          case MyBillsFilter.paid:
+                            return b.status == 'paid' || b.status == 'fully_paid' || b.status == 'fully_written_off';
+                          case MyBillsFilter.all:
+                            return true;
+                        }
+                      }).toList();
+
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          // Filter Chips Bar
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                            child: SingleChildScrollView(
+                              scrollDirection: Axis.horizontal,
+                              physics: const BouncingScrollPhysics(),
+                              child: Row(
+                                children: [
+                                  _buildFilterChip(
+                                    ref: ref,
+                                    label: 'ทั้งหมด (${bills.length})',
+                                    filter: MyBillsFilter.all,
+                                    current: selectedFilter,
+                                    isDark: isDark,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  _buildFilterChip(
+                                    ref: ref,
+                                    label: 'ยังไม่ชำระ (${bills.where((b) => b.status == 'unpaid' && !b.isCancelled && !b.isFullyWrittenOff).length})',
+                                    filter: MyBillsFilter.unpaid,
+                                    current: selectedFilter,
+                                    isDark: isDark,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  _buildFilterChip(
+                                    ref: ref,
+                                    label: 'ชำระบางส่วน (${bills.where((b) => b.status == 'partially_paid').length})',
+                                    filter: MyBillsFilter.partiallyPaid,
+                                    current: selectedFilter,
+                                    isDark: isDark,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  _buildFilterChip(
+                                    ref: ref,
+                                    label: 'ครบแล้ว (${bills.where((b) => b.status == 'paid' || b.status == 'fully_paid').length})',
+                                    filter: MyBillsFilter.paid,
+                                    current: selectedFilter,
+                                    isDark: isDark,
+                                  ),
+                                ],
+                              ),
+                            ),
                           ),
-                        ),
-                      ),
-                      child: const Icon(
-                        Icons.refresh_rounded,
-                        size: 19,
-                        color: Colors.white,
-                      ),
-                    ),
+
+                          const SizedBox(height: 14),
+
+                          // Section Title
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  _getFilterSectionTitle(selectedFilter),
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    letterSpacing: -0.2,
+                                    color: isDark ? AppColors.bodyOnDark : AppColors.ink,
+                                  ),
+                                ),
+                                Text(
+                                  '${filteredBills.length} รายการ',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w500,
+                                    color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          const SizedBox(height: 8),
+
+                          // Bills Contiguous List
+                          if (filteredBills.isEmpty)
+                            _buildEmptyState(isDark)
+                          else
+                            Column(
+                              children: filteredBills.asMap().entries.map((entry) {
+                                return AnimatedListItem(
+                                  index: entry.key,
+                                  child: _buildBillListItem(context, entry.value, isDark),
+                                );
+                              }).toList(),
+                            ),
+
+                          const SizedBox(height: 60),
+                        ],
+                      );
+                    },
                   ),
                 ],
               ),
-
-              const SizedBox(height: 14),
-
-              // 2. Financial Balance Hero
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'ยอดรวมบิลทั้งหมดที่สร้าง',
-                        style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.9),
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      AnimatedCounterText(
-                        value: totalBillAmount,
-                        prefix: '฿',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 26,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: -0.6,
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  // Status Pill
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-                    decoration: ShapeDecoration(
-                      color: Colors.white.withValues(alpha: 0.22),
-                      shape: const SmoothRectangleBorder(
-                        borderRadius: SmoothBorderRadius.all(
-                          SmoothRadius(cornerRadius: 10, cornerSmoothing: 1.0),
-                        ),
-                      ),
-                    ),
-                    child: Text(
-                      '$totalBillsCount บิลทั้งหมด',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 14),
-
-              // 3. Compact Metrics Row
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.12),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    _buildMetricItem(
-                      label: 'รอดำเนินการ',
-                      value: '$unpaidBillsCount บิล',
-                      icon: Icons.pending_actions_rounded,
-                    ),
-                    Container(
-                      width: 1,
-                      height: 18,
-                      color: Colors.white24,
-                    ),
-                    _buildMetricItem(
-                      label: 'ผู้ร่วมจ่ายทั้งหมด',
-                      value: '$totalDebtors คน',
-                      icon: Icons.people_alt_rounded,
-                    ),
-                  ],
-                ),
-              ),
-            ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  static Widget _buildMetricItem({
+  // =========================================================================
+  // CREATIVE FINANCIAL BENTO HERO CARD
+  // =========================================================================
+  Widget _buildBentoHeroCard({
+    required bool isDark,
+    required double totalAmount,
+    required double totalPaid,
+    required double totalOutstanding,
+    required int totalBills,
+    required int unpaidBills,
+    required int paidBills,
+    required int totalDebtors,
+  }) {
+    final progress = totalAmount > 0 ? (totalPaid / totalAmount).clamp(0.0, 1.0) : 0.0;
+    final percent = (progress * 100).toInt();
+
+    return Container(
+      decoration: ShapeDecoration(
+        color: isDark ? AppColors.surfaceTile1 : const Color(0xFF1E2024),
+        shadows: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.12),
+            blurRadius: 18,
+            offset: const Offset(0, 4),
+          ),
+        ],
+        shape: const SmoothRectangleBorder(
+          borderRadius: SmoothBorderRadius.all(
+            SmoothRadius(cornerRadius: 20, cornerSmoothing: 0.9),
+          ),
+        ),
+      ),
+      padding: const EdgeInsets.all(18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Top Row: Title + Total Bills Count Pill
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 7,
+                    height: 7,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFFF5000),
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  const Text(
+                    'ภาพรวมบิลทั้งหมดที่สร้าง',
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.white70,
+                    ),
+                  ),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  '$totalBills บิล',
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 8),
+
+          // Total Amount
+          AnimatedCounterText(
+            value: totalAmount,
+            prefix: '฿',
+            style: const TextStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.w700,
+              color: Colors.white,
+              letterSpacing: -0.6,
+            ),
+          ),
+
+          const SizedBox(height: 12),
+
+          // Visual Cashflow Progress Bar
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: progress,
+              minHeight: 5,
+              backgroundColor: Colors.white.withValues(alpha: 0.15),
+              valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF34C759)),
+            ),
+          ),
+
+          const SizedBox(height: 8),
+
+          // Collection Ratio Labels
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'เก็บได้แล้ว ฿${totalPaid.toStringAsFixed(2)} ($percent%)',
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                  color: Color(0xFF34C759),
+                ),
+              ),
+              Text(
+                'รอเก็บ ฿${totalOutstanding.toStringAsFixed(2)}',
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                  color: Color(0xFFFF9500),
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 14),
+
+          // Asymmetric Mini Metric Tiles Row
+          Row(
+            children: [
+              _buildMiniMetricPill(
+                icon: Icons.pending_actions_rounded,
+                iconColor: const Color(0xFFFF9500),
+                label: 'รอชำระ',
+                value: '$unpaidBills บิล',
+              ),
+              const SizedBox(width: 8),
+              _buildMiniMetricPill(
+                icon: Icons.check_circle_outline_rounded,
+                iconColor: const Color(0xFF34C759),
+                label: 'จบแล้ว',
+                value: '$paidBills บิล',
+              ),
+              const SizedBox(width: 8),
+              _buildMiniMetricPill(
+                icon: Icons.people_outline_rounded,
+                iconColor: const Color(0xFF5AC8FA),
+                label: 'ผู้ร่วมหาร',
+                value: '$totalDebtors คน',
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMiniMetricPill({
+    required IconData icon,
+    required Color iconColor,
     required String label,
     required String value,
-    required IconData icon,
   }) {
-    return Row(
-      children: [
-        Icon(icon, size: 15, color: Colors.white.withValues(alpha: 0.9)),
-        const SizedBox(width: 6),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
           children: [
-            Text(
-              label,
-              style: TextStyle(fontSize: 10.5, color: Colors.white.withValues(alpha: 0.8)),
-            ),
-            Text(
-              value,
-              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white),
+            Icon(icon, size: 15, color: iconColor),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: const TextStyle(fontSize: 10, color: Colors.white60),
+                  ),
+                  Text(
+                    value,
+                    style: const TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
             ),
           ],
         ),
-      ],
+      ),
+    );
+  }
+
+  Widget _buildBentoCardSkeleton(bool isDark) {
+    return const Padding(
+      padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 6.0),
+      child: AppSkeleton(
+        width: double.infinity,
+        height: 140,
+        cornerRadius: 20,
+      ),
     );
   }
 
@@ -672,10 +674,16 @@ class MyBillsScreen extends ConsumerWidget {
     }
   }
 
+  // =========================================================================
+  // RECEIPT-STYLE CONTIGUOUS LIST ITEM
+  // =========================================================================
   Widget _buildBillListItem(BuildContext context, BillModel bill, bool isDark) {
     final dateStr = bill.createdAt != null
         ? DebtAgeCalculator.formatThaiDate(bill.createdAt!)
         : 'วันนี้';
+
+    final paidDebtorsCount = bill.items.where((i) => i.isFullyPaid).length;
+    final totalDebtorsCount = bill.items.length;
 
     return Material(
       color: isDark ? AppColors.surfaceTile1 : Colors.white,
@@ -688,7 +696,7 @@ class MyBillsScreen extends ConsumerWidget {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  // Bill Icon
+                  // Receipt Icon Squircle
                   Container(
                     width: 40,
                     height: 40,
@@ -711,7 +719,7 @@ class MyBillsScreen extends ConsumerWidget {
                   ),
                   const SizedBox(width: 12),
 
-                  // Title, Date, Participant Count
+                  // Center: Title, Date, Split Progress
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -749,14 +757,16 @@ class MyBillsScreen extends ConsumerWidget {
                                 fontWeight: FontWeight.w400,
                               ),
                             ),
-                            if (bill.items.isNotEmpty) ...[
+                            if (totalDebtorsCount > 0) ...[
                               const SizedBox(width: 6),
                               Text(
-                                '• ${bill.items.length} ผู้ร่วมหาร',
+                                '• $paidDebtorsCount/$totalDebtorsCount จ่ายแล้ว',
                                 style: TextStyle(
                                   fontSize: 11,
-                                  color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
-                                  fontWeight: FontWeight.w400,
+                                  color: paidDebtorsCount == totalDebtorsCount
+                                      ? const Color(0xFF34C759)
+                                      : (isDark ? AppColors.bodyMuted : AppColors.inkMuted48),
+                                  fontWeight: FontWeight.w500,
                                 ),
                               ),
                             ],
@@ -772,7 +782,7 @@ class MyBillsScreen extends ConsumerWidget {
 
                   const SizedBox(width: 10),
 
-                  // Amount & Chevron
+                  // Right: Total Amount & Chevron
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     mainAxisSize: MainAxisSize.min,
@@ -844,6 +854,7 @@ class MyBillsScreen extends ConsumerWidget {
               final debtor = participant.debtor;
               final name = debtor?.displayName ?? 'เพื่อน';
               final initial = name.isNotEmpty ? name[0].toUpperCase() : 'U';
+              final isPaid = participant.isFullyPaid;
 
               return Positioned(
                 left: idx * 14.0,
@@ -851,7 +862,9 @@ class MyBillsScreen extends ConsumerWidget {
                   width: 22,
                   height: 22,
                   decoration: BoxDecoration(
-                    color: isDark ? const Color(0xFF2C2D32) : const Color(0xFFFFECE5),
+                    color: isPaid
+                        ? const Color(0xFF34C759).withValues(alpha: 0.18)
+                        : (isDark ? const Color(0xFF2C2D32) : const Color(0xFFFFECE5)),
                     shape: BoxShape.circle,
                     border: Border.all(
                       color: isDark ? AppColors.surfaceTile1 : Colors.white,
@@ -861,10 +874,10 @@ class MyBillsScreen extends ConsumerWidget {
                   child: Center(
                     child: Text(
                       initial,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 9.5,
                         fontWeight: FontWeight.w600,
-                        color: Color(0xFFFF5000),
+                        color: isPaid ? const Color(0xFF34C759) : const Color(0xFFFF5000),
                       ),
                     ),
                   ),
@@ -957,7 +970,7 @@ class MyBillsScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            'ลองเปลี่ยนตัวกรอง หรือแตะ "+ สร้างบิลใหม่" ด้านล่าง',
+            'ลองเปลี่ยนตัวกรอง หรือแตะ "+ สร้างบิล" ด้านบน',
             style: TextStyle(
               fontSize: 12,
               color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
@@ -974,7 +987,6 @@ class MyBillsScreen extends ConsumerWidget {
       padding: const EdgeInsets.all(16),
       child: Column(
         children: const [
-          AppSkeleton(width: double.infinity, height: 38, cornerRadius: 10, margin: EdgeInsets.only(bottom: 14)),
           DebtCardSkeleton(),
           DebtCardSkeleton(),
           DebtCardSkeleton(),
