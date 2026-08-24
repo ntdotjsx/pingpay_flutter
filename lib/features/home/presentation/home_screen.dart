@@ -11,6 +11,8 @@ import '../../bills/providers/bill_provider.dart';
 import '../../friends/providers/friends_provider.dart';
 import '../../payments/presentation/widgets/debt_acknowledgement_detail_sheet.dart';
 import '../../payments/providers/payment_providers.dart';
+import '../../notifications/presentation/notification_center_sheet.dart';
+import '../../notifications/providers/notification_providers.dart';
 import '../../rewards/providers/reward_providers.dart';
 import '../providers/pull_sensitivity_provider.dart';
 import 'widgets/line_calendar_widget.dart';
@@ -308,310 +310,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   }
 
   void _showPendingDebtRequestsSheet(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) {
-        return Consumer(
-          builder: (context, ref, _) {
-            final pendingDebts = ref.watch(pendingDebtRequestsProvider);
-
-            return Container(
-              constraints: BoxConstraints(
-                maxHeight: MediaQuery.of(context).size.height * 0.75,
-              ),
-              decoration: BoxDecoration(
-                color: isDark ? AppColors.surfaceTile1 : AppColors.canvas,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-              ),
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-              child: SafeArea(
-                top: false,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Center(
-                      child: Container(
-                        width: 36,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: isDark ? Colors.white24 : AppColors.hairline,
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFFF9500).withValues(alpha: 0.15),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.notifications_active_rounded,
-                            color: Color(0xFFFF9500),
-                            size: 20,
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'คำร้องขอรับเป็นหนี้',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              Text(
-                                pendingDebts.isEmpty
-                                    ? 'ไม่มีคำร้องขอที่รอการยืนยัน'
-                                    : 'เลื่อนเพื่อยอมรับว่าคุณติดหนี้เพื่อนจริง',
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  color: AppColors.inkMuted48,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        if (pendingDebts.isNotEmpty)
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 3,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppColors.error.withValues(alpha: 0.12),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Text(
-                              '${pendingDebts.length} รายการ',
-                              style: const TextStyle(
-                                color: AppColors.error,
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    if (pendingDebts.isEmpty)
-                      Container(
-                        padding: const EdgeInsets.symmetric(vertical: 40),
-                        alignment: Alignment.center,
-                        child: Column(
-                          children: [
-                            const Icon(
-                              Icons.check_circle_outline_rounded,
-                              size: 48,
-                              color: AppColors.success,
-                            ),
-                            const SizedBox(height: 12),
-                            Text(
-                              'คุณไม่มีรายการคำร้องขอเป็นหนี้ค้างอยู่',
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                                color: isDark ? AppColors.bodyOnDark : AppColors.ink,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            const Text(
-                              'เมื่อเพื่อนสร้างบิลหารเงิน จะปรากฏที่นี่เพื่อให้คุณตรวจสอบรายละเอียดและยอมรับ',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: AppColors.inkMuted48,
-                              ),
-                            ),
-                          ],
-                        ),
-                      )
-                    else
-                      Flexible(
-                        child: ListView.separated(
-                          shrinkWrap: true,
-                          padding: EdgeInsets.zero,
-                          itemCount: pendingDebts.length,
-                          separatorBuilder: (_, __) => const SizedBox(height: 12),
-                          itemBuilder: (context, index) {
-                            final debt = pendingDebts[index];
-                            return GestureDetector(
-                              onTap: () {
-                                Navigator.of(context).pop(); // Close current summary modal
-                                DebtAcknowledgementDetailSheet.show(context, debt);
-                              },
-                              child: Container(
-                                padding: const EdgeInsets.all(14),
-                                decoration: ShapeDecoration(
-                                  color: isDark
-                                      ? AppColors.surfaceTile2
-                                      : AppColors.canvasParchment,
-                                  shape: SmoothRectangleBorder(
-                                    side: BorderSide(
-                                      color: const Color(0xFFFF9500).withValues(alpha: 0.35),
-                                      width: 1.2,
-                                    ),
-                                    borderRadius: const SmoothBorderRadius.all(
-                                      SmoothRadius(cornerRadius: 18, cornerSmoothing: 1.0),
-                                    ),
-                                  ),
-                                ),
-                                child: Row(
-                                  children: [
-                                    Container(
-                                      width: 40,
-                                      height: 40,
-                                      decoration: ShapeDecoration(
-                                        color: AppColors.primary.withValues(alpha: 0.15),
-                                        shape: const SmoothRectangleBorder(
-                                          borderRadius: SmoothBorderRadius.all(
-                                            SmoothRadius(cornerRadius: 14, cornerSmoothing: 0.6),
-                                          ),
-                                        ),
-                                      ),
-                                      child: ClipSmoothRect(
-                                        radius: const SmoothBorderRadius.all(
-                                          SmoothRadius(cornerRadius: 14, cornerSmoothing: 0.6),
-                                        ),
-                                        child: debt.creditor.avatarUrl != null && debt.creditor.avatarUrl!.isNotEmpty
-                                            ? Image.network(
-                                                debt.creditor.avatarUrl!,
-                                                fit: BoxFit.cover,
-                                                errorBuilder: (_, __, ___) => Center(
-                                                  child: Text(
-                                                    debt.creditor.displayName.isNotEmpty
-                                                        ? debt.creditor.displayName[0].toUpperCase()
-                                                        : 'U',
-                                                    style: const TextStyle(
-                                                      fontSize: 14,
-                                                      fontWeight: FontWeight.bold,
-                                                      color: AppColors.primary,
-                                                    ),
-                                                  ),
-                                                ),
-                                              )
-                                            : Center(
-                                                child: Text(
-                                                  debt.creditor.displayName.isNotEmpty
-                                                      ? debt.creditor.displayName[0].toUpperCase()
-                                                      : 'U',
-                                                  style: const TextStyle(
-                                                    fontSize: 14,
-                                                    fontWeight: FontWeight.bold,
-                                                    color: AppColors.primary,
-                                                  ),
-                                                ),
-                                              ),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            debt.billTitle,
-                                            style: TextStyle(
-                                              fontSize: 14,
-                                              fontWeight: FontWeight.bold,
-                                              color: isDark ? AppColors.bodyOnDark : AppColors.ink,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 2),
-                                          Text(
-                                            'สร้างโดย ${debt.creditor.displayName}',
-                                            style: TextStyle(
-                                              fontSize: 11,
-                                              color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
-                                            ),
-                                          ),
-                                          if (debt.amountWrittenOff > 0) ...[
-                                            const SizedBox(height: 4),
-                                            Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                              decoration: BoxDecoration(
-                                                color: AppColors.success.withValues(alpha: 0.12),
-                                                borderRadius: BorderRadius.circular(6),
-                                              ),
-                                              child: Row(
-                                                mainAxisSize: MainAxisSize.min,
-                                                children: [
-                                                  const Icon(Icons.sync_alt_rounded, size: 10, color: AppColors.success),
-                                                  const SizedBox(width: 4),
-                                                  Text(
-                                                    'หักล้างหนี้เดิม -฿${debt.amountWrittenOff.toStringAsFixed(2)}',
-                                                    style: const TextStyle(
-                                                      fontSize: 10,
-                                                      fontWeight: FontWeight.bold,
-                                                      color: AppColors.success,
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                          ],
-                                        ],
-                                      ),
-                                    ),
-                                    Column(
-                                      crossAxisAlignment: CrossAxisAlignment.end,
-                                      children: [
-                                        Text(
-                                          '฿${debt.outstandingAmount.toStringAsFixed(2)}',
-                                          style: const TextStyle(
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.bold,
-                                            color: Color(0xFFFF9500),
-                                          ),
-                                        ),
-                                        const SizedBox(height: 4),
-                                        Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: const [
-                                            Text(
-                                              'กดดูรายละเอียด',
-                                              style: TextStyle(
-                                                fontSize: 11,
-                                                fontWeight: FontWeight.w600,
-                                                color: AppColors.primary,
-                                              ),
-                                            ),
-                                            SizedBox(width: 2),
-                                            Icon(
-                                              Icons.arrow_forward_ios_rounded,
-                                              size: 10,
-                                              color: AppColors.primary,
-                                            ),
-                                          ],
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-            );
-          },
-        );
-      },
-    );
+    NotificationCenterSheet.show(context);
   }
 
   @override
@@ -963,13 +662,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   ),
                   const SizedBox(width: 10),
 
-                  // Notification Bell with Badge (Squircle) for Pending Debt Requests
+                  // Notification Bell with Badge (Squircle) for All Notifications & Debt Requests
                   Consumer(
                     builder: (context, ref, _) {
-                      final pendingCount = ref.watch(pendingDebtRequestsCountProvider);
+                      final unreadCount = ref.watch(totalUnreadNotificationCountProvider);
 
                       return GestureDetector(
-                        onTap: () => _showPendingDebtRequestsSheet(context),
+                        onTap: () => NotificationCenterSheet.show(context),
                         child: Stack(
                           clipBehavior: Clip.none,
                           children: [
@@ -993,7 +692,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                 color: Colors.white,
                               ),
                             ),
-                            if (pendingCount > 0)
+                            if (unreadCount > 0)
                               Positioned(
                                 top: -2,
                                 right: -2,
@@ -1007,7 +706,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                     shape: BoxShape.circle,
                                   ),
                                   child: Text(
-                                    '$pendingCount',
+                                    unreadCount > 99 ? '99+' : '$unreadCount',
                                     style: const TextStyle(
                                       color: Colors.white,
                                       fontSize: 10,
