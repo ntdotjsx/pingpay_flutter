@@ -229,20 +229,32 @@ class AuthNotifier extends StateNotifier<AuthState> {
   Future<void> completeProfile(
     String fullName, {
     String? displayName,
+    String? firstName,
+    String? lastName,
     String? phone,
     String? address,
     String? promptPayId,
+    String? promptPayIdType,
     String? bankAccountNumber,
+    String? bankName,
+    String? bankCode,
+    String? truemoneyPhone,
   }) async {
     state = state.copyWith(isLoading: true);
     try {
       await _repo.updateProfile(
         displayName: displayName,
         fullName: fullName,
+        firstName: firstName,
+        lastName: lastName,
         phoneNumber: phone,
         address: address,
         promptPayId: promptPayId ?? phone,
+        promptPayIdType: promptPayIdType,
         bankAccountNumber: bankAccountNumber,
+        bankName: bankName,
+        bankCode: bankCode,
+        truemoneyPhone: truemoneyPhone,
       );
       final updatedUser = await _repo.getCurrentUser();
       state = state.copyWith(user: updatedUser, isLoading: false);

@@ -86,10 +86,16 @@ class AuthNotifierMock extends StateNotifier<AuthState>
   Future<void> completeProfile(
     String fullName, {
     String? displayName,
+    String? firstName,
+    String? lastName,
     String? phone,
     String? address,
     String? promptPayId,
+    String? promptPayIdType,
     String? bankAccountNumber,
+    String? bankName,
+    String? bankCode,
+    String? truemoneyPhone,
   }) async {}
 
   @override

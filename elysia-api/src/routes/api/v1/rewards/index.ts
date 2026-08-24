@@ -2,6 +2,7 @@ import { Elysia, t } from "elysia";
 import { onboardingGuard } from "../../../../middleware/auth";
 import { db } from "../../../../db";
 import { rewardItems, rewardRedemptions, users } from "../../../../db/schema";
+import { logActivity } from "../../../../modules/activity/activity.service";
 import { eq, desc } from "drizzle-orm";
 
 export default new Elysia()
@@ -137,6 +138,13 @@ export default new Elysia()
           shippingAddress: body.shippingAddress,
         })
         .returning();
+
+      logActivity(user.id, "reward_redeemed", {
+        rewardItemId: item.id,
+        rewardTitle: item.title,
+        pointsSpent: item.pointsCost,
+        redemptionId: redemption.id,
+      });
 
       return {
         success: true,

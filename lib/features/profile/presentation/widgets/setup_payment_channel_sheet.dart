@@ -30,8 +30,10 @@ class SetupPaymentChannelSheet extends ConsumerStatefulWidget {
 
 class _SetupPaymentChannelSheetState
     extends ConsumerState<SetupPaymentChannelSheet> {
+  final _realNameController = TextEditingController();
   final _promptPayController = TextEditingController();
   final _bankAccountController = TextEditingController();
+  final _trueMoneyController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   ThaiBank? _selectedBank;
   bool _isSaving = false;
@@ -42,15 +44,27 @@ class _SetupPaymentChannelSheetState
     super.initState();
     final user = ref.read(authStateProvider).user;
     if (user != null) {
+      _realNameController.text = user.fullName ?? '';
       _promptPayController.text = user.promptPayId ?? user.phoneNumber ?? '';
       _bankAccountController.text = user.bankAccountNumber ?? '';
+      _trueMoneyController.text = user.truemoneyPhone ?? '';
+
+      if (user.bankCode != null && user.bankCode!.isNotEmpty) {
+        try {
+          _selectedBank = kThaiBanks.firstWhere(
+            (b) => b.code.toLowerCase() == user.bankCode!.toLowerCase(),
+          );
+        } catch (_) {}
+      }
     }
   }
 
   @override
   void dispose() {
+    _realNameController.dispose();
     _promptPayController.dispose();
     _bankAccountController.dispose();
+    _trueMoneyController.dispose();
     super.dispose();
   }
 
@@ -178,11 +192,14 @@ class _SetupPaymentChannelSheetState
   Future<void> _handleSave() async {
     if (!_formKey.currentState!.validate()) return;
 
+    final realName = _realNameController.text.trim();
     final promptPay = _promptPayController.text.trim();
-    if (promptPay.isEmpty) {
+    final trueMoney = _trueMoneyController.text.trim();
+    final bankAccount = _bankAccountController.text.trim();
+
+    if (promptPay.isEmpty && bankAccount.isEmpty && trueMoney.isEmpty) {
       setState(() {
-        _errorMessage =
-            'กรุณาระบุเบอร์พร้อมเพย์หรือเลขบัตรประชาชนสำหรับรับเงิน';
+        _errorMessage = 'กรุณาระบุอย่างน้อย 1 ช่องทางสำหรับรับเงิน (พร้อมเพย์, บัญชีธนาคาร หรือ TrueMoney)';
       });
       return;
     }
@@ -194,16 +211,36 @@ class _SetupPaymentChannelSheetState
 
     try {
       final user = ref.read(authStateProvider).user;
-      final bankAccount = _bankAccountController.text.trim();
-      final formattedBankAccount = _selectedBank != null && bankAccount.isNotEmpty
-          ? '${_selectedBank!.shortName} $bankAccount'
-          : (bankAccount.isNotEmpty ? bankAccount : null);
+
+      // Extract first & last name from realName
+      final nameWords = realName.split(RegExp(r'\s+')).where((w) => w.isNotEmpty).toList();
+      final firstName = nameWords.isNotEmpty ? nameWords.first : null;
+      final lastName = nameWords.length > 1 ? nameWords.sublist(1).join(' ') : null;
+
+      String? promptPayType;
+      if (promptPay.isNotEmpty) {
+        final cleanPP = promptPay.replaceAll(RegExp(r'[^0-9]'), '');
+        if (cleanPP.length == 13) {
+          promptPayType = 'national_id';
+        } else if (cleanPP.length == 15) {
+          promptPayType = 'ewallet_id';
+        } else {
+          promptPayType = 'mobile_number';
+        }
+      }
 
       await ref.read(authStateProvider.notifier).completeProfile(
-        user?.fullName ?? user?.displayName ?? 'User',
+        realName,
         displayName: user?.displayName,
-        phone: promptPay,
-        bankAccountNumber: formattedBankAccount,
+        firstName: firstName,
+        lastName: lastName,
+        phone: promptPay.isNotEmpty ? promptPay : user?.phoneNumber,
+        promptPayId: promptPay.isNotEmpty ? promptPay : null,
+        promptPayIdType: promptPayType,
+        bankAccountNumber: bankAccount.isNotEmpty ? bankAccount : null,
+        bankName: _selectedBank?.name,
+        bankCode: _selectedBank?.code,
+        truemoneyPhone: trueMoney.isNotEmpty ? trueMoney : null,
       );
 
       if (mounted) {
@@ -229,6 +266,9 @@ class _SetupPaymentChannelSheetState
     return Padding(
       padding: EdgeInsets.only(bottom: bottomInset),
       child: Container(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.88,
+        ),
         decoration: ShapeDecoration(
           color: isDark ? AppColors.surfaceTile1 : Colors.white,
           shape: const SmoothRectangleBorder(
@@ -238,16 +278,16 @@ class _SetupPaymentChannelSheetState
             ),
           ),
         ),
-        padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+        padding: const EdgeInsets.fromLTRB(20, 14, 20, 24),
         child: Form(
           key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+          child: ListView(
+            shrinkWrap: true,
+            physics: const BouncingScrollPhysics(),
             children: [
               Center(
                 child: Container(
-                  width: 40,
+                  width: 38,
                   height: 4,
                   decoration: BoxDecoration(
                     color: isDark ? Colors.white24 : Colors.grey.shade300,
@@ -255,14 +295,14 @@ class _SetupPaymentChannelSheetState
                   ),
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 14),
 
               // Header Badge & Title
               Row(
                 children: [
                   Container(
-                    width: 48,
-                    height: 48,
+                    width: 44,
+                    height: 44,
                     decoration: BoxDecoration(
                       color: AppColors.primary.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(14),
@@ -270,26 +310,26 @@ class _SetupPaymentChannelSheetState
                     child: const Icon(
                       Icons.account_balance_wallet_rounded,
                       color: AppColors.primary,
-                      size: 26,
+                      size: 24,
                     ),
                   ),
-                  const SizedBox(width: 14),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Text(
-                          'ตั้งค่าช่องทางชำระเงิน',
+                          'ตั้งค่าช่องทางรับชำระเงิน',
                           style: TextStyle(
-                            fontSize: 18,
+                            fontSize: 17,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          'ต้องตั้งค่าพร้อมเพย์ก่อนสร้างบิลหรือสแกน OCR เพื่อให้เพื่อนโอนเงินคืนคุณได้',
+                          'ระบุชื่อจริงและช่องทางรับเงินเพื่อให้ EasySlip ตรวจสลิปได้ถูกต้อง',
                           style: TextStyle(
-                            fontSize: 12,
+                            fontSize: 11.5,
                             color: isDark
                                 ? AppColors.bodyMuted
                                 : AppColors.inkMuted48,
@@ -301,12 +341,28 @@ class _SetupPaymentChannelSheetState
                 ],
               ),
 
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
 
-              // PromptPay Field
+              // ── 1. Real Name Field ─────────────────────────────────────
               AppTextField(
-                label: 'เบอร์พร้อมเพย์ หรือ เลขบัตรประชาชน *',
-                hint: 'เช่น 0812345678 หรือ 1100501234567',
+                label: 'ชื่อ - นามสกุลจริง (สำหรับตรวจสลิป EasySlip) *',
+                hint: 'เช่น ธนพล พรหมมาศ หรือ Thanapon Phorarmat',
+                controller: _realNameController,
+                keyboardType: TextInputType.name,
+                autovalidateMode: AutovalidateMode.onUserInteraction,
+                prefixIcon: const Icon(
+                  Icons.person_rounded,
+                  color: AppColors.primary,
+                ),
+                validator: (v) => InputValidators.validateRealName(v, required: true),
+              ),
+
+              const SizedBox(height: 14),
+
+              // ── 2. PromptPay Field ─────────────────────────────────────
+              AppTextField(
+                label: 'เบอร์พร้อมเพย์ / เลขบัตร ปชช. / e-Wallet *',
+                hint: 'เช่น 0826419844 หรือ 1100501234567',
                 controller: _promptPayController,
                 keyboardType: TextInputType.number,
                 autovalidateMode: AutovalidateMode.onUserInteraction,
@@ -315,17 +371,17 @@ class _SetupPaymentChannelSheetState
                   LengthLimitingTextInputFormatter(15),
                 ],
                 prefixIcon: const Icon(
-                  Icons.qr_code_rounded,
-                  color: AppColors.primary,
+                  Icons.qr_code_2_rounded,
+                  color: Color(0xFF003D6B),
                 ),
-                validator: (v) => InputValidators.validatePromptPay(v, required: true),
+                validator: (v) => InputValidators.validatePromptPay(v, required: false),
               ),
 
               const SizedBox(height: 14),
 
-              // Bank Selection Tile with Logo
+              // ── 3. Bank Account Selection Tile ─────────────────────────
               Text(
-                'เลือกธนาคาร (สำหรับรับเงินโอนตรง)',
+                'ธนาคารสำหรับรับเงินโอนตรง (ไม่บังคับ)',
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
@@ -370,13 +426,13 @@ class _SetupPaymentChannelSheetState
                       ] else ...[
                         const Icon(
                           Icons.account_balance_rounded,
-                          size: 24,
+                          size: 22,
                           color: Colors.blueGrey,
                         ),
                         const SizedBox(width: 10),
                         const Expanded(
                           child: Text(
-                            'แตะเพื่อเลือกธนาคาร (ไม่บังคับ)',
+                            'แตะเพื่อเลือกธนาคาร',
                             style: TextStyle(
                               fontSize: 13,
                               color: AppColors.inkMuted48,
@@ -393,7 +449,7 @@ class _SetupPaymentChannelSheetState
                 ),
               ),
 
-              const SizedBox(height: 14),
+              const SizedBox(height: 12),
 
               // Bank Account Number Field
               AppTextField(
@@ -418,6 +474,26 @@ class _SetupPaymentChannelSheetState
                 },
               ),
 
+              const SizedBox(height: 14),
+
+              // ── 4. TrueMoney Wallet Field ──────────────────────────────
+              AppTextField(
+                label: 'เบอร์ TrueMoney Wallet (ไม่บังคับ)',
+                hint: 'เช่น 0826419844 (เบอร์โทร 10 หลัก)',
+                controller: _trueMoneyController,
+                keyboardType: TextInputType.phone,
+                autovalidateMode: AutovalidateMode.onUserInteraction,
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  LengthLimitingTextInputFormatter(10),
+                ],
+                prefixIcon: const Icon(
+                  Icons.account_balance_wallet_outlined,
+                  color: Color(0xFFFF8200),
+                ),
+                validator: (v) => InputValidators.validatePhoneNumber(v, required: false),
+              ),
+
               if (_errorMessage != null) ...[
                 const SizedBox(height: 12),
                 Text(
@@ -430,7 +506,7 @@ class _SetupPaymentChannelSheetState
                 ),
               ],
 
-              const SizedBox(height: 24),
+              const SizedBox(height: 20),
 
               // Save Button
               ElevatedButton(
@@ -438,7 +514,7 @@ class _SetupPaymentChannelSheetState
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
                   foregroundColor: Colors.white,
-                  minimumSize: const Size(double.infinity, 50),
+                  minimumSize: const Size(double.infinity, 48),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
                   ),
@@ -458,7 +534,7 @@ class _SetupPaymentChannelSheetState
                           Icon(Icons.check_circle_rounded, size: 20),
                           SizedBox(width: 8),
                           Text(
-                            'บันทึกและเริ่มสร้างบิล',
+                            'บันทึกช่องทางรับเงิน',
                             style: TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.bold,
@@ -481,4 +557,3 @@ class _SetupPaymentChannelSheetState
     );
   }
 }
-

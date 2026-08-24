@@ -317,6 +317,12 @@ export class FriendService {
     );
     console.log(`[Realtime] Friend accepted event sent friendshipId=${friendship.id}`);
 
+    logActivity(currentUserId, "friend_request_accepted", {
+      requestId,
+      friendshipId: friendship.id,
+      requesterId: friendship.requesterId,
+    });
+
     return friendship;
   }
 
@@ -545,6 +551,11 @@ export class FriendService {
         performedById: currentUserId,
         affectedUserId: friendId,
         note: `friendshipId:${updated.id}`,
+      });
+
+      logActivity(currentUserId, "friend_removed", {
+        friendshipId: updated.id,
+        friendId,
       });
 
       return updated;

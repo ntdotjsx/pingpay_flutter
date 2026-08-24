@@ -180,20 +180,77 @@ export class PaymentService {
       const slipAmountCents = Math.round(slipResult.amount * 100);
       if (slipAmountCents !== paymentCents) {
         throw new Error(
-          `SLIP_AMOUNT_MISMATCH: Slip amount (${slipResult.amount} THB) does not match submitted amount (${dto.amount} THB).`
+          `SLIP_AMOUNT_MISMATCH: Slip amount (${slipResult.amount} THB) does not match required payment amount (${dto.amount} THB).`
         );
       }
     }
 
-    // 4.26 Validate receiver promptpay / account if available
+    // 4.26 Validate receiver name, promptpay, or bank account if available
     if (slipResult.verified && slipResult.receiver) {
-      const expectedPP = bill.owner.promptPayId;
-      const expectedAcc = bill.owner.bankAccountNumber;
-      const actualPP = slipResult.receiver.promptPayId;
-      const actualAcc = slipResult.receiver.account;
+      const owner = bill.owner;
+      const expectedPP = owner.promptPayId?.replace(/[^0-9]/g, "");
+      const expectedAcc = owner.bankAccountNumber?.replace(/[^0-9]/g, "");
+      const expectedFullName = (owner.fullName || `${owner.firstName || ""} ${owner.lastName || ""}`).trim();
+      const expectedDisplayName = owner.displayName || "";
 
-      if (expectedPP && actualPP && expectedPP !== actualPP) {
-        throw new Error("SLIP_RECIPIENT_MISMATCH: Slip was transferred to an unexpected recipient PromptPay ID.");
+      const rawReceiver = (slipResult.rawResponse as any)?.data?.rawSlip?.receiver || (slipResult.rawResponse as any)?.data?.receiver;
+      const actualNameTh = (rawReceiver?.account?.name?.th || rawReceiver?.name?.th || slipResult.receiver.name || "").toLowerCase();
+      const actualNameEn = (rawReceiver?.account?.name?.en || rawReceiver?.name?.en || "").toLowerCase();
+      const actualPP = (slipResult.receiver.promptPayId || rawReceiver?.account?.proxy?.account || rawReceiver?.proxy?.value || "").replace(/[^0-9]/g, "");
+      const actualAcc = (slipResult.receiver.account || rawReceiver?.account?.bank?.account || "").replace(/[^0-9]/g, "");
+
+      const normalizeName = (name: string) => {
+        return name
+          .toLowerCase()
+          .replace(/^(นาย|นาง|นางสาว|น\.ส\.|ด\.ช\.|ด\.ญ\.|mr\.|mrs\.|ms\.|miss|dr\.)\s*/gi, "")
+          .replace(/[^a-zA-Z0-9\u0E00-\u0E7F]/g, " ")
+          .trim();
+      };
+
+      let isRecipientMatched = false;
+      let hasExpectedCriteria = false;
+
+      // 1. Check PromptPay Match (Supports masked matching e.g. xxx-xxx-9844 vs 0826419844)
+      if (expectedPP && expectedPP.length >= 4) {
+        hasExpectedCriteria = true;
+        const ppSuffix = expectedPP.slice(-4);
+        if (actualPP && (actualPP.includes(expectedPP) || expectedPP.includes(actualPP) || actualPP.endsWith(ppSuffix))) {
+          isRecipientMatched = true;
+        }
+      }
+
+      // 2. Check Bank Account Match (Supports masked matching e.g. xxx-x-x1234-x vs 1234567890)
+      if (!isRecipientMatched && expectedAcc && expectedAcc.length >= 4) {
+        hasExpectedCriteria = true;
+        const accSuffix = expectedAcc.slice(-4);
+        if (actualAcc && (actualAcc.includes(expectedAcc) || expectedAcc.includes(actualAcc) || actualAcc.endsWith(accSuffix))) {
+          isRecipientMatched = true;
+        }
+      }
+
+      // 3. Check Name Match (First Name / Last Name / Full Name token similarity)
+      if (!isRecipientMatched && (expectedFullName || expectedDisplayName)) {
+        hasExpectedCriteria = true;
+        const normExpected = normalizeName(`${expectedFullName} ${expectedDisplayName}`);
+        const expectedTokens = normExpected.split(/\s+/).filter((t: string) => t.length >= 3);
+        const normActualTh = normalizeName(actualNameTh);
+        const normActualEn = normalizeName(actualNameEn);
+
+        const tokenMatch = expectedTokens.some((token: string) => 
+          normActualTh.includes(token) || normActualEn.includes(token)
+        );
+
+        if (tokenMatch) {
+          isRecipientMatched = true;
+        }
+      }
+
+      // If owner has configured receiver details, but slip receiver matches none of them
+      if (hasExpectedCriteria && !isRecipientMatched) {
+        const ownerNameDisplay = expectedFullName || expectedDisplayName || "เจ้าของบิล";
+        throw new Error(
+          `SLIP_RECIPIENT_MISMATCH: ผู้รับเงินในสลิปไม่ตรงกับข้อมูลบัญชี/ชื่อของ ${ownerNameDisplay} (กรุณาโอนเข้าบัญชีหรือพร้อมเพย์ที่ระบุในบิล)`
+        );
       }
     }
 

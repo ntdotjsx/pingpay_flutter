@@ -34,19 +34,31 @@ class CreditorUserModel {
   final String id;
   final String userCode;
   final String displayName;
+  final String? fullName;
+  final String? firstName;
+  final String? lastName;
   final String? avatarUrl;
   final String? promptPayId;
   final String? promptPayIdType;
   final String? bankAccountNumber;
+  final String? bankName;
+  final String? bankCode;
+  final String? truemoneyPhone;
 
   const CreditorUserModel({
     required this.id,
     required this.userCode,
     required this.displayName,
+    this.fullName,
+    this.firstName,
+    this.lastName,
     this.avatarUrl,
     this.promptPayId,
     this.promptPayIdType,
     this.bankAccountNumber,
+    this.bankName,
+    this.bankCode,
+    this.truemoneyPhone,
   });
 
   factory CreditorUserModel.fromJson(Map<String, dynamic> json) {
@@ -54,10 +66,16 @@ class CreditorUserModel {
       id: json['id'] as String? ?? '',
       userCode: json['userCode'] as String? ?? '',
       displayName: json['displayName'] as String? ?? 'เจ้าของบิล',
+      fullName: json['fullName'] as String?,
+      firstName: json['firstName'] as String?,
+      lastName: json['lastName'] as String?,
       avatarUrl: json['avatarUrl'] as String?,
       promptPayId: json['promptPayId'] as String?,
       promptPayIdType: json['promptPayIdType'] as String?,
       bankAccountNumber: json['bankAccountNumber'] as String?,
+      bankName: json['bankName'] as String?,
+      bankCode: json['bankCode'] as String?,
+      truemoneyPhone: json['truemoneyPhone'] as String?,
     );
   }
 
@@ -65,10 +83,16 @@ class CreditorUserModel {
     'id': id,
     'userCode': userCode,
     'displayName': displayName,
+    'fullName': fullName,
+    'firstName': firstName,
+    'lastName': lastName,
     'avatarUrl': avatarUrl,
     'promptPayId': promptPayId,
     'promptPayIdType': promptPayIdType,
     'bankAccountNumber': bankAccountNumber,
+    'bankName': bankName,
+    'bankCode': bankCode,
+    'truemoneyPhone': truemoneyPhone,
   };
 }
 

@@ -27,11 +27,16 @@ class UserModel {
   final String? email;
   final String? displayName;
   final String? fullName;
+  final String? firstName;
+  final String? lastName;
   final String? avatarUrl;
   final String? role;
   final String? promptPayId;
   final String? phoneNumber;
   final String? bankAccountNumber;
+  final String? bankName;
+  final String? bankCode;
+  final String? truemoneyPhone;
   final int rewardPoints;
   final String? shippingAddress;
   final String? shippingPhone;
@@ -45,11 +50,16 @@ class UserModel {
     this.email,
     this.displayName,
     this.fullName,
+    this.firstName,
+    this.lastName,
     this.avatarUrl,
     this.role,
     this.promptPayId,
     this.phoneNumber,
     this.bankAccountNumber,
+    this.bankName,
+    this.bankCode,
+    this.truemoneyPhone,
     this.rewardPoints = 27,
     this.shippingAddress,
     this.shippingPhone,
@@ -65,11 +75,16 @@ class UserModel {
       email: json['email'],
       displayName: json['displayName'],
       fullName: json['fullName'],
+      firstName: json['firstName'],
+      lastName: json['lastName'],
       avatarUrl: json['avatarUrl'],
       role: json['role'] ?? 'user',
       promptPayId: json['promptPayId'],
       phoneNumber: json['phoneNumber'],
       bankAccountNumber: json['bankAccountNumber'],
+      bankName: json['bankName'],
+      bankCode: json['bankCode'],
+      truemoneyPhone: json['truemoneyPhone'],
       rewardPoints: json['rewardPoints'] is int
           ? json['rewardPoints'] as int
           : (int.tryParse(json['rewardPoints']?.toString() ?? '27') ?? 27),

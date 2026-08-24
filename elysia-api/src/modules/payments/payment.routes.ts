@@ -203,5 +203,44 @@ export const paymentRoutes = new Elysia()
       summary: "Debtor accepts and acknowledges debt",
       description: "Debtor performs a swipe action to confirm that they acknowledge the debt.",
     }
+  })
+
+  // EasySlip QR Code Generation Endpoint
+  .post("/qr/generate", async ({ body, set }) => {
+    const { defaultEasySlipQrService } = await import("./easyslip-qr.service");
+    const result = await defaultEasySlipQrService.generate(body as any);
+    if (!result.success) {
+      set.status = 400;
+      return { success: false, error: result.error };
+    }
+    return {
+      success: true,
+      data: {
+        image: result.image,
+        mime: result.mime,
+        payload: result.payload,
+      }
+    };
+  }, {
+    body: t.Object({
+      type: t.Union([
+        t.Literal("PROMPTPAY"),
+        t.Literal("TRUEMONEY"),
+        t.Literal("KSHOP"),
+        t.Literal("MAE_MANEE"),
+        t.Literal("TUNGNGERN")
+      ]),
+      msisdn: t.Optional(t.String()),
+      natId: t.Optional(t.String()),
+      eWalletId: t.Optional(t.String()),
+      ref1: t.Optional(t.String()),
+      merchantName: t.Optional(t.String()),
+      amount: t.Optional(t.Number()),
+    }),
+    detail: {
+      tags: ["Payments", "EasySlip QR"],
+      summary: "Generate payment QR via EasySlip",
+      description: "Generates PromptPay / TrueMoney / Merchant QR code image and payload via EasySlip API.",
+    }
   });
 

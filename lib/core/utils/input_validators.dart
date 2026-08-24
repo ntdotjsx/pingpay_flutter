@@ -103,6 +103,32 @@ class InputValidators {
     return null;
   }
 
+  /// Validates Real First & Last Name for EasySlip receiver bank verification
+  static String? validateRealName(String? value, {bool required = true}) {
+    if (value == null || value.trim().isEmpty) {
+      if (required) return 'กรุณากรอกชื่อและนามสกุลจริง';
+      return null;
+    }
+    final trimmed = value.trim();
+
+    // Check for illegal characters (numbers, special symbols)
+    if (RegExp(r'[0-9!@#$%^&*()_+={}\[\]:;"<>,.?/\\|~`]').hasMatch(trimmed)) {
+      return 'ชื่อและนามสกุลต้องประกอบด้วยตัวอักษรเท่านั้น (ไม่มีตัวเลขหรือสัญลักษณ์)';
+    }
+
+    // Split words by spaces
+    final words = trimmed.split(RegExp(r'\s+')).where((w) => w.isNotEmpty).toList();
+    if (words.length < 2) {
+      return 'กรุณากรอกทั้งชื่อและนามสกุล (เว้นวรรคระหว่างชื่อกับนามสกุล)';
+    }
+
+    if (words[0].length < 2 || words[1].length < 2) {
+      return 'ชื่อและนามสกุลต้องมีความยาวอย่างน้อย 2 ตัวอักษร';
+    }
+
+    return null;
+  }
+
   /// Validates required text (with min/max length)
   static String? validateRequired(
     String? value, {
@@ -123,3 +149,4 @@ class InputValidators {
     return null;
   }
 }
+

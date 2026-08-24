@@ -149,9 +149,14 @@ export const users = pgTable(
     email: varchar("email", { length: 255 }),
     displayName: varchar("display_name", { length: 128 }), // from Google, pre-profile
     fullName: varchar("full_name", { length: 128 }),
+    firstName: varchar("first_name", { length: 64 }),
+    lastName: varchar("last_name", { length: 64 }),
     address: text("address"),
     phoneNumber: varchar("phone_number", { length: 32 }),
     bankAccountNumber: varchar("bank_account_number", { length: 32 }),
+    bankName: varchar("bank_name", { length: 64 }),
+    bankCode: varchar("bank_code", { length: 16 }),
+    truemoneyPhone: varchar("truemoney_phone", { length: 32 }),
 
     // PromptPay ID used to generate a QR for anyone who owes this user money.
     // promptPayIdType tells the QR generator how to format the payload

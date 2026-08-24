@@ -6,13 +6,14 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:qr_flutter/qr_flutter.dart';
-import 'package:thai_promptpay/thai_promptpay.dart';
+import '../../../../core/constants/thai_banks.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/pingpay_loading.dart';
 import '../../../../core/utils/app_toast.dart';
 import '../../models/payment_models.dart';
 import '../../providers/payment_providers.dart';
 import '../../services/debt_age_calculator.dart';
+import '../../services/easyslip_qr_service.dart';
 import '../../../friends/providers/friend_nickname_provider.dart';
 
 class PaymentDetailBottomSheet extends ConsumerStatefulWidget {
@@ -51,10 +52,63 @@ class _PaymentDetailBottomSheetState
   bool _isFullPayment = true;
   File? _selectedSlipFile;
 
+  int _selectedChannelTab = 0; // 0: PromptPay, 1: TrueMoney, 2: Bank Transfer
+  EasySlipQrResult? _easySlipQrResult;
+  bool _isLoadingQr = false;
+
   @override
   void initState() {
     super.initState();
     _amountController.text = widget.debt.outstandingAmount.toStringAsFixed(2);
+    _initChannelAndFetchQr();
+  }
+
+  void _initChannelAndFetchQr() {
+    final creditor = widget.debt.creditor;
+    // Default to promptpay if available, else bank, else truemoney
+    if (creditor.promptPayId != null && creditor.promptPayId!.isNotEmpty) {
+      _selectedChannelTab = 0;
+    } else if (creditor.bankAccountNumber != null && creditor.bankAccountNumber!.isNotEmpty) {
+      _selectedChannelTab = 2;
+    } else if (creditor.truemoneyPhone != null && creditor.truemoneyPhone!.isNotEmpty) {
+      _selectedChannelTab = 1;
+    }
+    _fetchEasySlipQr();
+  }
+
+  Future<void> _fetchEasySlipQr() async {
+    final creditor = widget.debt.creditor;
+    final enteredAmount = double.tryParse(_amountController.text.trim()) ?? widget.debt.outstandingAmount;
+
+    String? targetNumber;
+    String type = 'PROMPTPAY';
+
+    if (_selectedChannelTab == 0) {
+      targetNumber = creditor.promptPayId;
+      type = 'PROMPTPAY';
+    } else if (_selectedChannelTab == 1) {
+      targetNumber = creditor.truemoneyPhone ?? creditor.promptPayId;
+      type = 'TRUEMONEY';
+    }
+
+    if (targetNumber == null || targetNumber.isEmpty) {
+      setState(() => _easySlipQrResult = null);
+      return;
+    }
+
+    setState(() => _isLoadingQr = true);
+    final res = await ref.read(easySlipQrServiceProvider).generateQr(
+      type: type,
+      msisdn: targetNumber,
+      amount: enteredAmount > 0 ? enteredAmount : null,
+    );
+
+    if (mounted) {
+      setState(() {
+        _easySlipQrResult = res;
+        _isLoadingQr = false;
+      });
+    }
   }
 
   @override
@@ -68,12 +122,14 @@ class _PaymentDetailBottomSheetState
       _isFullPayment = true;
       _amountController.text = widget.debt.outstandingAmount.toStringAsFixed(2);
     });
+    _fetchEasySlipQr();
   }
 
   void _selectPartialPayment() {
     setState(() {
       _isFullPayment = false;
     });
+    _fetchEasySlipQr();
   }
 
   Future<void> _pickSlipImage(ImageSource source) async {
@@ -1151,36 +1207,27 @@ class _PaymentDetailBottomSheetState
     final creditor = widget.debt.creditor;
     final promptPayId = creditor.promptPayId;
     final bankAcc = creditor.bankAccountNumber;
-    final enteredAmount = double.tryParse(_amountController.text.trim()) ?? 0.0;
+    final truemoneyPhone = creditor.truemoneyPhone;
+    final enteredAmount = double.tryParse(_amountController.text.trim()) ?? widget.debt.outstandingAmount;
 
     final nicknamesMap = ref.watch(friendNicknameProvider);
     final creditorNick = nicknamesMap[creditor.id] ?? nicknamesMap[creditor.userCode];
     final hasCreditorNick = creditorNick != null && creditorNick.trim().isNotEmpty;
     final effectiveCreditorName = hasCreditorNick ? creditorNick : creditor.displayName;
+    final creditorRealName = (creditor.fullName != null && creditor.fullName!.trim().isNotEmpty)
+        ? creditor.fullName!
+        : creditor.displayName;
 
-    String? qrPayload;
-    if (promptPayId != null && promptPayId.isNotEmpty) {
+    final hasPromptPay = promptPayId != null && promptPayId.isNotEmpty;
+    final hasTrueMoney = truemoneyPhone != null && truemoneyPhone.isNotEmpty;
+    final hasBank = bankAcc != null && bankAcc.isNotEmpty;
+
+    // Resolve Bank details if available
+    ThaiBank? matchedBank;
+    if (creditor.bankCode != null && creditor.bankCode!.isNotEmpty) {
       try {
-        final cleanId = promptPayId.replaceAll(RegExp(r'[^0-9]'), '');
-        final satang = enteredAmount > 0 ? (enteredAmount * 100).round() : null;
-
-        if (cleanId.length == 13) {
-          qrPayload = encodePromptPay(
-            target: PromptPayTarget(PromptPayType.nationalId, cleanId),
-            amountSatang: satang,
-          );
-        } else if (cleanId.length == 15) {
-          qrPayload = encodePromptPay(
-            target: PromptPayTarget(PromptPayType.eWallet, cleanId),
-            amountSatang: satang,
-          );
-        } else {
-          // Default to mobile
-          qrPayload = promptPayMobile(cleanId, amountSatang: satang);
-        }
-      } catch (e) {
-        debugPrint('PromptPayQR generate error: $e');
-      }
+        matchedBank = kThaiBanks.firstWhere((b) => b.code.toLowerCase() == creditor.bankCode!.toLowerCase());
+      } catch (_) {}
     }
 
     return Container(
@@ -1199,25 +1246,26 @@ class _PaymentDetailBottomSheetState
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          // Header Row
           Padding(
-            padding: const EdgeInsets.fromLTRB(14, 9, 14, 9),
+            padding: const EdgeInsets.fromLTRB(14, 10, 14, 8),
             child: Row(
               children: [
                 Container(
-                  width: 26,
-                  height: 26,
+                  width: 28,
+                  height: 28,
                   decoration: const ShapeDecoration(
-                    color: Color(0x1F003D6B),
+                    color: Color(0x1FFF5000),
                     shape: SmoothRectangleBorder(
                       borderRadius: SmoothBorderRadius.all(
-                        SmoothRadius(cornerRadius: 7, cornerSmoothing: 0.8),
+                        SmoothRadius(cornerRadius: 8, cornerSmoothing: 0.8),
                       ),
                     ),
                   ),
                   child: const Icon(
                     Icons.qr_code_2_rounded,
-                    color: Color(0xFF003D6B),
-                    size: 16,
+                    color: Color(0xFFFF5000),
+                    size: 18,
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -1226,7 +1274,7 @@ class _PaymentDetailBottomSheetState
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'พร้อมเพย์ / บัญชีรับเงินของ $effectiveCreditorName',
+                        'ช่องทางชำระเงินของ $effectiveCreditorName',
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w700,
@@ -1234,12 +1282,11 @@ class _PaymentDetailBottomSheetState
                         ),
                       ),
                       Text(
-                        'สแกน QR ผ่านแอปธนาคารเพื่อโอนเงิน',
+                        'ชื่อบัญชีจริง: $creditorRealName',
                         style: TextStyle(
                           fontSize: 11,
-                          color: isDark
-                              ? AppColors.bodyMuted
-                              : AppColors.inkMuted48,
+                          fontWeight: FontWeight.w500,
+                          color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
                         ),
                       ),
                     ],
@@ -1248,19 +1295,65 @@ class _PaymentDetailBottomSheetState
               ],
             ),
           ),
+
+          // Multi-Channel Selection Tabs
+          if (hasPromptPay || hasTrueMoney || hasBank) ...[
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              child: Row(
+                children: [
+                  if (hasPromptPay)
+                    Expanded(
+                      child: _buildChannelTabButton(
+                        tabIndex: 0,
+                        label: 'พร้อมเพย์',
+                        icon: Icons.qr_code_rounded,
+                        activeColor: const Color(0xFF003D6B),
+                        isDark: isDark,
+                      ),
+                    ),
+                  if (hasTrueMoney) ...[
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: _buildChannelTabButton(
+                        tabIndex: 1,
+                        label: 'TrueMoney',
+                        icon: Icons.account_balance_wallet_rounded,
+                        activeColor: const Color(0xFFFF8200),
+                        isDark: isDark,
+                      ),
+                    ),
+                  ],
+                  if (hasBank) ...[
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: _buildChannelTabButton(
+                        tabIndex: 2,
+                        label: 'โอนธนาคาร',
+                        icon: Icons.account_balance_rounded,
+                        activeColor: const Color(0xFF007AFF),
+                        isDark: isDark,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+
           Divider(
             height: 1,
             thickness: 0.6,
             color: isDark ? Colors.white10 : const Color(0xFFE5E7EB),
           ),
 
-          // PromptPay QR Display
-          if (qrPayload != null) ...[
+          // ── Tab 0 & 1: EasySlip QR Code View ────────────────────────────
+          if (_selectedChannelTab == 0 || _selectedChannelTab == 1) ...[
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 12.0),
               child: Center(
                 child: Container(
-                  padding: const EdgeInsets.all(10),
+                  padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(14),
@@ -1274,36 +1367,73 @@ class _PaymentDetailBottomSheetState
                   ),
                   child: Column(
                     children: [
+                      // Badge Header
                       Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 3),
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF003D6B),
+                          color: _selectedChannelTab == 0 ? const Color(0xFF003D6B) : const Color(0xFFFF8200),
                           borderRadius: BorderRadius.circular(5),
                         ),
-                        child: const Text(
-                          'PromptPay พร้อมเพย์',
-                          style: TextStyle(
+                        child: Text(
+                          _selectedChannelTab == 0 ? 'PromptPay พร้อมเพย์ (EasySlip)' : 'TrueMoney Wallet (EasySlip)',
+                          style: const TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
                             fontSize: 10,
                           ),
                         ),
                       ),
-                      const SizedBox(height: 6),
-                      QrImageView(
-                        data: qrPayload,
-                        version: QrVersions.auto,
-                        size: 160.0,
-                        backgroundColor: Colors.white,
-                      ),
+                      const SizedBox(height: 8),
+
+                      // QR Code Image or Placeholder
+                      if (_isLoadingQr)
+                        const SizedBox(
+                          width: 160,
+                          height: 160,
+                          child: Center(
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.5,
+                              color: Color(0xFFFF5000),
+                            ),
+                          ),
+                        )
+                      else if (_easySlipQrResult?.imageBase64 != null &&
+                          _easySlipQrResult!.imageBase64!.isNotEmpty)
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: Image.memory(
+                            base64Decode(_easySlipQrResult!.imageBase64!),
+                            width: 160,
+                            height: 160,
+                            fit: BoxFit.contain,
+                          ),
+                        )
+                      else if (_easySlipQrResult?.payload != null &&
+                          _easySlipQrResult!.payload!.isNotEmpty)
+                        QrImageView(
+                          data: _easySlipQrResult!.payload!,
+                          version: QrVersions.auto,
+                          size: 160.0,
+                          backgroundColor: Colors.white,
+                        )
+                      else
+                        Container(
+                          width: 160,
+                          height: 160,
+                          alignment: Alignment.center,
+                          child: const Text(
+                            'ไม่พบข้อมูล QR',
+                            style: TextStyle(fontSize: 12, color: AppColors.inkMuted48),
+                          ),
+                        ),
+
                       const SizedBox(height: 6),
                       Text(
                         'ยอดโอน: ฿${enteredAmount > 0 ? enteredAmount.toStringAsFixed(2) : widget.debt.outstandingAmount.toStringAsFixed(2)}',
-                        style: const TextStyle(
-                          fontSize: 12.5,
+                        style: TextStyle(
+                          fontSize: 13,
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFF003D6B),
+                          color: _selectedChannelTab == 0 ? const Color(0xFF003D6B) : const Color(0xFFFF8200),
                         ),
                       ),
                     ],
@@ -1318,38 +1448,91 @@ class _PaymentDetailBottomSheetState
             ),
           ],
 
-          // PromptPay ID & Bank Info List
-          if (promptPayId != null && promptPayId.isNotEmpty) ...[
+          // ── Account / Identifier Copy Rows ──────────────────────────────
+          if (_selectedChannelTab == 0 && hasPromptPay) ...[
             _buildCopyableInfoRow(
               icon: Icons.phone_android_rounded,
-              label: 'เบอร์พร้อมเพย์',
-              value: promptPayId,
+              label: 'เบอร์พร้อมเพย์ / รหัสผู้รับ',
+              value: promptPayId!,
               isDark: isDark,
             ),
-          ],
-
-          if (bankAcc != null && bankAcc.isNotEmpty) ...[
-            Divider(
-              height: 1,
-              thickness: 0.6,
-              indent: 48,
-              color: isDark ? Colors.white10 : const Color(0xFFE5E7EB),
-            ),
+          ] else if (_selectedChannelTab == 1 && hasTrueMoney) ...[
             _buildCopyableInfoRow(
-              icon: Icons.account_balance_rounded,
-              label: 'เลขที่บัญชีธนาคาร',
-              value: bankAcc,
+              icon: Icons.account_balance_wallet_rounded,
+              label: 'เบอร์ TrueMoney Wallet',
+              value: truemoneyPhone!,
               isDark: isDark,
+            ),
+          ] else if (_selectedChannelTab == 2 && hasBank) ...[
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              child: Row(
+                children: [
+                  if (matchedBank != null)
+                    Container(
+                      width: 38,
+                      height: 38,
+                      decoration: BoxDecoration(
+                        color: matchedBank.color,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        matchedBank.logoCode,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w900,
+                          fontSize: 13,
+                        ),
+                      ),
+                    )
+                  else
+                    const Icon(Icons.account_balance_rounded, size: 28, color: Color(0xFF007AFF)),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          creditor.bankName ?? matchedBank?.name ?? 'บัญชีธนาคาร',
+                          style: TextStyle(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.bold,
+                            color: isDark ? AppColors.bodyOnDark : AppColors.ink,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'เลขที่บัญชี: ${creditor.bankAccountNumber}',
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0.5,
+                            color: Color(0xFF007AFF),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.copy_rounded, size: 18, color: Color(0xFF007AFF)),
+                    onPressed: () {
+                      HapticFeedback.selectionClick();
+                      Clipboard.setData(ClipboardData(text: creditor.bankAccountNumber!));
+                      AppToast.success(context, 'คัดลอกเลขบัญชีธนาคารแล้ว');
+                    },
+                  ),
+                ],
+              ),
             ),
           ],
 
-          if ((promptPayId == null || promptPayId.isEmpty) &&
-              (bankAcc == null || bankAcc.isEmpty))
+          if (!hasPromptPay && !hasTrueMoney && !hasBank)
             Padding(
-              padding: const EdgeInsets.symmetric(vertical: 12.0),
+              padding: const EdgeInsets.symmetric(vertical: 14.0),
               child: Center(
                 child: Text(
-                  'เพื่อนคนนี้ยังไม่ได้ตั้งค่าพร้อมเพย์หรือเลขบัญชีธนาคาร',
+                  'เพื่อนคนนี้ยังไม่ได้ตั้งค่าช่องทางชำระเงิน',
                   style: TextStyle(
                     fontSize: 12,
                     color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
@@ -1358,6 +1541,57 @@ class _PaymentDetailBottomSheetState
               ),
             ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildChannelTabButton({
+    required int tabIndex,
+    required String label,
+    required IconData icon,
+    required Color activeColor,
+    required bool isDark,
+  }) {
+    final isSelected = _selectedChannelTab == tabIndex;
+
+    return InkWell(
+      onTap: () {
+        HapticFeedback.selectionClick();
+        setState(() => _selectedChannelTab = tabIndex);
+        _fetchEasySlipQr();
+      },
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? activeColor.withValues(alpha: 0.12)
+              : (isDark ? Colors.white10 : const Color(0xFFF0F2F5)),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: isSelected ? activeColor : Colors.transparent,
+            width: 1,
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              size: 14,
+              color: isSelected ? activeColor : (isDark ? AppColors.bodyMuted : AppColors.inkMuted48),
+            ),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 11.5,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                color: isSelected ? activeColor : (isDark ? AppColors.bodyMuted : AppColors.ink),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
