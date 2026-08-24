@@ -825,7 +825,7 @@ class _CreateBillScreenState extends ConsumerState<CreateBillScreen>
                   },
                 ),
 
-                // Group 1: Clean Inset-Grouped Bill Details List
+                // Group 1: Clean Inset-Grouped Bill Details Card
                 Container(
                   decoration: ShapeDecoration(
                     color: isDark ? AppColors.surfaceTile2 : const Color(0xFFF9FAFB),
@@ -839,163 +839,185 @@ class _CreateBillScreenState extends ConsumerState<CreateBillScreen>
                       ),
                     ),
                   ),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                   child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Row 1: Bill Name List Item
+                      // 1. Bill Name
+                      Row(
+                        children: [
+                          Container(
+                            width: 32,
+                            height: 32,
+                            decoration: const ShapeDecoration(
+                              color: Color(0x1FFF5000),
+                              shape: SmoothRectangleBorder(
+                                borderRadius: SmoothBorderRadius.all(
+                                  SmoothRadius(cornerRadius: 9, cornerSmoothing: 0.8),
+                                ),
+                              ),
+                            ),
+                            child: const Icon(
+                              Icons.receipt_long_rounded,
+                              color: Color(0xFFFF5000),
+                              size: 17,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Text(
+                            'ชื่อบิล / รายการ',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: isDark ? AppColors.bodyOnDark : AppColors.ink,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      TextField(
+                        controller: _titleController,
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: isDark ? AppColors.bodyOnDark : AppColors.ink,
+                        ),
+                        decoration: InputDecoration(
+                          isDense: true,
+                          filled: false,
+                          fillColor: Colors.transparent,
+                          hintText: 'เช่น ค่าอาหารมื้อเย็น, ทริปหัวหิน...',
+                          hintStyle: TextStyle(
+                            fontSize: 13.5,
+                            color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
+                            fontWeight: FontWeight.normal,
+                          ),
+                          border: InputBorder.none,
+                          enabledBorder: InputBorder.none,
+                          focusedBorder: InputBorder.none,
+                          disabledBorder: InputBorder.none,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                        ),
+                      ),
+
                       Padding(
-                        padding: const EdgeInsets.fromLTRB(14, 11, 14, 11),
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 36,
-                              height: 36,
-                              decoration: const ShapeDecoration(
-                                color: Color(0x1FFF5000),
-                                shape: SmoothRectangleBorder(
-                                  borderRadius: SmoothBorderRadius.all(
-                                    SmoothRadius(cornerRadius: 10, cornerSmoothing: 0.8),
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        child: Divider(
+                          height: 1,
+                          thickness: 0.6,
+                          color: isDark ? Colors.white10 : const Color(0xFFE5E7EB),
+                        ),
+                      ),
+
+                      // 2. Total Amount
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                width: 32,
+                                height: 32,
+                                decoration: const ShapeDecoration(
+                                  color: Color(0x1FFF5000),
+                                  shape: SmoothRectangleBorder(
+                                    borderRadius: SmoothBorderRadius.all(
+                                      SmoothRadius(cornerRadius: 9, cornerSmoothing: 0.8),
+                                    ),
+                                  ),
+                                ),
+                                alignment: Alignment.center,
+                                child: const Text(
+                                  '฿',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFFFF5000),
                                   ),
                                 ),
                               ),
-                              child: const Icon(
-                                Icons.edit_note_rounded,
-                                color: Color(0xFFFF5000),
-                                size: 20,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Text(
-                              'ชื่อบิล',
-                              style: TextStyle(
-                                fontSize: 13.5,
-                                fontWeight: FontWeight.w700,
-                                color: isDark ? AppColors.bodyOnDark : AppColors.ink,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: TextField(
-                                controller: _titleController,
-                                textAlign: TextAlign.end,
+                              const SizedBox(width: 10),
+                              Text(
+                                'ยอดรวมทั้งหมด (บาท)',
                                 style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
                                   color: isDark ? AppColors.bodyOnDark : AppColors.ink,
                                 ),
-                                decoration: InputDecoration(
-                                  isDense: true,
-                                  hintText: 'เช่น ค่าอาหาร, ทริปหัวหิน',
-                                  hintStyle: TextStyle(
-                                    fontSize: 13,
-                                    color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
-                                    fontWeight: FontWeight.normal,
-                                  ),
-                                  border: InputBorder.none,
-                                  contentPadding: EdgeInsets.zero,
-                                ),
                               ),
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      Divider(
-                        height: 1,
-                        thickness: 0.6,
-                        indent: 58,
-                        color: isDark ? Colors.white10 : const Color(0xFFE5E7EB),
-                      ),
-
-                      // Row 2: Total Amount List Item
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 36,
-                              height: 36,
-                              decoration: const ShapeDecoration(
-                                color: Color(0x1FFF5000),
-                                shape: SmoothRectangleBorder(
-                                  borderRadius: SmoothBorderRadius.all(
-                                    SmoothRadius(cornerRadius: 10, cornerSmoothing: 0.8),
-                                  ),
-                                ),
+                            ],
+                          ),
+                          GestureDetector(
+                            onTap: () => _openItemsSummarySheet(context),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFF5000).withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(8),
                               ),
-                              alignment: Alignment.center,
-                              child: const Text(
-                                '฿',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFFFF5000),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Text(
-                              'ยอดเงินรวม',
-                              style: TextStyle(
-                                fontSize: 13.5,
-                                fontWeight: FontWeight.w700,
-                                color: isDark ? AppColors.bodyOnDark : AppColors.ink,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: TextField(
-                                controller: _amountController,
-                                readOnly: true,
-                                onTap: () => _openItemsSummarySheet(context),
-                                textAlign: TextAlign.end,
-                                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                style: const TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFFFF5000),
-                                  letterSpacing: -0.3,
-                                ),
-                                decoration: InputDecoration(
-                                  isDense: true,
-                                  hintText: '0.00',
-                                  hintStyle: TextStyle(
-                                    fontSize: 16,
-                                    color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
-                                    fontWeight: FontWeight.normal,
-                                  ),
-                                  border: InputBorder.none,
-                                  contentPadding: EdgeInsets.zero,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            GestureDetector(
-                              onTap: () => _openItemsSummarySheet(context),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFFF5000).withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: const Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(Icons.edit_rounded, size: 12, color: Color(0xFFFF5000)),
-                                    SizedBox(width: 3),
-                                    Text(
-                                      'ระบุยอด',
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w700,
-                                        color: Color(0xFFFF5000),
-                                      ),
+                              child: const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.edit_note_rounded, size: 14, color: Color(0xFFFF5000)),
+                                  SizedBox(width: 3),
+                                  Text(
+                                    'แยกรายการ',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w700,
+                                      color: Color(0xFFFF5000),
                                     ),
-                                  ],
-                                ),
+                                  ),
+                                ],
                               ),
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.baseline,
+                        textBaseline: TextBaseline.alphabetic,
+                        children: [
+                          const Text(
+                            '฿ ',
+                            style: TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.w800,
+                              color: Color(0xFFFF5000),
+                            ),
+                          ),
+                          Expanded(
+                            child: TextField(
+                              controller: _amountController,
+                              readOnly: true,
+                              onTap: () => _openItemsSummarySheet(context),
+                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                              style: const TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.w800,
+                                color: Color(0xFFFF5000),
+                                letterSpacing: -0.5,
+                              ),
+                              decoration: InputDecoration(
+                                isDense: true,
+                                filled: false,
+                                fillColor: Colors.transparent,
+                                hintText: '0.00',
+                                hintStyle: TextStyle(
+                                  fontSize: 22,
+                                  color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                border: InputBorder.none,
+                                enabledBorder: InputBorder.none,
+                                focusedBorder: InputBorder.none,
+                                disabledBorder: InputBorder.none,
+                                contentPadding: EdgeInsets.zero,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
