@@ -12,19 +12,19 @@
 
 ---
 
-## 📖 สารบัญ (Table of Contents)
-- [เกี่ยวกับโครงงาน (About the Project)](#-เกี่ยวกับโครงงาน-about-the-project)
-- [ฟีเจอร์เด่นของระบบ (Core Features)](#-ฟีเจอร์เด่นของระบบ-core-features)
-- [สถาปัตยกรรมระบบ (System Architecture)](#-สถาปัตยกรรมระบบ-system-architecture)
-- [โครงสร้างโปรเจกต์ (Project Structure)](#-โครงสร้างโปรเจกต์-project-structure)
-- [เทคโนโลยีที่ใช้ (Tech Stack)](#-เทคโนโลยีที่ใช้-tech-stack)
-- [การติดตั้งและเริ่มต้นใช้งาน (Getting Started)](#-การติดตั้งและเริ่มต้นใช้งาน-getting-started)
-- [การทดสอบระบบ (Testing & Quality Assurance)](#-การทดสอบระบบ-testing--quality-assurance)
-- [ผู้จัดทำโครงงาน (Authors & Credits)](#-ผู้จัดทำโครงงาน-authors--credits)
+## สารบัญ (Table of Contents)
+- [เกี่ยวกับโครงงาน (About the Project)](#เกี่ยวกับโครงงาน-about-the-project)
+- [ฟีเจอร์เด่นของระบบ (Core Features)](#ฟีเจอร์เด่นของระบบ-core-features)
+- [สถาปัตยกรรมระบบ (System Architecture)](#สถาปัตยกรรมระบบ-system-architecture)
+- [โครงสร้างโปรเจกต์ (Project Structure)](#โครงสร้างโปรเจกต์-project-structure)
+- [เทคโนโลยีที่ใช้ (Tech Stack)](#เทคโนโลยีที่ใช้-tech-stack)
+- [การติดตั้งและเริ่มต้นใช้งาน (Getting Started)](#การติดตั้งและเริ่มต้นใช้งาน-getting-started)
+- [การทดสอบระบบ (Testing & Quality Assurance)](#การทดสอบระบบ-testing--quality-assurance)
+- [ผู้จัดทำโครงงาน (Authors & Credits)](#ผู้จัดทำโครงงาน-authors--credits)
 
 ---
 
-## 🌟 เกี่ยวกับโครงงาน (About the Project)
+## เกี่ยวกับโครงงาน (About the Project)
 **PingPay** ถูกออกแบบและพัฒนาขึ้นเพื่อแก้ปัญหาความยุ่งยากในการหารค่าใช้จ่ายร่วมกันในชีวิตประจำวัน เช่น การรับประทานอาหารร่วมกับเพื่อน การเดินทางท่องเที่ยว การแชร์ค่าใช้จ่ายภายในครอบครัว หรือเพื่อนร่วมหอพัก โดยนำเทคโนโลยีสมัยใหม่มาผสานเข้าด้วยกัน:
 1. **ลดความผิดพลาดในการคำนวณ**: คำนวณและจัดสรรยอดหนี้ตามสัดส่วนอย่างแม่นยำ พร้อมระบบสมการความสมดุลทางการเงิน (Financial Invariant)
 2. **ลดขั้นตอนการกรอกข้อมูล**: สแกนใบเสร็จด้วย AI OCR และรองรับการป้อนข้อมูลด้วยภาษาธรรมชาติ (Natural Language Input - NLI)
@@ -33,11 +33,11 @@
 
 ---
 
-## ✨ ฟีเจอร์เด่นของระบบ (Core Features)
+## ฟีเจอร์เด่นของระบบ (Core Features)
 
 ### 1. ระบบยืนยันตัวตนและความปลอดภัย (Authentication & Security)
 - **Google Sign-In**: เข้าสู่ระบบสะดวกรวดเร็วผ่าน Google Identity OAuth 2.0
-- **Onboarding State Machine**: ควบคุมลำดับขั้นตอนการเริ่มต้นใช้งานอย่างเคร่งครัด (`PDPA_REQUIRED` ➔ `PROFILE_REQUIRED` ➔ `PIN_REQUIRED` ➔ `COMPLETED`)
+- **Onboarding State Machine**: ควบคุมลำดับขั้นตอนการเริ่มต้นใช้งานอย่างเคร่งครัด (`PDPA_REQUIRED` -> `PROFILE_REQUIRED` -> `PIN_REQUIRED` -> `COMPLETED`)
 - **PIN Security**: รหัสผ่าน PIN 6 หลักเข้ารหัสด้วย Argon2id พร้อมระบบระงับบัญชีชั่วคราวเมื่อกรอกผิดเกิน 5 ครั้ง
 - **Forgot PIN Reset**: รีเซ็ตรหัส PIN ผ่านรหัสยืนยัน OTP 6 หลักทางอีเมล (มีอายุ 15 นาที)
 - **Single Active Device Session**: ควบคุมความปลอดภัยให้ใช้งานได้เพียง 1 อุปกรณ์ต่อบัญชี หากล็อกอินจากเครื่องใหม่ ระบบจะบังคับออกจากระบบทันที (`SESSION_TERMINATED`)
@@ -75,32 +75,32 @@
 
 ---
 
-## 🏗 สถาปัตยกรรมระบบ (System Architecture)
+## สถาปัตยกรรมระบบ (System Architecture)
 
 ```mermaid
 flowchart TD
     subgraph "Clients"
-        A["📱 Flutter Mobile App<br>(iOS & Android)"]
-        B["💻 Developer Console<br>(SvelteKit Web Admin)"]
+        A["Flutter Mobile App<br>(iOS & Android)"]
+        B["Developer Console<br>(SvelteKit Web Admin)"]
     end
 
     subgraph "Backend Layer (Bun + Elysia.js)"
-        C["🦊 Elysia API Server<br>(Port 3001)"]
-        W["⏱ Background Notification Worker<br>& Weekly Debt Scheduler"]
-        WS["⚡ Realtime WebSocket Gateway<br>(/realtime)"]
+        C["Elysia API Server<br>(Port 3001)"]
+        W["Background Notification Worker<br>& Weekly Debt Scheduler"]
+        WS["Realtime WebSocket Gateway<br>(/realtime)"]
     end
 
     subgraph "Database & Storage"
-        D[("🐘 PostgreSQL 16<br>(Drizzle ORM - 23 Tables)")]
+        D[("PostgreSQL 16<br>(Drizzle ORM - 23 Tables)")]
     end
 
     subgraph "External Cloud Services"
-        E1["🔑 Google Identity<br>(OAuth 2.0)"]
-        E2["💳 EasySlip Service<br>(QR Gen & Slip Verification)"]
-        E3["🤖 AI OCR Engine<br>(PaddleOCR / EasyOCR FastAPI)"]
-        E4["🔔 Firebase Cloud Messaging<br>(FCM HTTP v1)"]
-        E5["📧 SMTP / Email Service<br>(OTP Reset PIN)"]
-        E6["👵 LINE OA ป้านวล<br>(@508zvpuj 1-Click Share)"]
+        E1["Google Identity<br>(OAuth 2.0)"]
+        E2["EasySlip Service<br>(QR Gen & Slip Verification)"]
+        E3["AI OCR Engine<br>(PaddleOCR / EasyOCR FastAPI)"]
+        E4["Firebase Cloud Messaging<br>(FCM HTTP v1)"]
+        E5["SMTP / Email Service<br>(OTP Reset PIN)"]
+        E6["LINE OA ป้านวล<br>(@508zvpuj 1-Click Share)"]
     end
 
     A <-->|REST API & WebSockets| C
@@ -118,7 +118,7 @@ flowchart TD
 
 ---
 
-## 📁 โครงสร้างโปรเจกต์ (Project Structure)
+## โครงสร้างโปรเจกต์ (Project Structure)
 
 ```
 pingpay_mobile/
@@ -151,7 +151,7 @@ pingpay_mobile/
 
 ---
 
-## 🛠 เทคโนโลยีที่ใช้ (Tech Stack)
+## เทคโนโลยีที่ใช้ (Tech Stack)
 
 | ส่วนประกอบ | เทคโนโลยี | รายละเอียด |
 | :--- | :--- | :--- |
@@ -168,7 +168,7 @@ pingpay_mobile/
 
 ---
 
-## 🚀 การติดตั้งและเริ่มต้นใช้งาน (Getting Started)
+## การติดตั้งและเริ่มต้นใช้งาน (Getting Started)
 
 ### ความต้องการของระบบ (Prerequisites)
 - **Flutter SDK**: `>= 3.29.0`
@@ -213,13 +213,13 @@ flutter run
 
 ---
 
-## 🧪 การทดสอบระบบ (Testing & Quality Assurance)
+## การทดสอบระบบ (Testing & Quality Assurance)
 
 ### รันการทดสอบ Flutter Test Suite (Mobile App)
 ```bash
 flutter test
 ```
-* ครอบคลุมการทดสอบ Unit Tests, Widget Tests, Theme, NLI Parsing, Financial Calculations, และ Screen Flows **(88/88 Test Files — 100% Pass)**
+* ครอบคลุมการทดสอบ Unit Tests, Widget Tests, Theme, NLI Parsing, Financial Calculations, และ Screen Flows (88/88 Test Files — 100% Pass)
 
 ### รันการทดสอบ Backend Test Suite (Elysia API)
 ```bash
@@ -230,16 +230,10 @@ bun test tests/unit/
 
 ---
 
-## 👨‍💻 ผู้จัดทำโครงงาน (Authors & Credits)
+## ผู้จัดทำโครงงาน (Authors & Credits)
 
 * **ผู้จัดทำโครงงาน**: นายธนพล พ่ออามาตย์ (Thanapon Phorarmat)  
   *นักศึกษาระดับชั้น ปวส.2 แผนกวิชาคอมพิวเตอร์ธุรกิจและเทคโนโลยีสารสนเทศ สาขาวิชาคอมพิวเตอร์โปรแกรมเมอร์*
 * **ครูที่ปรึกษาหลัก**: นายอดุล ศรีภักดี
 * **ครูที่ปรึกษาร่วม**: นางปวันรัตน์ ขันแก้ว, นายวสันต์ น้อยบำรุง
 * **สถานศึกษา**: วิทยาลัยอาชีวศึกษาอุดรธานี
-
----
-
-<div align="center">
-  <sub>Developed with ❤️ for seamless social spending and PromptPay settlements.</sub>
-</div>
