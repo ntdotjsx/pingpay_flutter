@@ -50,6 +50,11 @@
             <action android:name="android.support.customtabs.action.CustomTabsService" />
         </intent>
         <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="line" />
+        </intent>
+        <package android:name="jp.naver.line.android" />
+        <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
         </intent>

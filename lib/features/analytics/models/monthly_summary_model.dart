@@ -1,4 +1,5 @@
 import '../../bills/models/bill_models.dart';
+import '../../payments/models/payment_models.dart';
 
 /// Represents aggregated financial statistics for a specific month
 class MonthlyExpenseSummary {
@@ -14,6 +15,7 @@ class MonthlyExpenseSummary {
   final int totalSettledCount;
   final List<MonthlyDataPoint> annualTrend; // 12 months trend data for the year
   final List<BillModel> monthlyBills; // Bills created in this month
+  final List<DebtItemModel> monthlyPaidDebts; // Debts paid by user in this month
   final List<MonthlyCategoryBreakdown> categoryBreakdown;
 
   const MonthlyExpenseSummary({
@@ -29,6 +31,7 @@ class MonthlyExpenseSummary {
     required this.totalSettledCount,
     required this.annualTrend,
     required this.monthlyBills,
+    this.monthlyPaidDebts = const [],
     required this.categoryBreakdown,
   });
 
@@ -59,6 +62,7 @@ class MonthlyExpenseSummary {
         ),
       ),
       monthlyBills: const [],
+      monthlyPaidDebts: const [],
       categoryBreakdown: const [],
     );
   }
@@ -98,13 +102,15 @@ class MonthlyDataPoint {
 class MonthlyCategoryBreakdown {
   final String title;
   final double amount;
+  final int count;
   final double percentage;
   final int colorValue;
 
   const MonthlyCategoryBreakdown({
     required this.title,
     required this.amount,
+    this.count = 1,
     required this.percentage,
-    required this.colorValue,
+    this.colorValue = 0xFFFF5000,
   });
 }

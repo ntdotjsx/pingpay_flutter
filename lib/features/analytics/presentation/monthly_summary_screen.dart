@@ -11,6 +11,10 @@ import '../providers/yearly_analytics_provider.dart';
 import 'widgets/monthly_bar_chart.dart';
 import 'widgets/monthly_breakdown_card.dart';
 import 'widgets/monthly_bill_tile.dart';
+import '../../../core/utils/app_toast.dart';
+import '../../../core/utils/line_share_helper.dart';
+import '../../auth/providers/auth_provider.dart';
+import '../../friends/providers/friend_nickname_provider.dart';
 
 class MonthlySummaryScreen extends ConsumerWidget {
   const MonthlySummaryScreen({super.key});
@@ -41,6 +45,9 @@ class MonthlySummaryScreen extends ConsumerWidget {
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final currencyFormatter = NumberFormat('#,##0.00', 'th');
+
+    final currentUserId = ref.watch(authStateProvider).user?.id;
+    final nicknamesMap = ref.watch(friendNicknameProvider);
 
     final monthName = _thaiMonthsFull[selectedPeriod.month - 1];
     final yearThai = (periodType == AnalyticsPeriodType.monthly ? selectedPeriod.year : selectedYear) + 543;
@@ -111,7 +118,78 @@ class MonthlySummaryScreen extends ConsumerWidget {
                               letterSpacing: -0.3,
                             ),
                           ),
-                          const SizedBox(width: 38), // Placeholder for balanced center alignment
+                          Builder(
+                            builder: (ctx) {
+                              final isCurrentOrFutureYear = selectedYear >= DateTime.now().year;
+                              final isYearlyUnfinished = periodType == AnalyticsPeriodType.yearly && isCurrentOrFutureYear;
+
+                              return Opacity(
+                                opacity: isYearlyUnfinished ? 0.35 : 1.0,
+                                child: Container(
+                                  width: 38,
+                                  height: 38,
+                                  decoration: ShapeDecoration(
+                                    color: Colors.white.withValues(alpha: 0.18),
+                                    shape: const SmoothRectangleBorder(
+                                      borderRadius: SmoothBorderRadius.all(
+                                        SmoothRadius(cornerRadius: 19, cornerSmoothing: 1.0),
+                                      ),
+                                    ),
+                                  ),
+                                  child: IconButton(
+                                    icon: const Icon(
+                                      Icons.share_rounded,
+                                      color: Colors.white,
+                                      size: 18,
+                                    ),
+                                    tooltip: isYearlyUnfinished
+                                        ? 'สรุปรายปียังไม่พร้อมให้ส่ง (ยังไม่สิ้นปี)'
+                                        : 'แชร์สรุปรายการ',
+                                    onPressed: () {
+                                      HapticFeedback.lightImpact();
+                                      if (isYearlyUnfinished) {
+                                        AppToast.warning(
+                                          context,
+                                          'ยังไม่สามารถส่งสรุปรายปีได้ เนื่องจากยังไม่สิ้นสุดปี พ.ศ. $yearThai',
+                                          title: 'ยังไม่ถึงกำหนดส่งรายปี',
+                                        );
+                                        return;
+                                      }
+
+                                      if (periodType == AnalyticsPeriodType.monthly) {
+                                        LineShareHelper.shareSummary(
+                                          context: context,
+                                          periodTitle: 'ประจำเดือน $monthName $yearThai',
+                                          totalOutflow: monthlySummary.totalOutflow,
+                                          totalInflow: monthlySummary.totalInflow,
+                                          totalBillsCount: monthlySummary.totalBillsCount,
+                                          bills: monthlySummary.monthlyBills,
+                                          paidDebts: monthlySummary.monthlyPaidDebts,
+                                          currentUserId: currentUserId,
+                                          nicknamesMap: nicknamesMap,
+                                        );
+                                      } else {
+                                        LineShareHelper.shareSummary(
+                                          context: context,
+                                          periodTitle: 'ประจำปี พ.ศ. $yearThai ($selectedYear)',
+                                          totalOutflow: yearlySummary.totalOutflow,
+                                          totalInflow: yearlySummary.totalInflow,
+                                          totalBillsCount: yearlySummary.totalBillsCount,
+                                          bills: yearlySummary.yearlyBills,
+                                          currentUserId: currentUserId,
+                                          nicknamesMap: nicknamesMap,
+                                          averageMonthlyExpense: yearlySummary.averageMonthlyExpense,
+                                          peakSpendingMonth: yearlySummary.peakSpendingMonth != null
+                                              ? '${yearlySummary.peakSpendingMonth!.monthName} (฿${currencyFormatter.format(yearlySummary.peakSpendingMonth!.outflow)})'
+                                              : null,
+                                        );
+                                      }
+                                    },
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
                         ],
                       ),
 

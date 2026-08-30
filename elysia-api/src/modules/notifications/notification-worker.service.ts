@@ -265,12 +265,27 @@ export class NotificationWorkerService {
     return result;
   }
 
+  private schedulerTimer: any = null;
+
   /**
-   * Start polling loop for background processing
+   * Start polling loop for background processing & periodic weekly debt reminders
    */
   start(intervalMs = 3000) {
     if (this.isRunning) return;
     this.isRunning = true;
+
+    // Run weekly reminder scheduler periodically (on start and every 1 hour)
+    const runScheduler = async () => {
+      try {
+        const { defaultDebtReminderSchedulerService } = await import("./debt-reminder-scheduler.service");
+        await defaultDebtReminderSchedulerService.runWeeklyReminderJob();
+      } catch (err) {
+        console.error("[NotificationWorkerService] Weekly reminder scheduler error:", err);
+      }
+    };
+
+    setTimeout(runScheduler, 3000);
+    this.schedulerTimer = setInterval(runScheduler, 60 * 60 * 1000);
 
     const loop = async () => {
       if (!this.isRunning) return;
@@ -293,6 +308,10 @@ export class NotificationWorkerService {
     if (this.timer) {
       clearTimeout(this.timer);
       this.timer = null;
+    }
+    if (this.schedulerTimer) {
+      clearInterval(this.schedulerTimer);
+      this.schedulerTimer = null;
     }
   }
 }

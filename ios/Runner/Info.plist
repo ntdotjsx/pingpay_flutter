@@ -61,6 +61,13 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>line</string>
+		<string>lineauth2</string>
+		<string>https</string>
+		<string>http</string>
+	</array>
 	<key>NSCameraUsageDescription</key>
 	<string>PingPay ต้องการใช้กล้องเพื่อถ่ายภาพใบเสร็จ สแกนบิล OCR และสแกน QR Code สำหรับเพิ่มเพื่อน</string>
 	<key>NSPhotoLibraryUsageDescription</key>

@@ -66,6 +66,8 @@ final monthlyAnalyticsProvider = Provider<MonthlyExpenseSummary>((ref) {
     return d.debtStartDate.year == targetYear && d.debtStartDate.month == targetMonth;
   }).toList();
 
+  final monthlyPaidDebts = monthlyDebts.where((d) => d.amountPaid > 0).toList();
+
   final totalDebtsPaid = monthlyDebts.fold<double>(
     0.0,
     (acc, d) => acc + d.amountPaid,
@@ -170,6 +172,7 @@ final monthlyAnalyticsProvider = Provider<MonthlyExpenseSummary>((ref) {
     totalSettledCount: totalSettledCount,
     annualTrend: annualTrend,
     monthlyBills: monthlyBills,
+    monthlyPaidDebts: monthlyPaidDebts,
     categoryBreakdown: categoryBreakdown,
   );
 });

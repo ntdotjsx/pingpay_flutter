@@ -121,7 +121,10 @@ class NotificationRepository {
         type = NotificationType.debtRequest;
         title = 'แจ้งเตือนชำระหนี้ค้างประจำสัปดาห์ ⏳';
         final billTitle = payload['billTitle'] ?? 'บิล';
-        final debtAmt = payload['outstandingAmount']?.toString() ?? '0';
+        final debtAmt = payload['remainingDebt']?.toString() ??
+            payload['outstandingAmount']?.toString() ??
+            payload['amount']?.toString() ??
+            '0';
         body = 'คุณมียอดค้างชำระ ฿$debtAmt สำหรับบิล "$billTitle"';
         amount = double.tryParse(debtAmt);
         relatedId = payload['billId']?.toString();

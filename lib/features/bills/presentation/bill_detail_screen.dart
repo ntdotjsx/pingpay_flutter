@@ -15,6 +15,7 @@ import '../../auth/providers/auth_provider.dart';
 import '../../friends/providers/friend_nickname_provider.dart';
 import '../providers/bill_provider.dart';
 import '../repositories/bill_repository.dart';
+import '../../../core/utils/line_share_helper.dart';
 
 class BillDetailScreen extends ConsumerStatefulWidget {
   final String billId;
@@ -505,6 +506,79 @@ class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
                         const SizedBox(height: 10),
                       ],
 
+                      // LINE Share Action Banner
+                      Container(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        decoration: ShapeDecoration(
+                          color: const Color(0xFF06C755).withValues(alpha: isDark ? 0.16 : 0.08),
+                          shape: const SmoothRectangleBorder(
+                            side: BorderSide(color: Color(0xFF06C755), width: 0.9),
+                            borderRadius: SmoothBorderRadius.all(
+                              SmoothRadius(cornerRadius: 18, cornerSmoothing: 0.8),
+                            ),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 36,
+                              height: 36,
+                              decoration: const BoxDecoration(
+                                color: Color(0xFF06C755),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.chat_bubble_rounded, color: Colors.white, size: 19),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'แชร์บิลนี้ไปยัง LINE',
+                                    style: TextStyle(
+                                      fontSize: 13.5,
+                                      fontWeight: FontWeight.w700,
+                                      color: isDark ? Colors.white : const Color(0xFF06C755),
+                                    ),
+                                  ),
+                                  Text(
+                                    'ส่งสรุปยอดและช่องทางจ่ายเงินเข้าแชทเพื่อนทันที',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            ElevatedButton.icon(
+                              onPressed: () {
+                                HapticFeedback.lightImpact();
+                                final user = ref.read(authStateProvider).user;
+                                LineShareHelper.shareBill(
+                                  context: context,
+                                  bill: bill,
+                                  creditorName: user?.displayName,
+                                  promptPayId: user?.promptPayId,
+                                );
+                              },
+                              icon: const Icon(Icons.send_rounded, size: 13),
+                              label: const Text('ส่งเข้า LINE'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF06C755),
+                                foregroundColor: Colors.white,
+                                elevation: 0,
+                                padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
+                                textStyle: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
                       // Group 3: Participants List (Unified Inset-Grouped List)
                       Container(
                         decoration: ShapeDecoration(
@@ -710,6 +784,42 @@ class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
                                                               fontSize: 10.5,
                                                               fontWeight: FontWeight.w700,
                                                               color: AppColors.error,
+                                                            ),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 6),
+                                                  GestureDetector(
+                                                    onTap: () {
+                                                      HapticFeedback.lightImpact();
+                                                      final user = ref.read(authStateProvider).user;
+                                                      LineShareHelper.shareDebtReminder(
+                                                        context: context,
+                                                        debtorName: debtorName,
+                                                        amount: item.outstandingAmount,
+                                                        billTitle: bill.title ?? 'บิลค่าใช้จ่าย',
+                                                        promptPayId: user?.promptPayId,
+                                                      );
+                                                    },
+                                                    child: Container(
+                                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2.5),
+                                                      decoration: BoxDecoration(
+                                                        color: const Color(0xFF06C755).withValues(alpha: 0.12),
+                                                        borderRadius: BorderRadius.circular(5),
+                                                      ),
+                                                      child: const Row(
+                                                        mainAxisSize: MainAxisSize.min,
+                                                        children: [
+                                                          Icon(Icons.chat_bubble_outline_rounded, size: 10.5, color: Color(0xFF06C755)),
+                                                          SizedBox(width: 3),
+                                                          Text(
+                                                            'เตือน LINE',
+                                                            style: TextStyle(
+                                                              fontSize: 10.5,
+                                                              fontWeight: FontWeight.w700,
+                                                              color: Color(0xFF06C755),
                                                             ),
                                                           ),
                                                         ],

@@ -48,6 +48,7 @@ async function main() {
 
   // 2. Ensure mock friends exist in the database
   const mockFriendSpecs = [
+    { code: "USR-NUAL01", name: "ป้านวล (Pa Nual)", phone: "0898765432", avatar: "https://api.dicebear.com/7.x/avataaars/png?seed=Nual" },
     { code: "USR-0931C3", name: "ป่น (Pon)", phone: "0812345671", avatar: "https://api.dicebear.com/7.x/avataaars/png?seed=Pon" },
     { code: "USR-1CE875", name: "Pastis (พาสทิส)", phone: "0812345672", avatar: "https://api.dicebear.com/7.x/avataaars/png?seed=Pastis" },
     { code: "USR-77A912", name: "พี่กอล์ฟ (Golf)", phone: "0812345673", avatar: "https://api.dicebear.com/7.x/avataaars/png?seed=Golf" },
@@ -109,7 +110,7 @@ async function main() {
     }
   }
 
-  const [f1, f2, f3, f4] = friendEntities;
+  const [fnual, f1, f2, f3, f4] = friendEntities;
 
   // 3. Clear old test bills owned by target user or involving target user as debtor
   console.log("\n🧹 Cleaning old test data for target user...");
@@ -321,6 +322,15 @@ async function main() {
   // --- MONTH 8: AUGUST 2026 (สิงหาคม - เดือนปัจจุบัน) ---
   const now = new Date();
   await createBillWithItems(
+    "ส้มตำป้านวล แซ่บอีหลี",
+    650.0,
+    new Date(now.getFullYear(), now.getMonth(), 29, 12, 30),
+    [
+      { debtor: fnual, amount: 250.0, paid: 0.0, status: "unpaid" },
+      { debtor: f1, amount: 200.0, paid: 200.0, status: "paid" },
+    ]
+  );
+  await createBillWithItems(
     "ปาร์ตี้วันเกิด Sushi Den โอมากาเสะ",
     3200.0,
     new Date(now.getFullYear(), now.getMonth(), 8, 19, 0),
@@ -339,6 +349,7 @@ async function main() {
       { debtor: f2, amount: 300.0, paid: 0.0, status: "unpaid" },
     ]
   );
+  await createDebtToFriend(fnual, "ข้าวแกงป้านวล มื้อเที่ยง", 120.0, new Date(now.getFullYear(), now.getMonth(), 28, 12, 0), 120.0, 120.0);
   await createDebtToFriend(f1, "ค่าขนมของฝากจากญี่ปุ่น", 1300.0, new Date(now.getFullYear(), now.getMonth(), 24, 15, 0), 650.0, 0.0);
   await createDebtToFriend(f4, "ค่าแท็กซี่กลับบ้านรอบดึก", 180.0, new Date(now.getFullYear(), now.getMonth(), 27, 23, 30), 180.0, 180.0);
 

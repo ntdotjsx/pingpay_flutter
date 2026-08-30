@@ -953,7 +953,7 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
 
                 const SizedBox(width: 8),
 
-                // 3. Quick Edit Nickname Button & Chevron
+                // 3. Quick Actions: Edit Nickname Button
                 IconButton(
                   icon: const Icon(Icons.edit_outlined, size: 17),
                   color: isDark ? Colors.white38 : AppColors.inkMuted48,
