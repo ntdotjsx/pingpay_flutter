@@ -1,27 +1,63 @@
-# PingPay — ข้อมูลระบบและคู่มือข้อกำหนดสำหรับออกแบบ DFD (Data Flow Diagram)
-> **เอกสารอ้างอิงฉบับสมบูรณ์ (System Specification & DFD Reference Manual)**  
-> รวบรวมข้อมูลตามสถาปัตยกรรมจริงของโปรเจกต์จากทั้ง 3 องค์ประกอบ: **Flutter Mobile App (`lib/`)**, **Elysia Backend API (`elysia-api/`)**, และ **Developer / Back-Office Console (`developer-console/`)**
+# Systems Analyst Instruction & DFD Generation Prompt
+
+## Role & Capability
+You are an expert Systems Analyst (SA) and Data Architecture Professional. You possess the advanced skill to design, analyze, and breakdown Data Flow Diagrams (DFD) across all levels accurately, following standard Structured Analysis methodologies (Yourdon/Gane & Sarson notations).
+
+## Core Rules & Symbols Definition
+When asked to create or analyze a DFD, always use and define these standard elements:
+1. External Entity (Square/Rectangle): Origin or destination of data.
+2. Process (Rounded Rectangle or Circle): Transformation of data (Numbered hierarchically e.g., 1.0, 1.1).
+3. Data Store (Open-ended box or parallel lines): Repository of data (Numbered e.g., D1, D2).
+4. Data Flow (Labeled Arrow): Movement of data between entities, processes, and stores.
+
+## DFD Level Breakdown Guide
+You must structure responses based on the requested level:
+
+### 1. Context Diagram (Level 0)
+- Purpose: Show the entire system as a single main process and its interactions with external entities.
+- Structure: Exactly ONE process (Process 0.0), all related external entities, and data flows moving in/out of the system boundary. No data stores allowed at this level.
+
+### 2. Level 1 Diagram (High-Level Decomposition)
+- Purpose: Break down the single main process from Level 0 into major sub-processes (e.g., 1.0, 2.0, 3.0).
+- Structure: Introduce high-level Data Stores (D1, D2...) and show how data flows between external entities, these core sub-processes, and data stores. Balance all inputs/outputs with the Context Diagram.
+
+### 3. Level 2 Diagram (Detailed Decomposition)
+- Purpose: Further decompose any complex process from Level 1 into finer functional units (e.g., Process 1.0 breaks down into 1.1, 1.2, 1.3).
+- Structure: Detail local data stores, error handling, and precise database read/write operations for that specific subsystem.
+
+### 4. Mermaid.js Output Option
+- Whenever appropriate or requested, generate valid Mermaid.js graph code (using flowchart syntax) so the user can easily render and visualize the DFD.
+
+## Response Behavior
+- Ask clarifying questions if the system scope, inputs, or outputs are unclear.
+- Systematically present Level 0, Level 1, and deeper levels sequentially upon request.
 
 ---
 
-## 📌 กติกาและมาตรฐานการเขียน DFD สำหรับระบบนี้
-1. **Context Diagram (Level 0)**:
-   - มีเพียง **Process 0.0: ระบบจัดการค่าใช้จ่ายร่วมกันและการชำระเงินผ่านพร้อมเพย์ (PingPay System)** เพียง Process เดียว
-   - **ไม่มี Data Store** ใน Context Diagram
-   - มี **External Entities (E1 - E7)** ทั้งหมดที่สื่อสารกับระบบ โดยมีทิศทาง Data Flow เข้า-ออกอย่างชัดเจน
-   - Data Flow ทุกเส้นต้องระบุเป็น **"กลุ่มข้อมูล (Concrete Noun Phrase)"** เช่น *"ข้อมูลการสร้างบิล"*, *"ผลการตรวจสอบสลิป"* (ห้ามใช้คำกว้าง ๆ หรือคำกริยา เช่น *"จัดการข้อมูล"*, *"บันทึกข้อมูล"*)
-2. **Level 1 DFD**:
-   - ใช้หมายเลขกำกับเป็น **1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0**
-   - มี **Logical Data Stores (D1 - D10)** เชื่อมต่อข้อมูลระหว่าง Process
-   - **Data Balancing**: Data Flow ที่เข้า-ออกจาก External Entity ใน Level 1 ต้องตรงกัน 100% กับใน Context Diagram (ชื่อและทิศทางข้อมูลตรงกัน)
-3. **Level 2 DFD**:
-   - แตก Process ย่อยเป็น **1.1, 1.2..., 2.1, 2.2...** จนถึงระดับฟังก์ชันปฏิบัติการ
+# PingPay — ข้อมูลระบบและคู่มือข้อกำหนดสำหรับออกแบบ DFD (Data Flow Diagram)
+> เอกสารอ้างอิงฉบับสมบูรณ์ (System Specification & DFD Reference Manual)  
+> รวบรวมข้อมูลตามสถาปัตยกรรมจริงของโปรเจกต์จากทั้ง 3 องค์ประกอบ: Flutter Mobile App (lib/), Elysia Backend API (elysia-api/), และ Developer / Back-Office Console (developer-console/)
+
+---
+
+## ข้อกำหนดและมาตรฐานการเขียน DFD สำหรับระบบนี้
+1. Context Diagram (Level 0):
+   - มีเพียง Process 0.0: ระบบจัดการค่าใช้จ่ายร่วมกันและการชำระเงินผ่านพร้อมเพย์ (PingPay System) เพียง Process เดียว
+   - ไม่มี Data Store ใน Context Diagram
+   - มี External Entities (E1 - E7) ทั้งหมดที่สื่อสารกับระบบ โดยมีทิศทาง Data Flow เข้า-ออกอย่างชัดเจน
+   - Data Flow ทุกเส้นต้องระบุเป็น "กลุ่มข้อมูล (Concrete Noun Phrase)" เช่น "ข้อมูลการสร้างบิล", "ผลการตรวจสอบสลิป" (ไม่ใช้คำกว้างๆ หรือคำกริยา เช่น "จัดการข้อมูล", "บันทึกข้อมูล")
+2. Level 1 DFD:
+   - ใช้หมายเลขกำกับเป็น 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0
+   - มี Logical Data Stores (D1 - D10) เชื่อมต่อข้อมูลระหว่าง Process
+   - Data Balancing: Data Flow ที่เข้า-ออกจาก External Entity ใน Level 1 ต้องตรงกัน 100% กับใน Context Diagram (ชื่อและทิศทางข้อมูลตรงกัน)
+3. Level 2 DFD:
+   - แตก Process ย่อยเป็น 1.1, 1.2..., 2.1, 2.2... จนถึงระดับฟังก์ชันปฏิบัติการ
    - รักษา Data Balancing จาก Level 1 อย่างเคร่งครัด
-4. **Logical Data Store**:
-   - **ไม่สร้าง Data Store ตามทุก Table ของฐานข้อมูลแบบ 1:1 (ไม่มองเป็น ER Diagram)**
+4. Logical Data Store:
+   - ไม่สร้าง Data Store ตามทุก Table ของฐานข้อมูลแบบ 1:1 (ไม่มองเป็น ER Diagram)
    - รวมกลุ่มข้อมูลเชิงตรรกะตามขอบเขตหน้าที่ (Domain Responsibility)
-5. **การตั้งชื่อ Data Flow**:
-   - ระบุชนิดข้อมูลที่ไหลจริง เช่น *"รหัส OTP ยืนยัน"*, *"ภาพถ่ายใบเสร็จ"*, *"ยอดเงินที่ต้องการชำระ"*, *"ประวัติการแลกของรางวัล"*
+5. การตั้งชื่อ Data Flow:
+   - ระบุชนิดข้อมูลที่ไหลจริง เช่น "รหัส OTP ยืนยัน", "ภาพถ่ายใบเสร็จ", "ยอดเงินที่ต้องการชำระ", "ประวัติการแลกของรางวัล"
 
 ---
 
@@ -44,9 +80,9 @@
 | รหัส | ชื่อ Entity | หน้าที่และขอบเขตการทำงาน |
 | :--- | :--- | :--- |
 | **E1** | **ผู้ใช้งานทั่วไป (End User)** | ผู้ใช้แอปมือถือ (ทั้งผู้สร้างบิล/เจ้าหนี้ และผู้ร่วมหาร/ลูกหนี้) ทำธุรกรรมหารเงิน, ป้อนข้อความสร้างบิล (NLI), สแกนใบเสร็จ, ตอบรับหนี้, ชำระเงินผ่าน PromptPay, แนบสลิป, ยกหนี้, แลกของรางวัล |
-| **E2** | **ผู้ดูแลระบบและผู้พัฒนา (Developer / Admin)** | ผู้ดูแลระบบที่ใช้งานผ่าน **Developer Console** (Web) เพื่อดูสถิติ GMV, ตรวจสอบธุรกรรมการเงิน, ระงับ/แบนบัญชี, จัดการข้อพิพาท, จัดการสต็อกของรางวัล, บรอดแคสต์แจ้งเตือน |
+| **E2** | **ผู้ดูแลระบบและผู้พัฒนา (Developer / Admin)** | ผู้ดูแลระบบที่ใช้งานผ่าน Developer Console (Web) เพื่อดูสถิติ GMV, ตรวจสอบธุรกรรมการเงิน, ระงับ/แบนบัญชี, จัดการข้อพิพาท, จัดการสต็อกของรางวัล, บรอดแคสต์แจ้งเตือน |
 | **E3** | **ระบบ Google Identity** | ผู้ให้บริการภายนอกสำหรับยืนยันตัวตน Google OAuth 2.0 และส่งคืน Google Profile (Google ID, Email, Name, Picture) |
-| **E4** | **ระบบ EasySlip Service** | บริการภายนอกสำหรับ:<br>1. **API v1**: สร้าง Dynamic PromptPay QR / TrueMoney QR พร้อมระบุยอดเงินตรงบิล<br>2. **API v2**: ตรวจสอบสลิปโอนเงินธนาคารแบบเรียลไทม์ (ชื่อ-เลขบัญชีผู้รับ, ยอดเงิน, วันเวลา, Ref No.) |
+| **E4** | **ระบบ EasySlip Service** | บริการภายนอกสำหรับ:<br>1. API v1: สร้าง Dynamic PromptPay QR / TrueMoney QR พร้อมระบุยอดเงินตรงบิล<br>2. API v2: ตรวจสอบสลิปโอนเงินธนาคารแบบเรียลไทม์ (ชื่อ-เลขบัญชีผู้รับ, ยอดเงิน, วันเวลา, Ref No.) |
 | **E5** | **ระบบ AI OCR Service** | บริการประมวลผลภาพถ่ายใบเสร็จ (FastAPI + PaddleOCR/EasyOCR) สกัดรายการสินค้า, จำนวน, ราคาแต่ละชิ้น, ภาษี/ค่าบริการ และยอดรวม |
 | **E6** | **ระบบ Firebase Cloud Messaging (FCM)** | บริการส่ง Push Notification ไปยังสมาร์ตโฟนของผู้ใช้ (แจ้งเตือนบิลใหม่, ทวงหนี้, สลิปเข้า, ผลยืนยัน, แจ้งเตือนยอดค้างชำระรายสัปดาห์ 8.9.1) |
 | **E7** | **ระบบส่งอีเมล (Email / SMTP Service)** | บริการส่งรหัส OTP 6 หลักทางอีเมลสำหรับการรีเซ็ตรหัส PIN เมื่อผู้ใช้ลืมรหัส |
@@ -74,16 +110,16 @@
 
 | รหัส | ชื่อ Logical Data Store | รายละเอียดโครงสร้างข้อมูลที่จัดเก็บ | แหล่งข้อมูลในฐานข้อมูลจริง (DB Tables Mapping) |
 | :--- | :--- | :--- | :--- |
-| **D1** | **ข้อมูลบัญชีผู้ใช้และการเข้าสู่ระบบ** | ข้อมูลโปรไฟล์ผู้ใช้ (User Code, Display Name, ชื่อ-นามสกุลจริงภาษาไทย/อังกฤษ, ที่อยู่, เบอร์โทร), สถานะ Onboarding, ข้อมูลเชื่อมโยง Google Provider (Google ID, Email), บันทึกประวัติการยอมรับ PDPA แต่ละเวอร์ชัน, บทบาท (User/Developer), สถานะบัญชี (Active/Suspended/Banned) | `users`, `auth_identities`, `consent_records` |
-| **D2** | **ข้อมูลความปลอดภัยและเซสชัน** | รหัสแฮช PIN (Argon2id/Bcrypt), จำนวนครั้งที่กรอกผิด, สถานะล็อคบัญชี, ข้อมูล Active Device Session (Device UUID, Refresh Token Hash, IP, วันหมดอายุ), รหัสแฮช OTP รีเซ็ต PIN, บันทึกเหตุการณ์ความปลอดภัย (Security Events) | `user_credentials`, `auth_sessions`, `otp_verifications`, `security_events` |
-| **D3** | **ข้อมูลช่องทางการรับเงิน** | หมายเลขพร้อมเพย์ (PromptPay ID & Type: เบอร์มือถือ/เลขบัตรประชาชน), เบอร์ TrueMoney Wallet, ข้อมูลบัญชีธนาคาร (Bank Code, Account No.), สถานะการยืนยันช่องทางรับเงินผ่านสลิปจริง (`promptPayVerifiedAt`) | `users` (Payment Channel Columns) |
-| **D4** | **ข้อมูลเพื่อนและความสัมพันธ์** | ความสัมพันธ์เพื่อนแบบ 2 ทิศทาง (Requester ID, Addressee ID, Status: Pending/Accepted/Blocked), QR Code ข้อมูลเพื่อน, ชื่อเล่นเฉพาะบุคคลที่ผู้ใช้ตั้งให้เพื่อน (Custom Nicknames) | `friendships`, Custom Nickname Storage |
-| **D5** | **ข้อมูลบิลและการหารค่าใช้จ่าย** | ข้อมูลบิล (Title, Note, Total Amount), **ยอดเริ่มต้นถาวร (`originalTotalAmount`)**, สัดส่วนของเจ้าของบิล (`myShare`), ข้อมูลรายการอาหาร/สินค้า (Items Breakdown: Subtotal, Service Charge, Tax), ภาพถ่ายใบเสร็จ, ประวัติการแก้ไขบิล (`edit_logs`) | `bills`, `edit_logs` |
-| **D6** | **ข้อมูลภาระหนี้และการชำระเงิน** | รายการหนี้รายบุคคล (`bill_items`: originalAmount, currentAmount, amountPaid, amountWrittenOff, isAcknowledged, isLocked), บันทึกงวดการชำระเงิน (`payments`: installmentNumber, method, channel, status), บัญชีแยกประเภทธุรกรรมการเงิน (`financial_transactions`: debt_created, payment, write_off, debt_adjusted) | `bill_items`, `payments`, `financial_transactions` |
-| **D7** | **ข้อมูลสลิปและการตรวจสอบ** | ภาพสลิปโอนเงิน, SHA-256 Hash ของไฟล์สลิป (ป้องกันสลิปซ้ำ), ผลการตรวจสอบสลิปจาก EasySlip (`payment_verifications`: ผู้โอน-ผู้รับ, ยอดจริง, วันเวลา, Ref No., Raw Response, Failure Code) | `payments` (Slip columns), `payment_verifications` |
-| **D8** | **ข้อมูลการแจ้งเตือนและคิวงาน** | คิวข้อความแจ้งเตือน Outbox (`notification_outbox`: eventType, payload, deduplicationKey, retry attempts, status), ประวัติการส่งมอบ (`notification_deliveries`), FCM Device Tokens ของอุปกรณ์, กำหนดการแจ้งเตือนหนี้ประจำสัปดาห์ (Weekly Reminders) | `notification_outbox`, `notification_deliveries`, `device_tokens` |
-| **D9** | **ข้อมูลร้านค้าและประวัติการแลกของรางวัล** | แคตตาล็อกของรางวัล (`reward_items`: title, description, pointsCost, category, stock, isActive), ยอดคะแนนสะสม PingPay Coins ของผู้ใช้ (`rewardPoints`), ประวัติการแลกของรางวัล (`reward_redemptions`: shippingAddress, trackingNumber, status) | `reward_items`, `reward_redemptions`, `users.reward_points` |
-| **D10** | **ข้อมูลการตรวจสอบและข้อพิพาทหลังบ้าน** | รายการข้อพิพาทระหว่างผู้ใช้ (`disputes`: reason, status, resolutionNote, resolvedById), บันทึกพฤติกรรมน่าสงสัย (`suspicious_activity_logs`: duplicate slips, anomaly logs), บันทึกการกระทำของผู้ดูแลระบบ (`admin_action_logs`: adminId, actionType, targetUserId, metadata), บันทึกกิจกรรมทั่วไป (`activity_logs`) | `disputes`, `suspicious_activity_logs`, `admin_action_logs`, `activity_logs` |
+| **D1** | **ข้อมูลบัญชีผู้ใช้และการเข้าสู่ระบบ** | ข้อมูลโปรไฟล์ผู้ใช้ (User Code, Display Name, ชื่อ-นามสกุลจริงภาษาไทย/อังกฤษ, ที่อยู่, เบอร์โทร), สถานะ Onboarding, ข้อมูลเชื่อมโยง Google Provider (Google ID, Email), บันทึกประวัติการยอมรับ PDPA แต่ละเวอร์ชัน, บทบาท (User/Developer), สถานะบัญชี (Active/Suspended/Banned) | users, auth_identities, consent_records |
+| **D2** | **ข้อมูลความปลอดภัยและเซสชัน** | รหัสแฮช PIN (Argon2id/Bcrypt), จำนวนครั้งที่กรอกผิด, สถานะล็อคบัญชี, ข้อมูล Active Device Session (Device UUID, Refresh Token Hash, IP, วันหมดอายุ), รหัสแฮช OTP รีเซ็ต PIN, บันทึกเหตุการณ์ความปลอดภัย (Security Events) | user_credentials, auth_sessions, otp_verifications, security_events |
+| **D3** | **ข้อมูลช่องทางการรับเงิน** | หมายเลขพร้อมเพย์ (PromptPay ID & Type: เบอร์มือถือ/เลขบัตรประชาชน), เบอร์ TrueMoney Wallet, ข้อมูลบัญชีธนาคาร (Bank Code, Account No.), สถานะการยืนยันช่องทางรับเงินผ่านสลิปจริง (promptPayVerifiedAt) | users (Payment Channel Columns) |
+| **D4** | **ข้อมูลเพื่อนและความสัมพันธ์** | ความสัมพันธ์เพื่อนแบบ 2 ทิศทาง (Requester ID, Addressee ID, Status: Pending/Accepted/Blocked), QR Code ข้อมูลเพื่อน, ชื่อเล่นเฉพาะบุคคลที่ผู้ใช้ตั้งให้เพื่อน (Custom Nicknames) | friendships, Custom Nickname Storage |
+| **D5** | **ข้อมูลบิลและการหารค่าใช้จ่าย** | ข้อมูลบิล (Title, Note, Total Amount), ยอดเริ่มต้นถาวร (originalTotalAmount), สัดส่วนของเจ้าของบิล (myShare), ข้อมูลรายการอาหาร/สินค้า (Items Breakdown: Subtotal, Service Charge, Tax), ภาพถ่ายใบเสร็จ, ประวัติการแก้ไขบิล (edit_logs) | bills, edit_logs |
+| **D6** | **ข้อมูลภาระหนี้และการชำระเงิน** | รายการหนี้รายบุคคล (bill_items: originalAmount, currentAmount, amountPaid, amountWrittenOff, isAcknowledged, isLocked), บันทึกงวดการชำระเงิน (payments: installmentNumber, method, channel, status), บัญชีแยกประเภทธุรกรรมการเงิน (financial_transactions: debt_created, payment, write_off, debt_adjusted) | bill_items, payments, financial_transactions |
+| **D7** | **ข้อมูลสลิปและการตรวจสอบ** | ภาพสลิปโอนเงิน, SHA-256 Hash ของไฟล์สลิป (ป้องกันสลิปซ้ำ), ผลการตรวจสอบสลิปจาก EasySlip (payment_verifications: ผู้โอน-ผู้รับ, ยอดจริง, วันเวลา, Ref No., Raw Response, Failure Code) | payments (Slip columns), payment_verifications |
+| **D8** | **ข้อมูลการแจ้งเตือนและคิวงาน** | คิวข้อความแจ้งเตือน Outbox (notification_outbox: eventType, payload, deduplicationKey, retry attempts, status), ประวัติการส่งมอบ (notification_deliveries), FCM Device Tokens ของอุปกรณ์, กำหนดการแจ้งเตือนหนี้ประจำสัปดาห์ (Weekly Reminders) | notification_outbox, notification_deliveries, device_tokens |
+| **D9** | **ข้อมูลร้านค้าและประวัติการแลกของรางวัล** | แคตตาล็อกของรางวัล (reward_items: title, description, pointsCost, category, stock, isActive), ยอดคะแนนสะสม PingPay Coins ของผู้ใช้ (rewardPoints), ประวัติการแลกของรางวัล (reward_redemptions: shippingAddress, trackingNumber, status) | reward_items, reward_redemptions, users.reward_points |
+| **D10** | **ข้อมูลการตรวจสอบและข้อพิพาทหลังบ้าน** | รายการข้อพิพาทระหว่างผู้ใช้ (disputes: reason, status, resolutionNote, resolvedById), บันทึกพฤติกรรมน่าสงสัย (suspicious_activity_logs: duplicate slips, anomaly logs), บันทึกการกระทำของผู้ดูแลระบบ (admin_action_logs: adminId, actionType, targetUserId, metadata), บันทึกกิจกรรมทั่วไป (activity_logs) | disputes, suspicious_activity_logs, admin_action_logs, activity_logs |
 
 ---
 
@@ -106,7 +142,7 @@ graph TD
 
 ## 4. รายละเอียดกระบวนการย่อย (Level 2 Processes Breakdown)
 
-### 🔴 Process 1.0: จัดการการยืนยันตัวตนและความปลอดภัยของผู้ใช้ (Authentication & Security)
+### Process 1.0: จัดการการยืนยันตัวตนและความปลอดภัยของผู้ใช้ (Authentication & Security)
 
 ```
 Process 1.0 Sub-processes:
@@ -119,35 +155,35 @@ Process 1.0 Sub-processes:
 ```
 
 - **1.1 ตรวจสอบสิทธิ์ผ่าน Google OAuth 2.0**:
-  - **Input**: *ข้อมูลการขอเข้าสู่ระบบ (Google ID Token / Auth Code)* จาก ผู้ใช้งาน (E1)
-  - **External Communication**: ส่ง *คำขอตรวจสอบ Token* ไปยัง Google Identity (E3) และรับ *ข้อมูลโปรไฟล์ที่ยืนยันแล้ว (Google ID, Email, Name, Picture)* กลับมา
-  - **Data Store**: บันทึก/ค้นหาข้อมูลบัญชีผู้ใช้ใน **D1 (User Accounts)**
-  - **Output**: *สถานะการเข้าสู่ระบบและขั้นตอน Onboarding (PDPA_REQUIRED -> PROFILE_REQUIRED -> PIN_REQUIRED -> COMPLETED)* ส่งกลับให้ ผู้ใช้งาน (E1)
+  - **Input**: ข้อมูลการขอเข้าสู่ระบบ (Google ID Token / Auth Code) จาก ผู้ใช้งาน (E1)
+  - **External Communication**: ส่ง คำขอตรวจสอบ Token ไปยัง Google Identity (E3) และรับ ข้อมูลโปรไฟล์ที่ยืนยันแล้ว (Google ID, Email, Name, Picture) กลับมา
+  - **Data Store**: บันทึก/ค้นหาข้อมูลบัญชีผู้ใช้ใน D1 (User Accounts)
+  - **Output**: สถานะการเข้าสู่ระบบและขั้นตอน Onboarding (PDPA_REQUIRED -> PROFILE_REQUIRED -> PIN_REQUIRED -> COMPLETED) ส่งกลับให้ ผู้ใช้งาน (E1)
 - **1.2 ตรวจสอบและบันทึกความยินยอม PDPA Consent**:
-  - **Input**: *ข้อมูลการยอมรับนโยบาย PDPA (Policy Version, Acceptance)* จาก ผู้ใช้งาน (E1)
-  - **Data Store**: บันทึกประวัติการยินยอมลง **D1 (User Accounts)**
-  - **Output**: *ผลการบันทึกความยินยอม PDPA* ส่งกลับให้ ผู้ใช้งาน (E1)
+  - **Input**: ข้อมูลการยอมรับนโยบาย PDPA (Policy Version, Acceptance) จาก ผู้ใช้งาน (E1)
+  - **Data Store**: บันทึกประวัติการยินยอมลง D1 (User Accounts)
+  - **Output**: ผลการบันทึกความยินยอม PDPA ส่งกลับให้ ผู้ใช้งาน (E1)
 - **1.3 ตั้งค่าและตรวจสอบรหัส PIN 6 หลัก**:
-  - **Input**: *รหัส PIN 6 หลัก* จาก ผู้ใช้งาน (E1)
-  - **Data Store**: แฮชรหัสผ่านด้วย Argon2id/Bcrypt และบันทึก/ตรวจสอบใน **D2 (Security & Credentials)**; หากกรอกผิดเกิน 5 ครั้งจะบันทึกสถานะล็อคบัญชีชั่วคราว
-  - **Output**: *ผลการตรวจสอบรหัส PIN / สถานะการล็อค* ส่งกลับให้ ผู้ใช้งาน (E1)
+  - **Input**: รหัส PIN 6 หลัก จาก ผู้ใช้งาน (E1)
+  - **Data Store**: แฮชรหัสผ่านด้วย Argon2id/Bcrypt และบันทึก/ตรวจสอบใน D2 (Security & Credentials); หากกรอกผิดเกิน 5 ครั้งจะบันทึกสถานะล็อคบัญชีชั่วคราว
+  - **Output**: ผลการตรวจสอบรหัส PIN / สถานะการล็อค ส่งกลับให้ ผู้ใช้งาน (E1)
 - **1.4 ควบคุมเซสชันอุปกรณ์เดียว (Single Active Device Session)**:
-  - **Input**: *ข้อมูลระบุตัวตนอุปกรณ์ (Device UUID, Device Info, FCM Token)* จาก ผู้ใช้งาน (E1)
-  - **Data Store**: ตรวจสอบและบันทึก Refresh Token Hash ใน **D2 (Security & Credentials)**; หากมีการเข้าสู่ระบบจากเครื่องใหม่ อุปกรณ์เดิมจะถูกยกเลิกเซสชันทันที (`SESSION_TERMINATED`)
-  - **Output**: *JWT Access Token และ Refresh Token ประจำอุปกรณ์* ส่งกลับให้ ผู้ใช้งาน (E1)
+  - **Input**: ข้อมูลระบุตัวตนอุปกรณ์ (Device UUID, Device Info, FCM Token) จาก ผู้ใช้งาน (E1)
+  - **Data Store**: ตรวจสอบและบันทึก Refresh Token Hash ใน D2 (Security & Credentials); หากมีการเข้าสู่ระบบจากเครื่องใหม่ อุปกรณ์เดิมจะถูกยกเลิกเซสชันทันที (SESSION_TERMINATED)
+  - **Output**: JWT Access Token และ Refresh Token ประจำอุปกรณ์ ส่งกลับให้ ผู้ใช้งาน (E1)
 - **1.5 ขอและตรวจสอบรหัส OTP สำหรับรีเซ็ต PIN**:
-  - **Input**: *คำขอรีเซ็ต PIN (อีเมล)* จาก ผู้ใช้งาน (E1)
-  - **External Communication**: สร้างรหัส OTP 6 หลัก แฮชบันทึกลง **D2** และส่ง *รหัส OTP ยืนยันตัวตน* ไปยัง ระบบส่งอีเมล (E7)
-  - **Verification**: รับ *รหัส OTP ที่กรอกยืนยัน* จาก ผู้ใช้งาน (E1) ตรวจสอบกับ **D2** เพื่ออนุญาตให้ตั้งรหัส PIN ใหม่
-  - **Output**: *ผลการยืนยัน OTP และสิทธิ์การตั้ง PIN ใหม่* ส่งกลับให้ ผู้ใช้งาน (E1)
+  - **Input**: คำขอรีเซ็ต PIN (อีเมล) จาก ผู้ใช้งาน (E1)
+  - **External Communication**: สร้างรหัส OTP 6 หลัก แฮชบันทึกลง D2 และส่ง รหัส OTP ยืนยันตัวตน ไปยัง ระบบส่งอีเมล (E7)
+  - **Verification**: รับ รหัส OTP ที่กรอกยืนยัน จาก ผู้ใช้งาน (E1) ตรวจสอบกับ D2 เพื่ออนุญาตให้ตั้งรหัส PIN ใหม่
+  - **Output**: ผลการยืนยัน OTP และสิทธิ์การตั้ง PIN ใหม่ ส่งกลับให้ ผู้ใช้งาน (E1)
 - **1.6 ตรวจสอบสิทธิ์ผู้ดูแลระบบ (Admin Role Authorization)**:
-  - **Input**: *ข้อมูลเข้าสู่ระบบของผู้ดูแลระบบ* จาก ผู้ดูแลระบบ (E2)
-  - **Data Store**: ตรวจสอบบทบาท `role == 'developer'` และสถานะ `accountStatus == 'active'` ใน **D1 (User Accounts)**
-  - **Output**: *สิทธิ์การเข้าใช้งาน Developer Console* ส่งกลับให้ ผู้ดูแลระบบ (E2)
+  - **Input**: ข้อมูลเข้าสู่ระบบของผู้ดูแลระบบ จาก ผู้ดูแลระบบ (E2)
+  - **Data Store**: ตรวจสอบบทบาท role == 'developer' และสถานะ accountStatus == 'active' ใน D1 (User Accounts)
+  - **Output**: สิทธิ์การเข้าใช้งาน Developer Console ส่งกลับให้ ผู้ดูแลระบบ (E2)
 
 ---
 
-### 🟠 Process 2.0: จัดการโปรไฟล์ ช่องทางการเงิน และรายชื่อเพื่อน (Profile, Payment Channels & Friends)
+### Process 2.0: จัดการโปรไฟล์ ช่องทางการเงิน และรายชื่อเพื่อน (Profile, Payment Channels & Friends)
 
 ```
 Process 2.0 Sub-processes:
@@ -158,27 +194,27 @@ Process 2.0 Sub-processes:
 ```
 
 - **2.1 ตรวจสอบและบันทึกชื่อ-นามสกุลจริง**:
-  - **Input**: *ข้อมูลชื่อ-นามสกุลจริงภาษาไทย/อังกฤษ* จาก ผู้ใช้งาน (E1)
+  - **Input**: ข้อมูลชื่อ-นามสกุลจริงภาษาไทย/อังกฤษ จาก ผู้ใช้งาน (E1)
   - **Logic**: ตรวจสอบว่าต้องมีทั้งชื่อและนามสกุล ไม่มีตัวเลขหรืออักขระพิเศษ
-  - **Data Store**: บันทึกลง **D1 (User Accounts)** เพื่อใช้ตรวจสอบเทียบกับชื่อบัญชีผู้รับเงินในสลิป
-  - **Output**: *ผลการตรวจสอบและบันทึกชื่อ-นามสกุล* ส่งกลับให้ ผู้ใช้งาน (E1)
+  - **Data Store**: บันทึกลง D1 (User Accounts) เพื่อใช้ตรวจสอบเทียบกับชื่อบัญชีผู้รับเงินในสลิป
+  - **Output**: ผลการตรวจสอบและบันทึกชื่อ-นามสกุล ส่งกลับให้ ผู้ใช้งาน (E1)
 - **2.2 ตั้งค่าและผูกช่องทางการรับเงิน**:
-  - **Input**: *ข้อมูลช่องทางรับเงิน (PromptPay ID & Type, TrueMoney No., Bank Code & Account No.)* จาก ผู้ใช้งาน (E1)
-  - **Data Store**: บันทึกลง **D3 (Payment Channels)**
-  - **Output**: *สถานะการผูกช่องทางรับเงิน* ส่งกลับให้ ผู้ใช้งาน (E1)
+  - **Input**: ข้อมูลช่องทางรับเงิน (PromptPay ID & Type, TrueMoney No., Bank Code & Account No.) จาก ผู้ใช้งาน (E1)
+  - **Data Store**: บันทึกลง D3 (Payment Channels)
+  - **Output**: สถานะการผูกช่องทางรับเงิน ส่งกลับให้ ผู้ใช้งาน (E1)
 - **2.3 จัดการความสัมพันธ์เพื่อน**:
-  - **Input**: *คำขอเพิ่มเพื่อน (User Code / สแกน QR Code)* จาก ผู้ใช้งาน (E1)
-  - **Data Store**: บันทึกคำขอและสถานะเพื่อน (Pending -> Accepted) ลง **D4 (Friendships & Nicknames)**
-  - **Notification**: ส่ง Event แจ้งเตือนเพื่อนใหม่ไปยัง **D8 (Notifications Outbox)** เพื่อยิง Push Notification
-  - **Output**: *รายชื่อและข้อมูลโปรไฟล์เพื่อน* ส่งกลับให้ ผู้ใช้งาน (E1)
+  - **Input**: คำขอเพิ่มเพื่อน (User Code / สแกน QR Code) จาก ผู้ใช้งาน (E1)
+  - **Data Store**: บันทึกคำขอและสถานะเพื่อน (Pending -> Accepted) ลง D4 (Friendships & Nicknames)
+  - **Notification**: ส่ง Event แจ้งเตือนเพื่อนใหม่ไปยัง D8 (Notifications Outbox) เพื่อยิง Push Notification
+  - **Output**: รายชื่อและข้อมูลโปรไฟล์เพื่อน ส่งกลับให้ ผู้ใช้งาน (E1)
 - **2.4 ตั้งชื่อเล่นและดูสรุปความสัมพันธ์เพื่อน**:
-  - **Input**: *ข้อมูลชื่อเล่นที่กำหนดให้เพื่อน (Custom Nickname)* จาก ผู้ใช้งาน (E1)
-  - **Data Store**: บันทึกชื่อเล่นลง **D4 (Friendships & Nicknames)** และดึงประวัติภาระหนี้จาก **D6 (Debts)** มาประมวลผลเป็นอันดับเพื่อน/ยอดค้าง
-  - **Output**: *หน้ารายละเอียดเพื่อน, ชื่อเล่นที่แสดงผล, สรุปยอดหนี้ระหว่างกัน* ส่งกลับให้ ผู้ใช้งาน (E1)
+  - **Input**: ข้อมูลชื่อเล่นที่กำหนดให้เพื่อน (Custom Nickname) จาก ผู้ใช้งาน (E1)
+  - **Data Store**: บันทึกชื่อเล่นลง D4 (Friendships & Nicknames) และดึงประวัติภาระหนี้จาก D6 (Debts) มาประมวลผลเป็นอันดับเพื่อน/ยอดค้าง
+  - **Output**: หน้ารายละเอียดเพื่อน, ชื่อเล่นที่แสดงผล, สรุปยอดหนี้ระหว่างกัน ส่งกลับให้ ผู้ใช้งาน (E1)
 
 ---
 
-### 🟡 Process 3.0: จัดการการสร้างบิลและหารค่าใช้จ่าย (Bill Creation, OCR, NLI & Splitting)
+### Process 3.0: จัดการการสร้างบิลและหารค่าใช้จ่าย (Bill Creation, OCR, NLI & Splitting)
 
 ```
 Process 3.0 Sub-processes:
@@ -190,37 +226,37 @@ Process 3.0 Sub-processes:
 ```
 
 - **3.1 สกัดรายการและราคาจากใบเสร็จด้วย AI OCR**:
-  - **Input**: *ภาพถ่ายใบเสร็จรับเงิน* จาก ผู้ใช้งาน (E1)
-  - **External Communication**: ส่ง *คำขอสกัดข้อความใบเสร็จ* ไปยัง AI OCR Service (E5) และรับ *รายการสินค้า, ราคาแต่ละชิ้น, ภาษี/ค่าบริการ, ยอดรวม* กลับมา
-  - **Output**: *รายการสินค้าและราคาที่สกัดได้จากใบเสร็จ* แสดงบนหน้าจอเพื่อให้ ผู้ใช้งาน (E1) ตรวจสอบและแก้ไข
+  - **Input**: ภาพถ่ายใบเสร็จรับเงิน จาก ผู้ใช้งาน (E1)
+  - **External Communication**: ส่ง คำขอสกัดข้อความใบเสร็จ ไปยัง AI OCR Service (E5) และรับ รายการสินค้า, ราคาแต่ละชิ้น, ภาษี/ค่าบริการ, ยอดรวม กลับมา
+  - **Output**: รายการสินค้าและราคาที่สกัดได้จากใบเสร็จ แสดงบนหน้าจอเพื่อให้ ผู้ใช้งาน (E1) ตรวจสอบและแก้ไข
 - **3.2 สร้างบิลด้วยภาษาธรรมชาติ (NLI Input)**:
-  - **Input**: *ข้อความภาษาธรรมชาติ (เช่น "กินชาบู 4 คน คนละ 250 รวม 1000")* จาก ผู้ใช้งาน (E1)
+  - **Input**: ข้อความภาษาธรรมชาติ (เช่น "กินชาบู 4 คน คนละ 250 รวม 1000") จาก ผู้ใช้งาน (E1)
   - **Logic**: วิเคราะห์โครงสร้างข้อความเพื่อดึงชื่อรายการ, ยอดรวม, จำนวนคน, และยอดเฉลี่ยรายคน
-  - **Output**: *พรีวิวบิลและรายชื่อผู้ร่วมหารที่ถูกจัดสรรโดยอัตโนมัติ* แสดงให้ ผู้ใช้งาน (E1) ยืนยัน
+  - **Output**: พรีวิวบิลและรายชื่อผู้ร่วมหารที่ถูกจัดสรรโดยอัตโนมัติ แสดงให้ ผู้ใช้งาน (E1) ยืนยัน
 - **3.3 สร้างบิลและจัดสรรยอดหนี้ตามสัดส่วน**:
-  - **Input**: *ข้อมูลบิลและรายชื่อผู้ร่วมหาร (Title, Total Amount, Participants, Selected Items)* จาก ผู้ใช้งาน (E1)
+  - **Input**: ข้อมูลบิลและรายชื่อผู้ร่วมหาร (Title, Total Amount, Participants, Selected Items) จาก ผู้ใช้งาน (E1)
   - **Business Logic**:
-    - คำนวณส่วนของเจ้าของบิล (`myShare`) และยอดของเพื่อนแต่ละคน
-    - บันทึกยอดเริ่มต้นถาวร `originalTotalAmount` และ `originalAmount` ประจำตัวเพื่อนแต่ละคน
-  - **Data Store**: บันทึกหัวบิลลง **D5 (Bills)** และสร้างรายการหนี้รายบุคคลลง **D6 (Debts)**
-  - **Notification**: ส่ง Event สร้างบิลไปยัง **D8 (Notifications Outbox)** เพื่อส่ง Push Notification
-  - **Output**: *ผลการสร้างบิลและสรุปยอดจัดสรรหนี้* ส่งกลับให้ ผู้ใช้งาน (E1)
+    - คำนวณส่วนของเจ้าของบิล (myShare) และยอดของเพื่อนแต่ละคน
+    - บันทึกยอดเริ่มต้นถาวร originalTotalAmount และ originalAmount ประจำตัวเพื่อนแต่ละคน
+  - **Data Store**: บันทึกหัวบิลลง D5 (Bills) และสร้างรายการหนี้รายบุคคลลง D6 (Debts)
+  - **Notification**: ส่ง Event สร้างบิลไปยัง D8 (Notifications Outbox) เพื่อส่ง Push Notification
+  - **Output**: ผลการสร้างบิลและสรุปยอดจัดสรรหนี้ ส่งกลับให้ ผู้ใช้งาน (E1)
 - **3.4 แก้ไขบิลภายใต้เงื่อนไขเพดานยอดเงิน**:
-  - **Input**: *ข้อมูลการแก้ไขบิล/ปรับยอดเพื่อน* จาก ผู้ใช้งาน (E1)
+  - **Input**: ข้อมูลการแก้ไขบิล/ปรับยอดเพื่อน จาก ผู้ใช้งาน (E1)
   - **Security Guard**:
-    - ตรวจสอบ `hasAnyPayment`: หากมีรายการชำระเงินเข้ามาแล้ว (`amountPaid > 0`) **จะไม่อนุญาตให้แก้ไข**
-    - ตรวจสอบเพดานยอดเงิน: $\text{Current Amount} \le \text{Original Total Amount}$ (ห้ามปรับยอดสูงกว่ายอดสร้างแรกเริ่ม)
-  - **Data Store**: อัปเดตข้อมูลใน **D5 (Bills)**, **D6 (Debts)** และบันทึกประวัติลง `edit_logs` ใน **D5**
-  - **Output**: *ผลการแก้ไขบิล / แจ้งเตือนข้อผิดพลาด* ส่งกลับให้ ผู้ใช้งาน (E1)
+    - ตรวจสอบ hasAnyPayment: หากมีรายการชำระเงินเข้ามาแล้ว (amountPaid > 0) จะไม่อนุญาตให้แก้ไข
+    - ตรวจสอบเพดานยอดเงิน: Current Amount <= Original Total Amount (ห้ามปรับยอดสูงกว่ายอดสร้างแรกเริ่ม)
+  - **Data Store**: อัปเดตข้อมูลใน D5 (Bills), D6 (Debts) และบันทึกประวัติลง edit_logs ใน D5
+  - **Output**: ผลการแก้ไขบิล / แจ้งเตือนข้อผิดพลาด ส่งกลับให้ ผู้ใช้งาน (E1)
 - **3.5 ยกเลิกบิลภายใต้เงื่อนไขล็อคการชำระเงิน**:
-  - **Input**: *คำขอยกเลิกบิลและเหตุผล* จาก ผู้ใช้งาน (E1)
-  - **Security Guard**: ตรวจสอบว่าบิลยังไม่มีการชำระเงิน หากมี `amountPaid > 0` จะปฏิเสธคำขอยกเลิกทันที (`PAID_DEBT_LOCKED`)
-  - **Data Store**: อัปเดตสถานะบิลเป็น `cancelled` ใน **D5 (Bills)** และยกเลิกภาระหนี้ทั้งหมดใน **D6 (Debts)**
-  - **Output**: *ผลการยกเลิกบิล* ส่งกลับให้ ผู้ใช้งาน (E1)
+  - **Input**: คำขอยกเลิกบิลและเหตุผล จาก ผู้ใช้งาน (E1)
+  - **Security Guard**: ตรวจสอบว่าบิลยังไม่มีการชำระเงิน หากมี amountPaid > 0 จะปฏิเสธคำขอยกเลิกทันที (PAID_DEBT_LOCKED)
+  - **Data Store**: อัปเดตสถานะบิลเป็น cancelled ใน D5 (Bills) และยกเลิกภาระหนี้ทั้งหมดใน D6 (Debts)
+  - **Output**: ผลการยกเลิกบิล ส่งกลับให้ ผู้ใช้งาน (E1)
 
 ---
 
-### 🟢 Process 4.0: ดำเนินการชำระเงิน ตรวจสอบสลิป และยกหนี้ (Payments, Verification & Write-off)
+### Process 4.0: ดำเนินการชำระเงิน ตรวจสอบสลิป และยกหนี้ (Payments, Verification & Write-off)
 
 ```
 Process 4.0 Sub-processes:
@@ -233,38 +269,38 @@ Process 4.0 Sub-processes:
 ```
 
 - **4.1 ตอบรับและยอมรับภาระหนี้**:
-  - **Input**: *คำขอยืนยันยอมรับหนี้* จาก ผู้ใช้งาน (E1 - ลูกหนี้)
-  - **Data Store**: อัปเดตสถานะ `isAcknowledged = true` ใน **D6 (Debts)**
-  - **Output**: *สถานะหนี้ที่ยอมรับแล้วพร้อมปุ่มชำระเงิน* ส่งกลับให้ ผู้ใช้งาน (E1)
+  - **Input**: คำขอยืนยันยอมรับหนี้ จาก ผู้ใช้งาน (E1 - ลูกหนี้)
+  - **Data Store**: อัปเดตสถานะ isAcknowledged = true ใน D6 (Debts)
+  - **Output**: สถานะหนี้ที่ยอมรับแล้วพร้อมปุ่มชำระเงิน ส่งกลับให้ ผู้ใช้งาน (E1)
 - **4.2 สร้าง Dynamic QR Code สำหรับชำระเงิน**:
-  - **Input**: *คำขอสร้าง QR และยอดเงินที่ต้องการชำระ (เต็มจำนวน / บางส่วน)* จาก ผู้ใช้งาน (E1)
-  - **Data Store**: ดึง PromptPay ID / TrueMoney No. ของเจ้าหนี้จาก **D3 (Payment Channels)**
-  - **External Communication**: ส่งข้อมูลไปยัง EasySlip Service (E4) เพื่อรับ *ภาพและ Payload ของ Dynamic QR Code*
-  - **Output**: *ภาพ QR Code ชำระเงินตรงยอด* แสดงบนหน้าจอ ผู้ใช้งาน (E1)
+  - **Input**: คำขอสร้าง QR และยอดเงินที่ต้องการชำระ (เต็มจำนวน / บางส่วน) จาก ผู้ใช้งาน (E1)
+  - **Data Store**: ดึง PromptPay ID / TrueMoney No. ของเจ้าหนี้จาก D3 (Payment Channels)
+  - **External Communication**: ส่งข้อมูลไปยัง EasySlip Service (E4) เพื่อรับ ภาพและ Payload ของ Dynamic QR Code
+  - **Output**: ภาพ QR Code ชำระเงินตรงยอด แสดงบนหน้าจอ ผู้ใช้งาน (E1)
 - **4.3 อัปโหลดสลิปและตรวจสอบความถูกต้องอัตโนมัติ**:
-  - **Input**: *ภาพสลิปโอนเงินธนาคาร* จาก ผู้ใช้งาน (E1)
-  - **Anti-Fraud & Hash Check**: คำนวณ SHA-256 Hash ของสลิป ตรวจสอบกับ **D7 (Slips & Verifications)** หากพบสลิปซ้ำจะบันทึกลง **D10 (Suspicious Activity Logs)** และปฏิเสธทันที
+  - **Input**: ภาพสลิปโอนเงินธนาคาร จาก ผู้ใช้งาน (E1)
+  - **Anti-Fraud & Hash Check**: คำนวณ SHA-256 Hash ของสลิป ตรวจสอบกับ D7 (Slips & Verifications) หากพบสลิปซ้ำจะบันทึกลง D10 (Suspicious Activity Logs) และปฏิเสธทันที
   - **External Verification**: ส่งภาพสลิปให้ EasySlip Service (E4) ตรวจสอบความถูกต้อง (ยอดเงิน, วันเวลา, ชื่อ-เลขบัญชีผู้รับ)
-  - **Data Store**: บันทึกงวดชำระเงินสถานะ `pending_owner_confirmation` ลง **D6 (Debts)** และบันทึกผลตรวจสอบลง **D7 (Slips & Verifications)**
-  - **Output**: *ผลการตรวจสอบสลิปเบื้องต้น* ส่งกลับให้ ผู้ใช้งาน (E1)
+  - **Data Store**: บันทึกงวดชำระเงินสถานะ pending_owner_confirmation ลง D6 (Debts) และบันทึกผลตรวจสอบลง D7 (Slips & Verifications)
+  - **Output**: ผลการตรวจสอบสลิปเบื้องต้น ส่งกลับให้ ผู้ใช้งาน (E1)
 - **4.4 เจ้าของบิลยืนยันหรือปฏิเสธยอดเงิน**:
-  - **Input**: *คำสั่งยืนยันรับเงิน หรือ ปฏิเสธสลิปพร้อมเหตุผล* จาก ผู้ใช้งาน (E1 - เจ้าหนี้)
+  - **Input**: คำสั่งยืนยันรับเงิน หรือ ปฏิเสธสลิปพร้อมเหตุผล จาก ผู้ใช้งาน (E1 - เจ้าหนี้)
   - **Data Store**:
-    - กรณียืนยัน: อัปเดตสถานะการชำระเงินเป็น `confirmed`, เพิ่มยอด `amountPaid`, ลดหนี้คงค้างใน **D6 (Debts)** และบันทึกลงบัญชีแยกประเภท `financial_transactions`
-    - กรณีปฏิเสธ: อัปเดตสถานะเป็น `rejected` หนี้คงค้างไม่เปลี่ยนแปลง
-  - **Notification**: ส่งข้อความแจ้งเตือนผลไปยัง **D8 (Notifications Outbox)**
-  - **Output**: *ผลการยืนยัน/ปฏิเสธยอดเงิน* ส่งกลับให้ ผู้ใช้งาน (E1)
+    - กรณียืนยัน: อัปเดตสถานะการชำระเงินเป็น confirmed, เพิ่มยอด amountPaid, ลดหนี้คงค้างใน D6 (Debts) และบันทึกลงบัญชีแยกประเภท financial_transactions
+    - กรณีปฏิเสธ: อัปเดตสถานะเป็น rejected หนี้คงค้างไม่เปลี่ยนแปลง
+  - **Notification**: ส่งข้อความแจ้งเตือนผลไปยัง D8 (Notifications Outbox)
+  - **Output**: ผลการยืนยัน/ปฏิเสธยอดเงิน ส่งกลับให้ ผู้ใช้งาน (E1)
 - **4.5 จัดการการชำระเงินแบบหลายงวด**:
-  - **Logic**: รักษาประวัติแยกแต่ละงวด (`installmentNumber: 1, 2, 3...`) ใน **D6 (Debts)** โดยไม่บันทึกทับยอดเดิม
-  - **Output**: *ประวัติการชำระเงินรายงวด* แสดงในหน้ารายละเอียดการชำระเงิน
+  - **Logic**: รักษาประวัติแยกแต่ละงวด (installmentNumber: 1, 2, 3...) ใน D6 (Debts) โดยไม่บันทึกทับยอดเดิม
+  - **Output**: ประวัติการชำระเงินรายงวด แสดงในหน้ารายละเอียดการชำระเงิน
 - **4.6 ดำเนินการยกหนี้ให้เพื่อน**:
-  - **Input**: *คำขอยกหนี้ (จำนวนเงิน, เหตุผล)* จาก ผู้ใช้งาน (E1 - เจ้าของบิล)
-  - **Data Store**: เพิ่มยอด `amountWrittenOff`, ลดหนี้คงค้างใน **D6 (Debts)**, บันทึกการยกหนี้ลง `edit_logs` ใน **D5** และบันทึกบัญชีแยกประเภทใน **D6**
-  - **Output**: *สถานะการยกหนี้และยอดหนี้คงเหลือใหม่* ส่งกลับให้ ผู้ใช้งาน (E1)
+  - **Input**: คำขอยกหนี้ (จำนวนเงิน, เหตุผล) จาก ผู้ใช้งาน (E1 - เจ้าของบิล)
+  - **Data Store**: เพิ่มยอด amountWrittenOff, ลดหนี้คงค้างใน D6 (Debts), บันทึกการยกหนี้ลง edit_logs ใน D5 และบันทึกบัญชีแยกประเภทใน D6
+  - **Output**: สถานะการยกหนี้และยอดหนี้คงเหลือใหม่ ส่งกลับให้ ผู้ใช้งาน (E1)
 
 ---
 
-### 🔵 Process 5.0: สรุปรายงาน ไทม์ไลน์ และระบบแจ้งเตือน (Analytics, Timeline & Notifications)
+### Process 5.0: สรุปรายงาน ไทม์ไลน์ และระบบแจ้งเตือน (Analytics, Timeline & Notifications)
 
 ```
 Process 5.0 Sub-processes:
@@ -275,29 +311,29 @@ Process 5.0 Sub-processes:
 ```
 
 - **5.1 ประมวลผลและสรุปยอดสถิติแดชบอร์ดและรายปี**:
-  - **Input**: *คำขอดูสถิติบิล ภาระหนี้ และรายงานรายเดือน/รายปี* จาก ผู้ใช้งาน (E1)
-  - **Data Store**: ดึงข้อมูลบิลจาก **D5 (Bills)** และหนี้จาก **D6 (Debts)**
+  - **Input**: คำขอดูสถิติบิล ภาระหนี้ และรายงานรายเดือน/รายปี จาก ผู้ใช้งาน (E1)
+  - **Data Store**: ดึงข้อมูลบิลจาก D5 (Bills) และหนี้จาก D6 (Debts)
   - **Business Invariant**:
-    - **บิลที่ยกหนี้ให้ครบแล้ว (`isFullyWrittenOff`) จะไม่ถูกนำไปรวมใน "ยอดรวมบิลทั้งหมดที่สร้าง" และ "ยอดรอเก็บ"**
-    - **การแชร์สรุปรายปีจะถูกระงับ (Disabled) จนกว่าจะสิ้นสุดปี พ.ศ. นั้นจริง**
-  - **Output**: *สถิติยอดบิลที่สร้าง, ยอดเก็บได้แล้ว, ยอดรอเก็บ, จำนวนเพื่อนที่ร่วมหาร, รายงานสรุปค่าใช้จ่าย* แสดงบนหน้าจอ ผู้ใช้งาน (E1)
+    - บิลที่ยกหนี้ให้ครบแล้ว (isFullyWrittenOff) จะไม่ถูกนำไปรวมใน "ยอดรวมบิลทั้งหมดที่สร้าง" และ "ยอดรอเก็บ"
+    - การแชร์สรุปรายปีจะถูกระงับ (Disabled) จนกว่าจะสิ้นสุดปี พ.ศ. นั้นจริง
+  - **Output**: สถิติยอดบิลที่สร้าง, ยอดเก็บได้แล้ว, ยอดรอเก็บ, จำนวนเพื่อนที่ร่วมหาร, รายงานสรุปค่าใช้จ่าย แสดงบนหน้าจอ ผู้ใช้งาน (E1)
 - **5.2 แสดงไทม์ไลน์และปฏิทินการเงิน**:
-  - **Data Store**: ดึงวันที่สร้างบิลจาก **D5** (แสดงจุดสีส้ม) และวันที่เกิดหนี้จาก **D6** (แสดงจุดสีน้ำเงิน)
-  - **Output**: *ปฏิทินการเงินและรายการกิจกรรมรายวัน* แสดงผลให้ ผู้ใช้งาน (E1)
+  - **Data Store**: ดึงวันที่สร้างบิลจาก D5 (แสดงจุดสีส้ม) และวันที่เกิดหนี้จาก D6 (แสดงจุดสีน้ำเงิน)
+  - **Output**: ปฏิทินการเงินและรายการกิจกรรมรายวัน แสดงผลให้ ผู้ใช้งาน (E1)
 - **5.3 ส่งการแจ้งเตือนแบบเรียลไทม์และ Push Notification**:
-  - **Input**: *คิวข้อความแจ้งเตือนที่พร้อมส่ง* จาก **D8 (Notifications Outbox)**
+  - **Input**: คิวข้อความแจ้งเตือนที่พร้อมส่ง จาก D8 (Notifications Outbox)
   - **External Communication**: ส่ง Push Notification พร้อมรูปภาพผ่าน FCM Service (E6) ไปยังอุปกรณ์ของ ผู้ใช้งาน (E1)
-  - **In-App Realtime**: ส่งข้อมูลผ่าน WebSocket (`/realtime`) ไปยังแอปของผู้ใช้ที่กำลังเปิดใช้งาน
-  - **Output**: *Push Notification และรายการแจ้งเตือนใน Notification Center*
+  - **In-App Realtime**: ส่งข้อมูลผ่าน WebSocket (/realtime) ไปยังแอปของผู้ใช้ที่กำลังเปิดใช้งาน
+  - **Output**: Push Notification และรายการแจ้งเตือนใน Notification Center
 - **5.4 ประมวลผลรอบเตือนหนี้ประจำสัปดาห์อัตโนมัติ (8.9.1)**:
-  - **Logic**: ระบบ Cron/Scheduler ตรวจสอบหนี้ที่ค้างชำระ (`remainingDebt > 0`) ใน **D6 (Debts)** ทุกสัปดาห์ พร้อมคำนวณ `ISO Week Key` (เช่น `2026-W35`)
-  - **Deduplication**: ป้องกันการส่งซ้ำในสัปดาห์เดียวกันด้วย `DEBT_WEEKLY_REMINDER:{billItemId}:{weekKey}`
-  - **Data Store**: สร้างรายการแจ้งเตือนลง **D8 (Notifications Outbox)** เพื่อให้ Worker ทยอยส่งแจ้งเตือน
-  - **Output**: *การแจ้งเตือนยอดค้างชำระรายสัปดาห์ไปยังลูกหนี้*
+  - **Logic**: ระบบ Cron/Scheduler ตรวจสอบหนี้ที่ค้างชำระ (remainingDebt > 0) ใน D6 (Debts) ทุกสัปดาห์ พร้อมคำนวณ ISO Week Key (เช่น 2026-W35)
+  - **Deduplication**: ป้องกันการส่งซ้ำในสัปดาห์เดียวกันด้วย DEBT_WEEKLY_REMINDER:{billItemId}:{weekKey}
+  - **Data Store**: สร้างรายการแจ้งเตือนลง D8 (Notifications Outbox) เพื่อให้ Worker ทยอยส่งแจ้งเตือน
+  - **Output**: การแจ้งเตือนยอดค้างชำระรายสัปดาห์ไปยังลูกหนี้
 
 ---
 
-### 🟣 Process 6.0: จัดการร้านค้าและแลกของรางวัล (Rewards Store & Points Redemption)
+### Process 6.0: จัดการร้านค้าและแลกของรางวัล (Rewards Store & Points Redemption)
 
 ```
 Process 6.0 Sub-processes:
@@ -307,20 +343,20 @@ Process 6.0 Sub-processes:
 ```
 
 - **6.1 แสดงรายการของรางวัลและคะแนนสะสม**:
-  - **Input**: *คำขอดูรายการของรางวัลและคะแนนสะสม* จาก ผู้ใช้งาน (E1)
-  - **Data Store**: ดึงยอดคะแนนจาก **D1 (User Accounts)** และรายการของรางวัลที่ Active จาก **D9 (Rewards Catalog)**
-  - **Output**: *รายการของรางวัล, จำนวนแต้มที่ต้องใช้, จำนวนแต้มคงเหลือ* แสดงบนหน้าจอ ผู้ใช้งาน (E1)
+  - **Input**: คำขอดูรายการของรางวัลและคะแนนสะสม จาก ผู้ใช้งาน (E1)
+  - **Data Store**: ดึงยอดคะแนนจาก D1 (User Accounts) และรายการของรางวัลที่ Active จาก D9 (Rewards Catalog)
+  - **Output**: รายการของรางวัล, จำนวนแต้มที่ต้องใช้, จำนวนแต้มคงเหลือ แสดงบนหน้าจอ ผู้ใช้งาน (E1)
 - **6.2 ดำเนินการแลกของรางวัลและตัดคะแนน**:
-  - **Input**: *คำขอแลกของรางวัลพร้อมข้อมูลจัดส่ง (ชื่อผู้รับ, เบอร์โทร, ที่อยู่จัดส่ง)* จาก ผู้ใช้งาน (E1)
-  - **Data Store**: ตรวจสอบสต็อกใน **D9**, ตัดคะแนนสะสมใน **D1 (User Accounts)**, ลดจำนวนสต็อกสินค้า และบันทึกประวัติการแลกลง **D9 (Rewards Catalog & Redemptions)**
-  - **Output**: *ผลการแลกของรางวัลและหลักฐานการทำรายการ* ส่งกลับให้ ผู้ใช้งาน (E1)
+  - **Input**: คำขอแลกของรางวัลพร้อมข้อมูลจัดส่ง (ชื่อผู้รับ, เบอร์โทร, ที่อยู่จัดส่ง) จาก ผู้ใช้งาน (E1)
+  - **Data Store**: ตรวจสอบสต็อกใน D9, ตัดคะแนนสะสมใน D1 (User Accounts), ลดจำนวนสต็อกสินค้า และบันทึกประวัติการแลกลง D9 (Rewards Catalog & Redemptions)
+  - **Output**: ผลการแลกของรางวัลและหลักฐานการทำรายการ ส่งกลับให้ ผู้ใช้งาน (E1)
 - **6.3 ติดตามสถานะการจัดส่งของรางวัล**:
-  - **Data Store**: ดึงสถานะการจัดส่ง (Pending Delivery, Shipped, Delivered) และเลข Tracking จาก **D9**
-  - **Output**: *สถานะการจัดส่งและเลขพัสดุ* แสดงให้ ผู้ใช้งาน (E1) ตรวจสอบ
+  - **Data Store**: ดึงสถานะการจัดส่ง (Pending Delivery, Shipped, Delivered) และเลข Tracking จาก D9
+  - **Output**: สถานะการจัดส่งและเลขพัสดุ แสดงให้ ผู้ใช้งาน (E1) ตรวจสอบ
 
 ---
 
-### ⚫ Process 7.0: จัดการระบบและตรวจสอบความปลอดภัยหลังบ้าน (Back-Office Administration & Developer Console)
+### Process 7.0: จัดการระบบและตรวจสอบความปลอดภัยหลังบ้าน (Back-Office Administration & Developer Console)
 
 ```
 Process 7.0 Sub-processes:
@@ -334,39 +370,39 @@ Process 7.0 Sub-processes:
 ```
 
 - **7.1 ติดตามแดชบอร์ดภาพรวมระบบและสถิติการเงิน**:
-  - **Input**: *คำขอดูสถิติระบบและรายงานทางการเงิน* จาก ผู้ดูแลระบบ (E2)
-  - **Data Store**: ประมวลผลข้อมูลจาก **D1**, **D5**, **D6**, **D10**
-  - **Output**: *สถิติภาพรวมระบบ (จำนวนผู้ใช้, ยอด GMV, อัตราความสำเร็จ OCR, สถิติสลิป)* แสดงบนหน้าจอ Developer Console
+  - **Input**: คำขอดูสถิติระบบและรายงานทางการเงิน จาก ผู้ดูแลระบบ (E2)
+  - **Data Store**: ประมวลผลข้อมูลจาก D1, D5, D6, D10
+  - **Output**: สถิติภาพรวมระบบ (จำนวนผู้ใช้, ยอด GMV, อัตราความสำเร็จ OCR, สถิติสลิป) แสดงบนหน้าจอ Developer Console
 - **7.2 จัดการสถานะบัญชีผู้ใช้**:
-  - **Input**: *คำสั่งระงับ (Suspend), แบน (Ban), หรือปลดแบนบัญชีพร้อมเหตุผล* จาก ผู้ดูแลระบบ (E2)
-  - **Data Store**: อัปเดตสถานะใน **D1 (User Accounts)** และบันทึก Audit Trail ลง `admin_action_logs` ใน **D10**
-  - **Output**: *ผลการจัดการสถานะบัญชีผู้ใช้* ส่งกลับให้ ผู้ดูแลระบบ (E2)
+  - **Input**: คำสั่งระงับ (Suspend), แบน (Ban), หรือปลดแบนบัญชีพร้อมเหตุผล จาก ผู้ดูแลระบบ (E2)
+  - **Data Store**: อัปเดตสถานะใน D1 (User Accounts) และบันทึก Audit Trail ลง admin_action_logs ใน D10
+  - **Output**: ผลการจัดการสถานะบัญชีผู้ใช้ ส่งกลับให้ ผู้ดูแลระบบ (E2)
 - **7.3 ตรวจสอบและระงับข้อพิพาทการเงิน**:
-  - **Input**: *คำสั่งตัดสินข้อพิพาท (Resolved Paid / Written Off / Rejected)* จาก ผู้ดูแลระบบ (E2)
-  - **Data Store**: อัปเดตสถานะใน `disputes` ใน **D10**, อัปเดตหนี้ใน **D6 (Debts)** และบันทึก Audit Trail ลง **D10**
-  - **Output**: *ผลการตัดสินข้อพิพาท* ส่งกลับให้ ผู้ดูแลระบบ (E2)
+  - **Input**: คำสั่งตัดสินข้อพิพาท (Resolved Paid / Written Off / Rejected) จาก ผู้ดูแลระบบ (E2)
+  - **Data Store**: อัปเดตสถานะใน disputes ใน D10, อัปเดตหนี้ใน D6 (Debts) และบันทึก Audit Trail ลง D10
+  - **Output**: ผลการตัดสินข้อพิพาท ส่งกลับให้ ผู้ดูแลระบบ (E2)
 - **7.4 ตรวจสอบพฤติกรรมผิดปกติและสลิปซ้ำ**:
-  - **Input**: *คำขอดูรายการพฤติกรรมน่าสงสัย (Duplicate Slips, Multi-Account IPs)* จาก ผู้ดูแลระบบ (E2)
-  - **Data Store**: ดึงข้อมูลจาก `suspicious_activity_logs` ใน **D10**
-  - **Output**: *รายงานพฤติกรรมผิดปกติและหลักฐานสลิปซ้ำ* แสดงให้ ผู้ดูแลระบบ (E2)
+  - **Input**: คำขอดูรายการพฤติกรรมน่าสงสัย (Duplicate Slips, Multi-Account IPs) จาก ผู้ดูแลระบบ (E2)
+  - **Data Store**: ดึงข้อมูลจาก suspicious_activity_logs ใน D10
+  - **Output**: รายงานพฤติกรรมผิดปกติและหลักฐานสลิปซ้ำ แสดงให้ ผู้ดูแลระบบ (E2)
 - **7.5 ตรวจสอบสมุดบัญชีแยกประเภทและการเงิน**:
-  - **Input**: *คำขอตรวจสอบรายการเคลื่อนไหวทางการเงิน* จาก ผู้ดูแลระบบ (E2)
-  - **Data Store**: ดึงรายการธุรกรรมจาก `financial_transactions` ใน **D6**
-  - **Output**: *รายงานสมุดบัญชีแยกประเภทและการตรวจสอบสมดุลการเงิน* แสดงให้ ผู้ดูแลระบบ (E2)
+  - **Input**: คำขอตรวจสอบรายการเคลื่อนไหวทางการเงิน จาก ผู้ดูแลระบบ (E2)
+  - **Data Store**: ดึงรายการธุรกรรมจาก financial_transactions ใน D6
+  - **Output**: รายงานสมุดบัญชีแยกประเภทและการตรวจสอบสมดุลการเงิน แสดงให้ ผู้ดูแลระบบ (E2)
 - **7.6 จัดการสต็อกสินค้าของรางวัลและการจัดส่ง**:
-  - **Input**: *คำสั่งเพิ่ม/แก้ไขสินค้าของรางวัล และการอัปเดตเลขพัสดุ (Tracking Number)* จาก ผู้ดูแลระบบ (E2)
-  - **Data Store**: อัปเดตข้อมูลสินค้าและสถานะการจัดส่งใน **D9 (Rewards Catalog & Redemptions)**
-  - **Output**: *ผลการจัดการสินค้าและการจัดส่งของรางวัล* ส่งกลับให้ ผู้ดูแลระบบ (E2)
+  - **Input**: คำสั่งเพิ่ม/แก้ไขสินค้าของรางวัล และการอัปเดตเลขพัสดุ (Tracking Number) จาก ผู้ดูแลระบบ (E2)
+  - **Data Store**: อัปเดตข้อมูลสินค้าและสถานะการจัดส่งใน D9 (Rewards Catalog & Redemptions)
+  - **Output**: ผลการจัดการสินค้าและการจัดส่งของรางวัล ส่งกลับให้ ผู้ดูแลระบบ (E2)
 - **7.7 บรอดแคสต์ข้อความแจ้งเตือนและตรวจสอบคิวงาน**:
-  - **Input**: *คำสั่งส่งแจ้งเตือนบรอดแคสต์ (หัวข้อ, ข้อความ, รูปภาพ, กลุ่มเป้าหมาย)* จาก ผู้ดูแลระบบ (E2)
-  - **Data Store**: บันทึกข้อความลง **D8 (Notifications Outbox)** เพื่อให้ Worker ส่งผ่าน FCM (E6)
-  - **Output**: *สถานะการประมวลผลคิวแจ้งเตือน* ส่งกลับให้ ผู้ดูแลระบบ (E2)
+  - **Input**: คำสั่งส่งแจ้งเตือนบรอดแคสต์ (หัวข้อ, ข้อความ, รูปภาพ, กลุ่มเป้าหมาย) จาก ผู้ดูแลระบบ (E2)
+  - **Data Store**: บันทึกข้อความลง D8 (Notifications Outbox) เพื่อให้ Worker ส่งผ่าน FCM (E6)
+  - **Output**: สถานะการประมวลผลคิวแจ้งเตือน ส่งกลับให้ ผู้ดูแลระบบ (E2)
 
 ---
 
 ## 5. ตารางสรุป Data Flow ทั้งหมดของระบบ (Data Flow Dictionary & Balancing Map)
 
-ตารางนี้ใช้ตรวจสอบ **Data Balancing ระหว่าง Context Diagram, Level 1 DFD และ Level 2 DFD**:
+ตารางนี้ใช้ตรวจสอบ Data Balancing ระหว่าง Context Diagram, Level 1 DFD และ Level 2 DFD:
 
 | ชื่อ Data Flow (Concrete Noun Phrase) | แหล่งกำเนิด (Source) | ปลายทาง (Destination) | Process ที่เกี่ยวข้อง (Level 1 / Level 2) | คำอธิบายรายละเอียดข้อมูล |
 | :--- | :--- | :--- | :--- | :--- |
@@ -412,15 +448,15 @@ Process 7.0 Sub-processes:
    - ทุกรายการหนี้ต้องเป็นไปตามสมการนี้เสมอ ไม่มียอดเงินสูญหายหรือเกินจริง
 2. **เพดานยอดเงินบิลสูงสุด (Original Amount Ceiling Rule)**:
    $$\text{Current Amount} \le \text{Original Amount}$$
-   - ยอดที่สร้างไว้ครั้งแรกจะถูกบันทึกใน `originalTotalAmount` และ `originalAmount` ในฐานข้อมูลถาวร
-   - การแก้ไขบิลสามารถปรับลดยอดได้ แต่ **ห้ามปรับเพิ่มเกินกว่ายอดเริ่มต้นเด็ดขาด**
+   - ยอดที่สร้างไว้ครั้งแรกจะถูกบันทึกใน originalTotalAmount และ originalAmount ในฐานข้อมูลถาวร
+   - การแก้ไขบิลสามารถปรับลดยอดได้ แต่ ห้ามปรับเพิ่มเกินกว่ายอดเริ่มต้นเด็ดขาด
 3. **ล็อคการแก้ไข/ยกเลิกบิลเมื่อมีการชำระเงิน (Payment Lock Policy)**:
-   - หากบิลหรือรายการหนี้ใดมี `amountPaid > 0` หรือมีการชำระเงินเข้ามาแล้ว **ระบบจะล็อคไม่อนุญาตให้แก้ไขยอดเงิน หรือลบ/ยกเลิกบิลนั้นได้**
+   - หากบิลหรือรายการหนี้ใดมี amountPaid > 0 หรือมีการชำระเงินเข้ามาแล้ว ระบบจะล็อคไม่อนุญาตให้แก้ไขยอดเงิน หรือลบ/ยกเลิกบิลนั้นได้
 4. **การคำนวณยอดบิลในแดชบอร์ด (Excluded Written-Off Bills Calculation)**:
-   - บิลที่ยกหนี้ให้ครบแล้ว (`isFullyWrittenOff`) จะ **ไม่ถูกนำมารวมใน "ยอดรวมบิลทั้งหมดที่สร้าง" และ "ยอดรอเก็บ"** เพื่อไม่ให้บิดเบือนกระแสเงินสดจริง แต่ยังคงแสดงในแท็บ *"ยกหนี้แล้ว"* และ *"ทั้งหมด"* เพื่อให้ตรวจสอบประวัติได้
+   - บิลที่ยกหนี้ให้ครบแล้ว (isFullyWrittenOff) จะ ไม่ถูกนำมารวมใน "ยอดรวมบิลทั้งหมดที่สร้าง" และ "ยอดรอเก็บ" เพื่อไม่ให้บิดเบือนกระแสเงินสดจริง แต่ยังคงแสดงในแท็บ "ยกหนี้แล้ว" และ "ทั้งหมด" เพื่อให้ตรวจสอบประวัติได้
 5. **การควบคุมความปลอดภัยอุปกรณ์เดียว (Single Active Device Session Policy)**:
-   - บัญชีผู้ใช้สามารถล็อกอินใช้งานได้เพียง **1 อุปกรณ์ในเวลาเดียวกัน** หากมีการล็อกอินจากอุปกรณ์ใหม่ อุปกรณ์เดิมจะถูกบังคับออกจากระบบทันที (`SESSION_TERMINATED`)
+   - บัญชีผู้ใช้สามารถล็อกอินใช้งานได้เพียง 1 อุปกรณ์ในเวลาเดียวกัน หากมีการล็อกอินจากอุปกรณ์ใหม่ อุปกรณ์เดิมจะถูกบังคับออกจากระบบทันที (SESSION_TERMINATED)
 6. **การป้องกันสลิปซ้ำ (Duplicate Slip Hash & Reference Protection)**:
    - สลิปทุกใบจะถูกคำนวณ SHA-256 Hash และตรวจสอบกับประวัติสลิปเดิมในระบบ หากพบซ้ำจะปฏิเสธและบันทึกพฤติกรรมน่าสงสัยทันที
 7. **ระบบแจ้งเตือนยอดค้างชำระรายสัปดาห์ (8.9.1 Weekly Reminder Cadence)**:
-   - ระบบ Worker จะประมวลผลหนี้ที่ยังค้างชำระ (`remainingDebt > 0`) สัปดาห์ละ 1 ครั้ง และใช้คีย์ `DEBT_WEEKLY_REMINDER:{billItemId}:{weekKey}` เพื่อป้องกันการส่งซ้ำซ้อนในสัปดาห์เดียวกัน
+   - ระบบ Worker จะประมวลผลหนี้ที่ยังค้างชำระ (remainingDebt > 0) สัปดาห์ละ 1 ครั้ง และใช้คีย์ DEBT_WEEKLY_REMINDER:{billItemId}:{weekKey} เพื่อป้องกันการส่งซ้ำซ้อนในสัปดาห์เดียวกัน
