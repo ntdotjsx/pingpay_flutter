@@ -523,7 +523,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
                     const SizedBox(height: 10),
 
-                    // Recommended Banner Card
+                    // Recommended Banner Cards
+                    _buildMonthlyAnalyticsPromoCard(context),
+
+                    const SizedBox(height: 10),
+
                     _buildRecommendedPromoCard(context),
 
                     const SizedBox(height: 24),
@@ -1066,4 +1070,69 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     );
   }
 
+  Widget _buildMonthlyAnalyticsPromoCard(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return GestureDetector(
+      onTap: () => context.push('/analytics/monthly'),
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16),
+        padding: const EdgeInsets.all(16),
+        decoration: ShapeDecoration(
+          color: isDark ? AppColors.surfaceTile1 : AppColors.canvas,
+          shape: const SmoothRectangleBorder(
+            borderRadius: SmoothBorderRadius.all(
+              SmoothRadius(cornerRadius: 24, cornerSmoothing: 1.0),
+            ),
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: ShapeDecoration(
+                color: const Color(0xFFFF5000).withValues(alpha: isDark ? 0.2 : 0.1),
+                shape: const SmoothRectangleBorder(
+                  borderRadius: SmoothBorderRadius.all(
+                    SmoothRadius(cornerRadius: 14, cornerSmoothing: 1.0),
+                  ),
+                ),
+              ),
+              child: const Icon(
+                Icons.insights_rounded,
+                color: Color(0xFFFF5000),
+                size: 26,
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'สรุปค่าใช้จ่ายและกราฟรายเดือน',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: isDark ? AppColors.bodyOnDark : AppColors.ink,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  const Text(
+                    'วิเคราะห์แนวโน้มรายรับ-รายจ่าย และสถิติบิลประจำเดือน',
+                    style: TextStyle(fontSize: 11, color: AppColors.inkMuted48),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(
+              Icons.chevron_right_rounded,
+              color: AppColors.inkMuted48,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }

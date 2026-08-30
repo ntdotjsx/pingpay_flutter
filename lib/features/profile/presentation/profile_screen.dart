@@ -10,6 +10,7 @@ import '../../../core/utils/app_toast.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../friends/providers/friends_provider.dart';
 import '../../home/providers/pull_sensitivity_provider.dart';
+import '../../feedback/presentation/feedback_bottom_sheet.dart';
 import 'widgets/setup_payment_channel_sheet.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
@@ -270,9 +271,30 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   onTap: () => _showSensitivitySheet(context),
                 ),
 
+                const SizedBox(height: 20),
+
+                // ── 5. Settings Group: Support & Feedback ─────────────────
+                _buildSectionHeader('ศูนย์ช่วยเหลือและข้อเสนอแนะ', Icons.support_agent_rounded, const Color(0xFF5865F2), isDark),
+                const SizedBox(height: 6),
+
+                // Feedback & Bug Report
+                _buildModernSettingsTile(
+                  icon: Icons.chat_bubble_outline_rounded,
+                  iconBgColor: const Color(0xFF5865F2).withValues(alpha: 0.12),
+                  iconColor: const Color(0xFF5865F2),
+                  title: 'ส่งข้อเสนอแนะและแจ้งปัญหา',
+                  subtitle: 'แจ้งบั๊ก ขอฟีเจอร์ หรือส่งความคิดเห็นตรงไปยัง Discord ทีมงาน',
+                  badge: _buildStatusBadge('Discord Live', const Color(0xFF5865F2)),
+                  isDark: isDark,
+                  onTap: () {
+                    HapticFeedback.lightImpact();
+                    FeedbackBottomSheet.show(context);
+                  },
+                ),
+
                 const SizedBox(height: 28),
 
-                // ── 5. Logout Action Button ────────────────────────────────
+                // ── 6. Logout Action Button ────────────────────────────────
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16.0),
                   child: InkWell(

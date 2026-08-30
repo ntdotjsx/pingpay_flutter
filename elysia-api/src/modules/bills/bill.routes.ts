@@ -1,5 +1,6 @@
 import { Elysia, t } from "elysia";
 import { BillService } from "./bill.service";
+import { NliParserService } from "./nli-parser.service";
 import {
   CreateBillSchema,
   EditBillSchema,
@@ -9,8 +10,27 @@ import {
 } from "./bill.schema";
 
 const billService = new BillService();
+const nliParserService = new NliParserService();
 
 export const billRoutes = new Elysia()
+  .post("/nli-parse", async ({ body, user, set }) => {
+    try {
+      const result = await nliParserService.parsePrompt(user.id, body.prompt);
+      return { success: true, data: result };
+    } catch (e: any) {
+      set.status = 400;
+      return { success: false, error: e.message };
+    }
+  }, {
+    body: t.Object({
+      prompt: t.String({ description: "Thai natural language bill prompt" })
+    }),
+    detail: {
+      tags: ["Bills"],
+      summary: "Parse natural language bill prompt (NLI)",
+      description: "Extracts title, total amount, and matched friends from Thai natural language text."
+    }
+  })
   .post("/", async ({ body, user, set }) => {
     try {
       const bill = await billService.createBill(user.id, body);

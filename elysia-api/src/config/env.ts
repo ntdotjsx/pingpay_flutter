@@ -39,6 +39,7 @@ export const env = {
   SLIPOK_API_KEY: process.env.SLIPOK_API_KEY || process.env.EASYSLIP_API_KEY || "",
   SLIPOK_BRANCH_ID: process.env.SLIPOK_BRANCH_ID || "",
   LINE_CHANNEL_ACCESS_TOKEN: process.env.LINE_CHANNEL_ACCESS_TOKEN || "",
+  DISCORD_FEEDBACK_WEBHOOK_URL: process.env.DISCORD_FEEDBACK_WEBHOOK_URL || process.env.DISCORD_WEBHOOK_URL || "",
   PORT: process.env.PORT ? parseInt(process.env.PORT, 10) : 3000,
 };
 

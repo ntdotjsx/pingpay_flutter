@@ -24,6 +24,8 @@ import '../../features/friends/screens/qr_scan_friend_screen.dart';
 import '../../features/payments/presentation/payments_screen.dart';
 import '../../features/profile/presentation/profile_screen.dart';
 import '../../features/rewards/presentation/rewards_store_screen.dart';
+import '../../features/analytics/presentation/monthly_summary_screen.dart';
+import '../../features/feedback/presentation/feedback_bottom_sheet.dart';
 
 final rootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -155,6 +157,25 @@ final routerProvider = Provider<GoRouter>((ref) {
           final id = state.pathParameters['id'] ?? '';
           return AppPageTransition.slide(key: state.pageKey, child: FriendDetailScreen(friendshipId: id));
         },
+      ),
+      GoRoute(
+        path: '/analytics/monthly',
+        pageBuilder: (context, state) => AppPageTransition.slide(
+          key: state.pageKey,
+          child: const MonthlySummaryScreen(),
+        ),
+      ),
+      GoRoute(
+        path: '/feedback',
+        pageBuilder: (context, state) => AppPageTransition.modal(
+          key: state.pageKey,
+          child: Scaffold(
+            appBar: AppBar(
+              title: const Text('ส่งข้อเสนอแนะและแจ้งปัญหา'),
+            ),
+            body: const FeedbackBottomSheet(),
+          ),
+        ),
       ),
     ],
     redirect: (context, state) {

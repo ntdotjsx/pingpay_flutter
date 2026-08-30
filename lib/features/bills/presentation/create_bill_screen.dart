@@ -12,6 +12,7 @@ import '../../../core/utils/app_toast.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../friends/models/friend_models.dart';
 import '../../friends/providers/friends_provider.dart';
+import '../../friends/providers/friend_nickname_provider.dart';
 import '../../payments/providers/payment_providers.dart';
 import '../../profile/presentation/widgets/setup_payment_channel_sheet.dart';
 import '../models/ocr_models.dart';
@@ -24,6 +25,7 @@ import 'widgets/bill_items_summary_card.dart';
 import 'widgets/bill_items_bottom_sheet.dart';
 import 'widgets/destructive_confirmation_sheet.dart';
 import 'widgets/selected_friends_horizontal_bar.dart';
+import 'widgets/nli_bill_input_bottom_sheet.dart';
 
 class CreateBillScreen extends ConsumerStatefulWidget {
   const CreateBillScreen({super.key});
@@ -330,6 +332,78 @@ class _CreateBillScreenState extends ConsumerState<CreateBillScreen> {
     );
   }
 
+  void _showNliPromptActionSheet(BuildContext context) {
+    HapticFeedback.lightImpact();
+    final friendsAsync = ref.read(friendsListProvider);
+    final friendItems = friendsAsync.valueOrNull ?? [];
+    final userFriends = friendItems.map((f) => f.user).toList();
+    final nicknamesMap = ref.read(friendNicknameProvider);
+
+    NliBillInputBottomSheet.show(
+      context: context,
+      userFriends: userFriends,
+      friendNicknames: nicknamesMap,
+      onApplyParsedBill: (parsed) {
+        final notifier = ref.read(billCreationProvider.notifier);
+
+        // 1. Set Items Breakdown
+        if (parsed.items.isNotEmpty) {
+          notifier.setItems(parsed.items);
+        }
+
+        // 2. Set Title & Total Amount
+        if (parsed.title.isNotEmpty) {
+          _titleController.text = parsed.title;
+        }
+        if (parsed.totalAmount > 0) {
+          _amountController.text = parsed.totalAmount.toStringAsFixed(2);
+        }
+        notifier.setBillInfo(
+          title: _titleController.text.trim(),
+          totalAmount: parsed.totalAmount > 0
+              ? parsed.totalAmount
+              : (double.tryParse(_amountController.text) ?? 0.0),
+          description: _descriptionController.text.trim(),
+        );
+
+        // 3. Set Include Owner
+        notifier.setIncludeOwner(parsed.includeOwner);
+
+        // 4. Set Participants & Custom Amounts
+        if (parsed.matchedParticipants.isNotEmpty) {
+          final matchedUserIds = parsed.matchedParticipants
+              .map((p) => p.friend.id ?? p.friend.userCode)
+              .toSet();
+
+          final selectedFriendItems = friendItems.where((f) {
+            final uid = f.user.id ?? f.friendshipId;
+            return matchedUserIds.contains(uid) || matchedUserIds.contains(f.user.userCode);
+          }).toList();
+
+          notifier.setSelectedFriends(selectedFriendItems);
+
+          // If custom amounts were specified, adjust each participant's amount
+          for (final p in parsed.matchedParticipants) {
+            if (p.isCustomAmountSpecified && p.customAmount != null) {
+              final participantIndex = ref.read(billCreationProvider).participants.indexWhere(
+                (part) => part.userId == (p.friend.id ?? p.friend.userCode) || part.userCode == p.friend.userCode,
+              );
+              if (participantIndex != -1) {
+                notifier.adjustParticipantAmount(participantIndex, p.customAmount!);
+              }
+            }
+          }
+        }
+
+        final itemsCountMsg = parsed.items.isNotEmpty ? ' พร้อม ${parsed.items.length} รายการ' : '';
+        AppToast.success(
+          context,
+          'ดึงข้อมูล "${parsed.title}" ยอด ฿${parsed.totalAmount.toStringAsFixed(2)}$itemsCountMsg สำเร็จแล้ว',
+        );
+      },
+    );
+  }
+
   Future<void> _showConfirmationSheet() async {
     final user = ref.read(authStateProvider).user;
     final promptPayId = user?.promptPayId ?? user?.phoneNumber ?? '';
@@ -542,32 +616,66 @@ class _CreateBillScreenState extends ConsumerState<CreateBillScreen> {
                         ],
                       ),
 
-                      // Quick OCR Scan Pill in Header
-                      GestureDetector(
-                        onTap: () => _showScanReceiptActionSheet(context),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.22),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: Colors.white.withValues(alpha: 0.35)),
-                          ),
-                          child: const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.document_scanner_rounded, size: 14, color: Colors.white),
-                              SizedBox(width: 4),
-                              Text(
-                                'สแกนบิล AI',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w700,
-                                  color: Colors.white,
-                                ),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // Quick NLI Text Prompt Pill in Header
+                          GestureDetector(
+                            onTap: () => _showNliPromptActionSheet(context),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.22),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.white.withValues(alpha: 0.35)),
                               ),
-                            ],
+                              child: const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.auto_awesome_rounded, size: 14, color: Colors.white),
+                                  SizedBox(width: 4),
+                                  Text(
+                                    'พิมพ์สั่ง AI',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w700,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                           ),
-                        ),
+                          const SizedBox(width: 6),
+
+                          // Quick OCR Scan Pill in Header
+                          GestureDetector(
+                            onTap: () => _showScanReceiptActionSheet(context),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.22),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.white.withValues(alpha: 0.35)),
+                              ),
+                              child: const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.document_scanner_rounded, size: 14, color: Colors.white),
+                                  SizedBox(width: 4),
+                                  Text(
+                                    'สแกนบิล AI',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w700,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),

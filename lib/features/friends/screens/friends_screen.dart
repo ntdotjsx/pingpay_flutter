@@ -530,11 +530,18 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
                 ),
               ),
               data: (friends) {
+                final nicknamesMap = ref.watch(friendNicknameProvider);
                 final filtered = friends.where((f) {
                   if (_searchQuery.isEmpty) return true;
+                  final friendKey = (f.user.id != null && f.user.id!.isNotEmpty)
+                      ? f.user.id!
+                      : f.user.userCode;
+                  final nickname = (nicknamesMap[friendKey] ?? '').toLowerCase();
                   final name = f.user.displayName.toLowerCase();
                   final code = f.user.userCode.toLowerCase();
-                  return name.contains(_searchQuery) || code.contains(_searchQuery);
+                  return name.contains(_searchQuery) ||
+                      code.contains(_searchQuery) ||
+                      nickname.contains(_searchQuery);
                 }).toList();
 
                 if (filtered.isEmpty) {
@@ -554,7 +561,7 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
                 return ListView.separated(
                   padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
                   itemCount: filtered.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 8),
+                  separatorBuilder: (_, __) => const SizedBox(height: 10),
                   itemBuilder: (context, index) {
                     final friend = filtered[index];
                     return _buildFriendCard(context, friend, isDark);
@@ -568,152 +575,396 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen>
     );
   }
 
+  void _showEditNicknameDialog(BuildContext context, FriendItemModel friend) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final friendKey = (friend.user.id != null && friend.user.id!.isNotEmpty)
+        ? friend.user.id!
+        : friend.user.userCode;
+    final currentNickname = ref.read(friendNicknameProvider)[friendKey] ?? '';
+    final controller = TextEditingController(text: currentNickname);
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: isDark ? AppColors.surfaceTile1 : Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(
+          'ตั้งชื่อเล่นให้เพื่อน',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 17,
+            color: isDark ? AppColors.bodyOnDark : AppColors.ink,
+          ),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'ชื่อในระบบ: ${friend.user.displayName} (${friend.user.userCode})',
+              style: TextStyle(
+                fontSize: 12,
+                color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: controller,
+              autofocus: true,
+              style: TextStyle(
+                fontSize: 14.5,
+                fontWeight: FontWeight.w600,
+                color: isDark ? AppColors.bodyOnDark : AppColors.ink,
+              ),
+              decoration: InputDecoration(
+                hintText: 'เช่น บาส, เอ็ม, นัท...',
+                hintStyle: TextStyle(
+                  color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
+                  fontSize: 13,
+                ),
+                filled: true,
+                fillColor: isDark ? AppColors.surfaceTile2 : const Color(0xFFF3F4F6),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              ),
+            ),
+            const SizedBox(height: 6),
+            const Text(
+              'ชื่อเล่นนี้จะแสดงในเครื่องของคุณและใช้สั่งสร้างบิลด้วย AI ได้',
+              style: TextStyle(fontSize: 11, color: Color(0xFFFF5000)),
+            ),
+          ],
+        ),
+        actions: [
+          if (currentNickname.isNotEmpty)
+            TextButton(
+              onPressed: () async {
+                Navigator.pop(ctx);
+                await ref.read(friendNicknameProvider.notifier).removeNickname(
+                      userId: friend.user.id,
+                      userCode: friend.user.userCode,
+                    );
+                if (context.mounted) {
+                  AppToast.success(context, 'ล้างชื่อเล่นเรียบร้อยแล้ว');
+                }
+              },
+              child: const Text(
+                'ล้างชื่อเล่น',
+                style: TextStyle(color: Color(0xFFFF3B30), fontWeight: FontWeight.w600),
+              ),
+            ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('ยกเลิก'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final newNick = controller.text.trim();
+              Navigator.pop(ctx);
+              await ref.read(friendNicknameProvider.notifier).setNickname(
+                    userId: friend.user.id,
+                    userCode: friend.user.userCode,
+                    nickname: newNick,
+                  );
+              if (context.mounted) {
+                AppToast.success(
+                  context,
+                  newNick.isEmpty
+                      ? 'ล้างชื่อเล่นเรียบร้อยแล้ว'
+                      : 'ตั้งชื่อเล่นเป็น "$newNick" แล้ว',
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFFF5000),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            child: const Text('บันทึก', style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildFriendCard(
     BuildContext context,
     FriendItemModel friend,
     bool isDark,
   ) {
+    final friendKey = (friend.user.id != null && friend.user.id!.isNotEmpty)
+        ? friend.user.id!
+        : friend.user.userCode;
+    final nicknamesMap = ref.watch(friendNicknameProvider);
+    final nickname = nicknamesMap[friendKey];
+    final hasNickname = nickname != null && nickname.trim().isNotEmpty;
+    final effectiveName = hasNickname ? nickname.trim() : friend.user.displayName;
+
+    final colorPalette = [
+      const Color(0xFFFF5000),
+      const Color(0xFF8B5CF6),
+      const Color(0xFF3B82F6),
+      const Color(0xFF10B981),
+      const Color(0xFFEC4899),
+      const Color(0xFFF59E0B),
+    ];
+    final colorIndex = (friend.user.userCode.hashCode.abs()) % colorPalette.length;
+    final avatarAccent = colorPalette[colorIndex];
+
     return Container(
       decoration: ShapeDecoration(
         color: isDark ? AppColors.surfaceTile1 : Colors.white,
         shape: SmoothRectangleBorder(
           side: BorderSide(
             color: isDark ? Colors.white10 : const Color(0xFFE5E7EB),
-            width: 0.8,
+            width: 0.9,
           ),
           borderRadius: const SmoothBorderRadius.all(
-            SmoothRadius(cornerRadius: 16, cornerSmoothing: 0.8),
+            SmoothRadius(cornerRadius: 18, cornerSmoothing: 0.8),
           ),
         ),
+        shadows: isDark
+            ? []
+            : [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.03),
+                  blurRadius: 10,
+                  offset: const Offset(0, 3),
+                ),
+              ],
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(18),
           onTap: () => context.push('/friends/${friend.friendshipId}'),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             child: Row(
               children: [
-                // Avatar
-                Container(
-                  width: 46,
-                  height: 46,
-                  decoration: ShapeDecoration(
-                    color: const Color(0xFFFF5000).withValues(alpha: 0.12),
-                    shape: const SmoothRectangleBorder(
-                      borderRadius: SmoothBorderRadius.all(
-                        SmoothRadius(cornerRadius: 14, cornerSmoothing: 0.6),
+                // 1. Avatar with subtle gradient/badge
+                Stack(
+                  children: [
+                    Container(
+                      width: 48,
+                      height: 48,
+                      decoration: ShapeDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            avatarAccent.withValues(alpha: isDark ? 0.35 : 0.18),
+                            avatarAccent.withValues(alpha: isDark ? 0.20 : 0.08),
+                          ],
+                        ),
+                        shape: const SmoothRectangleBorder(
+                          borderRadius: SmoothBorderRadius.all(
+                            SmoothRadius(cornerRadius: 15, cornerSmoothing: 0.7),
+                          ),
+                        ),
+                      ),
+                      child: ClipSmoothRect(
+                        radius: const SmoothBorderRadius.all(
+                          SmoothRadius(cornerRadius: 15, cornerSmoothing: 0.7),
+                        ),
+                        child: (friend.user.avatarUrl != null && friend.user.avatarUrl!.trim().isNotEmpty)
+                            ? Image.network(
+                                friend.user.avatarUrl!,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => Center(
+                                  child: Text(
+                                    effectiveName.isNotEmpty
+                                        ? effectiveName[0].toUpperCase()
+                                        : 'U',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 18,
+                                      color: avatarAccent,
+                                    ),
+                                  ),
+                                ),
+                              )
+                            : Center(
+                                child: Text(
+                                  effectiveName.isNotEmpty
+                                      ? effectiveName[0].toUpperCase()
+                                      : 'U',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 18,
+                                    color: avatarAccent,
+                                  ),
+                                ),
+                              ),
                       ),
                     ),
-                  ),
-                  child: ClipSmoothRect(
-                    radius: const SmoothBorderRadius.all(
-                      SmoothRadius(cornerRadius: 14, cornerSmoothing: 0.6),
+                    Positioned(
+                      right: 0,
+                      bottom: 0,
+                      child: Container(
+                        width: 13,
+                        height: 13,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF10B981),
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: isDark ? AppColors.surfaceTile1 : Colors.white,
+                            width: 2,
+                          ),
+                        ),
+                      ),
                     ),
-                    child: friend.user.avatarUrl != null && friend.user.avatarUrl!.isNotEmpty
-                        ? Image.network(
-                            friend.user.avatarUrl!,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => Center(
-                              child: Text(
-                                friend.user.displayName.isNotEmpty
-                                    ? friend.user.displayName[0].toUpperCase()
-                                    : 'U',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 18,
-                                  color: Color(0xFFFF5000),
+                  ],
+                ),
+
+                const SizedBox(width: 14),
+
+                // 2. Info details
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Name Line
+                      Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              effectiveName,
+                              style: TextStyle(
+                                fontWeight: FontWeight.w700,
+                                fontSize: 15.5,
+                                letterSpacing: -0.3,
+                                color: isDark ? AppColors.bodyOnDark : AppColors.ink,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          if (hasNickname) ...[
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: ShapeDecoration(
+                                color: const Color(0xFFFF5000).withValues(alpha: isDark ? 0.25 : 0.12),
+                                shape: const SmoothRectangleBorder(
+                                  borderRadius: SmoothBorderRadius.all(
+                                    SmoothRadius(cornerRadius: 6, cornerSmoothing: 0.6),
+                                  ),
+                                ),
+                              ),
+                              child: const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.label_rounded, size: 10, color: Color(0xFFFF5000)),
+                                  SizedBox(width: 2),
+                                  Text(
+                                    'ชื่อเล่น',
+                                    style: TextStyle(
+                                      fontSize: 9.5,
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFFFF5000),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+
+                      const SizedBox(height: 3),
+
+                      // Subtitle Line (Real Name / Display Name & ID)
+                      if (hasNickname)
+                        Text(
+                          'ชื่อในระบบ: ${friend.user.displayName}',
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        )
+                      else
+                        Row(
+                          children: [
+                            GestureDetector(
+                              onTap: () => _showEditNicknameDialog(context, friend),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: isDark ? Colors.white10 : const Color(0xFFF3F4F6),
+                                  borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(
+                                    color: isDark ? Colors.white12 : const Color(0xFFE5E7EB),
+                                    width: 0.6,
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.edit_note_rounded,
+                                      size: 12,
+                                      color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
+                                    ),
+                                    const SizedBox(width: 3),
+                                    Text(
+                                      'ตั้งชื่อเล่น',
+                                      style: TextStyle(
+                                        fontSize: 10.5,
+                                        fontWeight: FontWeight.w600,
+                                        color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ),
-                          )
-                        : Center(
-                            child: Text(
-                              friend.user.displayName.isNotEmpty
-                                  ? friend.user.displayName[0].toUpperCase()
-                                  : 'U',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 18,
-                                color: Color(0xFFFF5000),
-                              ),
-                            ),
+                          ],
+                        ),
+
+                      const SizedBox(height: 4),
+
+                      // User Code Pill
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                        decoration: BoxDecoration(
+                          color: isDark ? Colors.white.withValues(alpha: 0.06) : const Color(0xFFF1F3F6),
+                          borderRadius: BorderRadius.circular(5),
+                        ),
+                        child: Text(
+                          'รหัส: ${friend.user.userCode}',
+                          style: TextStyle(
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w600,
+                            color: isDark ? AppColors.bodyMuted : AppColors.inkMuted80,
+                            letterSpacing: 0.2,
                           ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Builder(
-                    builder: (context) {
-                      final friendKey = (friend.user.id != null && friend.user.id!.isNotEmpty)
-                          ? friend.user.id!
-                          : friend.user.userCode;
-                      final nicknamesMap = ref.watch(friendNicknameProvider);
-                      final nickname = nicknamesMap[friendKey];
-                      final hasNickname = nickname != null && nickname.trim().isNotEmpty;
-                      final effectiveName = hasNickname ? nickname : friend.user.displayName;
 
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Flexible(
-                                child: Text(
-                                  effectiveName,
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.w700,
-                                    fontSize: 15,
-                                    letterSpacing: -0.2,
-                                    color: isDark ? AppColors.bodyOnDark : AppColors.ink,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                              if (hasNickname) ...[
-                                const SizedBox(width: 5),
-                                Text(
-                                  '(${friend.user.displayName})',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
-                                  ),
-                                ),
-                              ],
-                            ],
-                          ),
-                          const SizedBox(height: 3),
-                          Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: isDark ? Colors.white10 : const Color(0xFFEFF1F5),
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: Text(
-                                  'รหัส: ${friend.user.userCode}',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold,
-                                    color: isDark ? AppColors.bodyMuted : AppColors.inkMuted48,
-                                    letterSpacing: 0.3,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      );
-                    },
-                  ),
+                const SizedBox(width: 8),
+
+                // 3. Quick Edit Nickname Button & Chevron
+                IconButton(
+                  icon: const Icon(Icons.edit_outlined, size: 17),
+                  color: isDark ? Colors.white38 : AppColors.inkMuted48,
+                  tooltip: 'แก้ไขชื่อเล่น',
+                  visualDensity: VisualDensity.compact,
+                  onPressed: () => _showEditNicknameDialog(context, friend),
                 ),
                 Icon(
                   Icons.chevron_right_rounded,
-                  color: isDark ? Colors.white38 : AppColors.hairline,
-                  size: 20,
+                  color: isDark ? Colors.white24 : AppColors.hairline,
+                  size: 18,
                 ),
               ],
             ),

@@ -7,13 +7,12 @@ async function main() {
   await db.execute(sql`
     DROP SCHEMA public CASCADE;
     CREATE SCHEMA public;
-    GRANT ALL ON SCHEMA public TO postgres;
     GRANT ALL ON SCHEMA public TO public;
 
     CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
     CREATE TYPE friend_status AS ENUM ('pending', 'accepted', 'blocked', 'rejected', 'cancelled');
-    CREATE TYPE bill_status AS ENUM ('unpaid', 'partially_paid', 'fully_paid', 'partially_written_off', 'fully_written_off');
+    CREATE TYPE bill_status AS ENUM ('unpaid', 'partially_paid', 'fully_paid', 'partially_written_off', 'fully_written_off', 'cancelled');
     CREATE TYPE bill_item_status AS ENUM ('unpaid', 'partially_paid', 'paid', 'written_off');
     CREATE TYPE payment_method AS ENUM ('full', 'installment');
     CREATE TYPE payment_channel AS ENUM ('promptpay_qr', 'bank_transfer', 'cash');
@@ -68,7 +67,8 @@ async function main() {
       'PAYMENT_PENDING_CONFIRMATION',
       'PAYMENT_CONFIRMED',
       'PAYMENT_REJECTED',
-      'DEBT_WEEKLY_REMINDER'
+      'DEBT_WEEKLY_REMINDER',
+      'ADMIN_BROADCAST'
     );
     CREATE TYPE notification_status AS ENUM (
       'PENDING',
@@ -82,15 +82,25 @@ async function main() {
     CREATE TABLE users (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       user_code VARCHAR(32) NOT NULL UNIQUE,
+      email VARCHAR(255),
       display_name VARCHAR(128),
       full_name VARCHAR(128),
+      first_name VARCHAR(64),
+      last_name VARCHAR(64),
       address TEXT,
       phone_number VARCHAR(32),
       bank_account_number VARCHAR(32),
+      bank_name VARCHAR(64),
+      bank_code VARCHAR(16),
+      truemoney_phone VARCHAR(32),
       prompt_pay_id VARCHAR(32),
       prompt_pay_id_type promptpay_id_type,
       prompt_pay_verified_at TIMESTAMP,
       avatar_url TEXT,
+      reward_points INTEGER NOT NULL DEFAULT 0,
+      shipping_address TEXT,
+      shipping_phone VARCHAR(32),
+      shipping_recipient_name VARCHAR(128),
       profile_completed_at TIMESTAMP,
       role user_role NOT NULL DEFAULT 'user',
       account_status account_status NOT NULL DEFAULT 'active',
@@ -118,7 +128,7 @@ async function main() {
     CREATE TABLE auth_identities (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       user_id UUID NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
-      provider VARCHAR(32) NOT NULL DEFAULT 'line',
+      provider VARCHAR(32) NOT NULL DEFAULT 'google',
       provider_user_id VARCHAR(128) NOT NULL,
       created_at TIMESTAMP NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMP NOT NULL DEFAULT NOW()
@@ -178,6 +188,7 @@ async function main() {
       title VARCHAR(128),
       currency VARCHAR(3) NOT NULL DEFAULT 'THB',
       total_amount NUMERIC(12, 2) NOT NULL,
+      original_total_amount NUMERIC(12, 2),
       receipt_image_url TEXT,
       ocr_raw_data JSONB,
       items_breakdown JSONB,
@@ -196,6 +207,8 @@ async function main() {
       amount_paid NUMERIC(12, 2) NOT NULL DEFAULT '0',
       amount_written_off NUMERIC(12, 2) NOT NULL DEFAULT '0',
       status bill_item_status NOT NULL DEFAULT 'unpaid',
+      is_acknowledged BOOLEAN NOT NULL DEFAULT false,
+      acknowledged_at TIMESTAMP,
       is_locked BOOLEAN NOT NULL DEFAULT false,
       created_at TIMESTAMP NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
@@ -281,6 +294,76 @@ async function main() {
       resolved_at TIMESTAMP,
       created_at TIMESTAMP NOT NULL DEFAULT NOW()
     );
+
+    CREATE TABLE reward_items (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      title VARCHAR(128) NOT NULL,
+      description TEXT,
+      points_cost INTEGER NOT NULL,
+      category VARCHAR(64) DEFAULT 'physical',
+      image_url TEXT,
+      in_stock INTEGER NOT NULL DEFAULT 0,
+      is_active BOOLEAN NOT NULL DEFAULT true,
+      created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+    );
+
+    CREATE TABLE reward_redemptions (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      reward_item_id UUID NOT NULL REFERENCES reward_items(id) ON DELETE RESTRICT,
+      points_spent INTEGER NOT NULL,
+      status VARCHAR(32) NOT NULL DEFAULT 'pending_delivery',
+      recipient_name VARCHAR(128) NOT NULL,
+      phone_number VARCHAR(32) NOT NULL,
+      shipping_address TEXT NOT NULL,
+      tracking_number VARCHAR(64),
+      created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX reward_redemptions_user_idx ON reward_redemptions (user_id);
+
+    CREATE TABLE device_tokens (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      token TEXT NOT NULL UNIQUE,
+      platform VARCHAR(32) NOT NULL DEFAULT 'android',
+      device_name VARCHAR(128),
+      device_model VARCHAR(128),
+      device_brand VARCHAR(64),
+      os_version VARCHAR(64),
+      app_version VARCHAR(64),
+      created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX device_tokens_user_idx ON device_tokens (user_id);
+
+    CREATE TABLE otp_verifications (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      email VARCHAR(255) NOT NULL,
+      otp_hash TEXT NOT NULL,
+      purpose VARCHAR(32) NOT NULL DEFAULT 'pin_reset',
+      attempts INTEGER NOT NULL DEFAULT 0,
+      max_attempts INTEGER NOT NULL DEFAULT 5,
+      expires_at TIMESTAMP NOT NULL,
+      verified_at TIMESTAMP,
+      created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX otp_verifications_user_idx ON otp_verifications (user_id);
+    CREATE INDEX otp_verifications_email_idx ON otp_verifications (email);
+
+    CREATE TABLE security_events (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+      event VARCHAR(64) NOT NULL,
+      ip_address VARCHAR(64),
+      metadata JSONB,
+      created_at TIMESTAMP NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX security_events_user_idx ON security_events (user_id);
+
     CREATE TABLE notification_outbox (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       event_type notification_event_type NOT NULL,
@@ -299,7 +382,6 @@ async function main() {
       created_at TIMESTAMP NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMP NOT NULL DEFAULT NOW()
     );
-
     CREATE INDEX notification_outbox_recipient_idx ON notification_outbox(recipient_user_id);
     CREATE INDEX notification_outbox_status_available_idx ON notification_outbox(status, available_at);
 
@@ -314,7 +396,6 @@ async function main() {
       error_message TEXT,
       created_at TIMESTAMP NOT NULL DEFAULT NOW()
     );
-
     CREATE INDEX notification_deliveries_notification_idx ON notification_deliveries(notification_id);
   `);
 

@@ -62,18 +62,35 @@ async function run() {
       EXCEPTION WHEN duplicate_object THEN null; END $$;
 
       -- 1. users table columns
+      ALTER TABLE IF EXISTS "users" ADD COLUMN IF NOT EXISTS "user_code" varchar(32);
+      ALTER TABLE IF EXISTS "users" ADD COLUMN IF NOT EXISTS "full_name" varchar(128);
       ALTER TABLE IF EXISTS "users" ADD COLUMN IF NOT EXISTS "first_name" varchar(64);
       ALTER TABLE IF EXISTS "users" ADD COLUMN IF NOT EXISTS "last_name" varchar(64);
+      ALTER TABLE IF EXISTS "users" ADD COLUMN IF NOT EXISTS "address" text;
+      ALTER TABLE IF EXISTS "users" ADD COLUMN IF NOT EXISTS "phone_number" varchar(32);
+      ALTER TABLE IF EXISTS "users" ADD COLUMN IF NOT EXISTS "bank_account_number" varchar(32);
       ALTER TABLE IF EXISTS "users" ADD COLUMN IF NOT EXISTS "bank_name" varchar(64);
       ALTER TABLE IF EXISTS "users" ADD COLUMN IF NOT EXISTS "bank_code" varchar(32);
       ALTER TABLE IF EXISTS "users" ADD COLUMN IF NOT EXISTS "truemoney_phone" varchar(32);
+      ALTER TABLE IF EXISTS "users" ADD COLUMN IF NOT EXISTS "prompt_pay_id" varchar(32);
+      ALTER TABLE IF EXISTS "users" ADD COLUMN IF NOT EXISTS "prompt_pay_id_type" "public"."promptpay_id_type";
+      ALTER TABLE IF EXISTS "users" ADD COLUMN IF NOT EXISTS "prompt_pay_verified_at" timestamp;
+      ALTER TABLE IF EXISTS "users" ADD COLUMN IF NOT EXISTS "avatar_url" text;
       ALTER TABLE IF EXISTS "users" ADD COLUMN IF NOT EXISTS "reward_points" integer DEFAULT 0 NOT NULL;
       ALTER TABLE IF EXISTS "users" ADD COLUMN IF NOT EXISTS "shipping_address" text;
       ALTER TABLE IF EXISTS "users" ADD COLUMN IF NOT EXISTS "shipping_phone" varchar(32);
       ALTER TABLE IF EXISTS "users" ADD COLUMN IF NOT EXISTS "shipping_recipient_name" varchar(128);
+      ALTER TABLE IF EXISTS "users" ADD COLUMN IF NOT EXISTS "profile_completed_at" timestamp;
       ALTER TABLE IF EXISTS "users" ADD COLUMN IF NOT EXISTS "role" "public"."user_role" DEFAULT 'user' NOT NULL;
       ALTER TABLE IF EXISTS "users" ADD COLUMN IF NOT EXISTS "account_status" "public"."account_status" DEFAULT 'active' NOT NULL;
       ALTER TABLE IF EXISTS "users" ADD COLUMN IF NOT EXISTS "suspended_until" timestamp;
+
+      -- Backfill user_code for existing users if null
+      UPDATE "users" SET "user_code" = 'USR-' || upper(substr(md5(random()::text || id::text), 1, 6)) WHERE "user_code" IS NULL;
+      UPDATE "users" SET "user_code" = 'USR-60CE13' WHERE "display_name" ILIKE '%Thanapon%' OR "email" ILIKE '%thanapon%';
+      UPDATE "users" SET "avatar_url" = "picture_url" WHERE "avatar_url" IS NULL AND "picture_url" IS NOT NULL;
+      UPDATE "users" SET "account_status" = 'active' WHERE "account_status" IS NULL;
+      UPDATE "users" SET "role" = 'user' WHERE "role" IS NULL;
 
       -- 2. bill_items table columns
       ALTER TABLE IF EXISTS "bill_items" ADD COLUMN IF NOT EXISTS "is_acknowledged" boolean DEFAULT false NOT NULL;

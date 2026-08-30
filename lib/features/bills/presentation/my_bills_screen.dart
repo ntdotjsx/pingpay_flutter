@@ -442,36 +442,76 @@ class MyBillsScreen extends ConsumerWidget {
                     ],
                   ),
 
-                  // Quick Create Button in Frosted Style
-                  InkWell(
-                    onTap: () => _handleCreateBill(context, ref),
-                    borderRadius: BorderRadius.circular(14),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-                      decoration: ShapeDecoration(
-                        color: Colors.white.withValues(alpha: 0.22),
-                        shape: const SmoothRectangleBorder(
-                          borderRadius: SmoothBorderRadius.all(
-                            SmoothRadius(cornerRadius: 14, cornerSmoothing: 0.8),
+                  Row(
+                    children: [
+                      // Monthly Analytics Button
+                      InkWell(
+                        onTap: () {
+                          HapticFeedback.lightImpact();
+                          context.push('/analytics/monthly');
+                        },
+                        borderRadius: BorderRadius.circular(14),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                          decoration: ShapeDecoration(
+                            color: Colors.white.withValues(alpha: 0.22),
+                            shape: const SmoothRectangleBorder(
+                              borderRadius: SmoothBorderRadius.all(
+                                SmoothRadius(cornerRadius: 14, cornerSmoothing: 0.8),
+                              ),
+                            ),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.insights_rounded, size: 16, color: Colors.white),
+                              SizedBox(width: 4),
+                              Text(
+                                'สรุปรายเดือน',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ),
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.add_rounded, size: 16, color: Colors.white),
-                          SizedBox(width: 4),
-                          Text(
-                            'สร้างบิล',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.white,
+                      const SizedBox(width: 8),
+
+                      // Quick Create Button in Frosted Style
+                      InkWell(
+                        onTap: () => _handleCreateBill(context, ref),
+                        borderRadius: BorderRadius.circular(14),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                          decoration: ShapeDecoration(
+                            color: Colors.white.withValues(alpha: 0.22),
+                            shape: const SmoothRectangleBorder(
+                              borderRadius: SmoothBorderRadius.all(
+                                SmoothRadius(cornerRadius: 14, cornerSmoothing: 0.8),
+                              ),
                             ),
                           ),
-                        ],
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.add_rounded, size: 16, color: Colors.white),
+                              SizedBox(width: 4),
+                              Text(
+                                'สร้างบิล',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
-                    ),
+                    ],
                   ),
                 ],
               ),
