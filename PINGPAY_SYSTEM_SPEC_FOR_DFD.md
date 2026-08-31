@@ -133,8 +133,8 @@ You must structure responses based on the requested level:
 | **D11** | **ข้อมูลประวัติการตรวจสอบสลิป EasySlip (Payment Verifications)** | ประวัติการเรียก EasySlip API v2 ตรวจสอบสลิป (Provider, Status, Provider Reference, Verified Amount, ข้อมูลผู้โอน-ผู้รับ, Failure Code, Raw JSON Response) | `payment_verifications` |
 | **D12** | **สมุดบัญชีแยกประเภทธุรกรรมการเงิน (Financial Transactions)** | สมุดบัญชีแยกประเภทแบบบันทึกเพิ่มอย่างเดียว (Append-Only Financial Ledger: Type: debt_created, debt_adjusted, payment, refund, write_off, Amount, Reference ID, Metadata) | `financial_transactions` |
 | **D13** | **ข้อมูลประวัติการแก้ไขบิลและปรับยอด (Edit Logs)** | บันทึกประวัติการเปลี่ยนแปลงบิล (Action: bill_created, bill_amount_edited, bill_item_edited, debt_written_off, bill_cancelled, friend_added, friend_removed), ค่าเดิม (`previousValue`), ค่าใหม่ (`newValue`), เหตุผล และผู้กระทำ | `edit_logs` |
-| **D14** | **ข้อมูลข้อพิพาททางการเงิน (Disputes)** | รายการข้อพิพาทเรื่องยอดหนี้ระหว่างผู้ใช้ (Bill Item ID, Raised By ID, Reason, Status: open, under_review, resolved_paid, resolved_written_off, resolved_rejected, Resolution Note, Resolved By Developer ID) | `disputes` |
-| **D15** | **คิวงานแจ้งเตือนและการส่งมอบ (Notification Outbox & Deliveries)** | คิวข้อความแจ้งเตือน Outbox (Event Type: BILL_CREATED, BILL_UPDATED, BILL_WRITTEN_OFF, PAYMENT_PENDING_CONFIRMATION, PAYMENT_CONFIRMED, PAYMENT_REJECTED, DEBT_WEEKLY_REMINDER, ADMIN_BROADCAST, Payload, Deduplication Key, Status, Retry Attempts) และบันทึกผลการส่งมอบ (`notification_deliveries`) | `notification_outbox`, `notification_deliveries` |
+| **D14** | **ข้อมูลข้อพิพาททางการเงิน (Disputes)** | รายการข้อพิพาทเรื่องยอดหนี้ระหว่างผู้ใช้ (Bill Item ID, Raised By ID, Reason, **หลักฐานภาพถ่ายลูกหนี้ (`evidenceUrl`)**, Status: `open`, `under_review`, `resolved_paid`, `resolved_written_off`, `resolved_rejected`, **คำชี้แจงเจ้าหนี้ (`creditorEvidenceNote`)**, **หลักฐานแก้ต่างของเจ้าหนี้ (`creditorEvidenceUrl`)**, **เวลาที่เจ้าหนี้ตอบกลับ (`creditorRespondedAt`)**, Resolution Note, Resolved By Developer ID, Resolved At) | `disputes` |
+| **D15** | **คิวงานแจ้งเตือนและการส่งมอบ (Notification Outbox & Deliveries)** | คิวข้อความแจ้งเตือน Outbox (Event Type: BILL_CREATED, BILL_UPDATED, BILL_WRITTEN_OFF, PAYMENT_PENDING_CONFIRMATION, PAYMENT_CONFIRMED, PAYMENT_REJECTED, DEBT_WEEKLY_REMINDER, **DISPUTE_RAISED**, **DISPUTE_RESOLVED**, ADMIN_BROADCAST, Payload, Deduplication Key, Status, Retry Attempts) และบันทึกผลการส่งมอบ (`notification_deliveries`) | `notification_outbox`, `notification_deliveries` |
 | **D16** | **ประวัติการกระทำของผู้ดูแลระบบ (Admin Action Logs)** | บันทึกการปฏิบัติงานของผู้ดูแลระบบ/นักพัฒนา (Action Type: view_transactions, view_logs, suspend_account, ban_account, unsuspend_account, flag_suspicious, resolve_dispute, Metadata, Target User ID) | `admin_action_logs` |
 | **D17** | **พฤติกรรมน่าสงสัยและการทุจริต (Suspicious Activity Logs)** | บันทึกพฤติกรรมผิดปกติที่ไม่ถูกลบอัตโนมัติ (Type: duplicate_slip, multi_account_ip, brute_force_detected, Description, IP, Device ID, Metadata) | `suspicious_activity_logs` |
 | **D18** | **บันทึกกิจกรรมทั่วไป (Activity Logs)** | บันทึกกิจกรรมทั่วไปของผู้ใช้ในระบบ (Action, User ID, Metadata, Created At) พร้อมรอบ Purge อัตโนมัติทุก 1 เดือน | `activity_logs` |
@@ -287,7 +287,9 @@ Process 4.0 Sub-processes:
 ├── 4.3 อัปโหลดสลิปและตรวจสอบความถูกต้องอัตโนมัติ (EasySlip Verification & Dedup)
 ├── 4.4 เจ้าของบิลยืนยันหรือปฏิเสธยอดเงิน (Owner Confirmation / Rejection)
 ├── 4.5 จัดการการชำระเงินแบบหลายงวด (Partial Payment & Installment Tracking)
-└── 4.6 ดำเนินการยกหนี้ให้เพื่อน (Debt Write-off Management)
+├── 4.6 ดำเนินการยกหนี้ให้เพื่อน (Debt Write-off Management)
+├── 4.7 ยื่นข้อพิพาทเรื่องยอดหนี้ไม่ถูกต้อง (Debtor Dispute Filing)
+└── 4.8 เจ้าหนี้ส่งหลักฐานชี้แจงแก้ต่าง (Creditor Counter-Evidence Submission)
 ```
 
 - **4.1 ตอบรับและยอมรับภาระหนี้**:
@@ -322,6 +324,17 @@ Process 4.0 Sub-processes:
   - **Data Store**: เพิ่มยอด amountWrittenOff, ลดหนี้คงค้างใน D9 (Bill Items), บันทึกการยกหนี้ลง D13 (Edit Logs), และบันทึกลง D12 (Financial Transactions: write_off)
   - **Notification**: ส่ง Event แจ้งเตือนยกหนี้ (BILL_WRITTEN_OFF) ไปยัง D15 (Notification Outbox)
   - **Output**: สถานะการยกหนี้และยอดหนี้คงเหลือใหม่ ส่งกลับให้ ผู้ใช้งาน (E1)
+- **4.7 ยื่นข้อพิพาทเรื่องยอดหนี้ไม่ถูกต้อง (Debtor Dispute Filing)**:
+  - **Input**: คำร้องขอยื่นข้อพิพาท (billItemId, ประเภทปัญหา/เหตุผล, ลิงก์หรือรูปภาพหลักฐาน `evidenceUrl`) จาก ผู้ใช้งาน (E1 - ลูกหนี้)
+  - **Logic**: ตรวจสอบความเป็นลูกหนี้ของรายการ และป้องกันการยื่นข้อพิพาทซ้ำในรายการเดิม
+  - **Data Store**: บันทึกคำร้องลง D14 (Disputes: reason, evidenceUrl, status = 'open')
+  - **Notification**: ส่ง Event แจ้งเตือนข้อพิพาท (DISPUTE_RAISED) ไปยัง D15 (Notification Outbox) เพื่อส่ง Push Notification ไปยังเจ้าหนี้ (เจ้าของบิล)
+  - **Output**: ผลการยื่นข้อพิพาทและสถานะคำร้อง ส่งกลับให้ ผู้ใช้งาน (E1 - ลูกหนี้)
+- **4.8 เจ้าหนี้ส่งหลักฐานชี้แจงแก้ต่าง (Creditor Counter-Evidence Submission)**:
+  - **Input**: คำชี้แจงแก้ต่าง (`creditorEvidenceNote`) และหลักฐานเพิ่มเติม (`creditorEvidenceUrl`) จาก ผู้ใช้งาน (E1 - เจ้าหนี้)
+  - **Logic**: ตรวจสอบสิทธิ์ความเป็นเจ้าของบิล (Creditor) และดึงภาพถ่ายใบเสร็จรับเงินหลักของบิล (`receiptImageUrl` ใน D8) มาประกอบการชี้แจง
+  - **Data Store**: อัปเดตข้อมูลลง D14 (Disputes: creditorEvidenceNote, creditorEvidenceUrl, creditorRespondedAt, status = 'under_review')
+  - **Output**: ผลการส่งหลักฐานชี้แจงแก้ต่างและสถานะคำร้อง ส่งกลับให้ ผู้ใช้งาน (E1 - เจ้าหนี้)
 
 ---
 
@@ -403,9 +416,11 @@ Process 7.0 Sub-processes:
   - **Input**: คำสั่งระงับ (Suspend), แบน (Ban), หรือปลดแบนบัญชีพร้อมเหตุผล จาก ผู้ดูแลระบบ (E2)
   - **Data Store**: อัปเดตสถานะใน D1 (Users) และบันทึก Audit Trail ลง D16 (Admin Action Logs)
   - **Output**: ผลการจัดการสถานะบัญชีผู้ใช้ ส่งกลับให้ ผู้ดูแลระบบ (E2)
-- **7.3 ตรวจสอบและระงับข้อพิพาทการเงิน**:
-  - **Input**: คำสั่งตัดสินข้อพิพาท (Resolved Paid / Written Off / Rejected) จาก ผู้ดูแลระบบ (E2)
-  - **Data Store**: อัปเดตสถานะใน D14 (Disputes), อัปเดตหนี้ใน D9 (Bill Items), บันทึกธุรกรรมลง D12 (Financial Transactions), และบันทึก Audit Trail ลง D16 (Admin Action Logs)
+- **7.3 ตรวจสอบและระงับข้อพิพาทการเงิน (Dispute Resolution Management)**:
+  - **Input**: คำสั่งตัดสินข้อพิพาท (Resolved Paid / Resolved Written Off / Rejected) พร้อมเหตุผลประกอบ (`resolutionNote`) จาก ผู้ดูแลระบบ (E2)
+  - **Inspection**: ตรวจสอบข้อมูลเปรียบเทียบ 2 ฝั่ง (หลักฐานของลูกหนี้ `evidenceUrl` vs คำชี้แจงและหลักฐานแก้ต่างของเจ้าหนี้ `creditorEvidenceNote`/`creditorEvidenceUrl` พร้อมภาพใบเสร็จหลักของบิล)
+  - **Data Store**: อัปเดตสถานะใน D14 (Disputes: status, resolutionNote, resolvedById, resolvedAt), อัปเดตสถานะหนี้ใน D9 (Bill Items: ปรับเป็น paid หรือ written_off ตามผลการตัดสิน), บันทึกธุรกรรมลง D12 (Financial Transactions), และบันทึก Audit Trail ลง D16 (Admin Action Logs)
+  - **Notification**: ส่ง Event แจ้งผลการตัดสินข้อพิพาท (DISPUTE_RESOLVED) ไปยัง D15 (Notification Outbox) เพื่อส่ง Push Notification แจ้งเตือนไปยังทั้งลูกหนี้และเจ้าหนี้
   - **Output**: ผลการตัดสินข้อพิพาท ส่งกลับให้ ผู้ดูแลระบบ (E2)
 - **7.4 ตรวจสอบพฤติกรรมผิดปกติและสลิปซ้ำ**:
   - **Input**: คำขอดูรายการพฤติกรรมน่าสงสัย (Duplicate Slips, Multi-Account IPs) จาก ผู้ดูแลระบบ (E2)
@@ -462,8 +477,12 @@ Process 7.0 Sub-processes:
 | **รายงานสถิติการเงินและไทม์ไลน์** | ระบบ PingPay | ผู้ใช้งาน (E1) | 5.0 / 5.1, 5.2 | D8, D9, D10 | สรุปยอดค้าง, สถิติบิลที่สร้าง, ปฏิทินรายวัน, ประวัติรายการ, สรุปรายเดือน/รายปี |
 | **คำขอแลกของรางวัลและที่อยู่จัดส่ง** | ผู้ใช้งาน (E1) | ระบบ PingPay | 6.0 / 6.2 | D1, D19, D20 | รหัสของรางวัล, จำนวนแต้ม, ชื่อผู้รับ, เบอร์โทร, ที่อยู่จัดส่ง |
 | **สถานะการจัดส่งและเลขพัสดุ** | ระบบ PingPay | ผู้ใช้งาน (E1) | 6.0 / 6.3 | D20 | สถานะพัสดุและรหัสติดตามพัสดุ (Tracking Number) |
+| **คำร้องขอยื่นข้อพิพาทและหลักฐาน** | ผู้ใช้งาน (E1) | ระบบ PingPay | 4.0 / 4.7 | D14, D15 | รหัสหนี้, เหตุผลการคัดค้าน, และลิงก์/ภาพถ่ายหลักฐานของลูกหนี้ (`evidenceUrl`) |
+| **คำชี้แจงและหลักฐานแก้ต่างของเจ้าหนี้** | ผู้ใช้งาน (E1) | ระบบ PingPay | 4.0 / 4.8 | D14 | ข้อความคำชี้แจง (`creditorEvidenceNote`), ลิงก์/ภาพถ่ายหลักฐานเพิ่มเติม (`creditorEvidenceUrl`) |
+| **การแจ้งเตือนข้อพิพาทไปยังเจ้าหนี้** | ระบบ PingPay | FCM Service (E6) | 5.0 / 5.3 | D15 | FCM Payload (หัวข้อ, ข้อความ, รูปภาพ) แจ้งเตือนบิลที่มีข้อพิพาท (`DISPUTE_RAISED`) |
+| **การแจ้งเตือนผลตัดสินข้อพิพาท** | ระบบ PingPay | FCM Service (E6) | 5.0 / 5.3 | D15 | FCM Payload แจ้งผลตัดสินข้อพิพาท (`DISPUTE_RESOLVED`) ไปยังลูกหนี้และเจ้าหนี้ |
 | **คำสั่งจัดการระบบหลังบ้าน** | ผู้ดูแลระบบ (E2) | ระบบ PingPay | 7.0 / 7.2 - 7.7 | D1, D14, D15, D16, D19, D20 | คำสั่งระงับบัญชี, ตัดสินข้อพิพาท, จัดการสต็อก, บรอดแคสต์ |
-| **รายงานสถิติและข้อมูลตรวจสอบหลังบ้าน** | ระบบ PingPay | ผู้ดูแลระบบ (E2) | 7.0 / 7.1 - 7.6 | D1, D8, D9, D10, D12, D14, D16, D17, D18 | สถิติภาพรวม GMV, รายงานข้อพิพาท, สลิปซ้ำ, Audit Logs |
+| **รายงานสถิติและข้อมูลตรวจสอบหลังบ้าน** | ระบบ PingPay | ผู้ดูแลระบบ (E2) | 7.0 / 7.1 - 7.6 | D1, D8, D9, D10, D12, D14, D16, D17, D18 | สถิติภาพรวม GMV, รายงานข้อพิพาทและหลักฐาน 2 ฝั่ง, สลิปซ้ำ, Audit Logs |
 
 ---
 
@@ -486,3 +505,9 @@ Process 7.0 Sub-processes:
    - สลิปทุกใบจะถูกคำนวณ SHA-256 Hash และตรวจสอบกับประวัติสลิปเดิมในระบบ หากพบซ้ำจะปฏิเสธและบันทึกลง `suspicious_activity_logs` ทันที
 7. **ระบบแจ้งเตือนยอดค้างชำระรายสัปดาห์ (8.9.1 Weekly Reminder Cadence)**:
    - ระบบ Worker จะประมวลผลหนี้ที่ยังค้างชำระ (`remainingDebt > 0`) สัปดาห์ละ 1 ครั้ง และใช้คีย์ `DEBT_WEEKLY_REMINDER:{billItemId}:{weekKey}` เพื่อป้องกันการส่งซ้ำซ้อนในสัปดาห์เดียวกัน
+8. **กระบวนการระงับข้อพิพาทสองฝ่ายและการแจ้งผลอัตโนมัติ (Two-Sided Dispute Resolution Invariant)**:
+   - ลูกหนี้สามารถยื่นคัดค้านยอดหนี้พร้อมแนบหลักฐาน (`evidenceUrl`)
+   - ระบบจะส่ง Event `DISPUTE_RAISED` แจ้งเตือนไปยังเจ้าหนี้ทันที
+   - เจ้าหนี้สามารถตรวจสอบคำร้อง ดูภาพใบเสร็จเดิมของบิล และส่งคำชี้แจงแก้ต่างพร้อมหลักฐานเพิ่มเติม (`creditorEvidenceNote`, `creditorEvidenceUrl`)
+   - สถานะข้อพิพาทจะถูกปรับเป็น `under_review` เพื่อรอการตัดสินจากผู้ดูแลระบบใน Developer Console
+   - เมื่อผู้ดูแลระบบตัดสิน ระบบจะบันทึกสถานะ (`resolved_paid`, `resolved_written_off`, `resolved_rejected`) และส่ง Event `DISPUTE_RESOLVED` แจ้งเตือนผลสรุปไปยังทั้งสองฝ่ายโดยอัตโนมัติ
