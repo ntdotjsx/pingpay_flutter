@@ -7,6 +7,8 @@ export type NotificationEventType =
   | "PAYMENT_CONFIRMED"
   | "PAYMENT_REJECTED"
   | "DEBT_WEEKLY_REMINDER"
+  | "DISPUTE_RAISED"
+  | "DISPUTE_RESOLVED"
   | "FRIEND_REQUEST_RECEIVED"
   | "FRIEND_REQUEST_ACCEPTED";
 
@@ -130,6 +132,31 @@ export interface BillCancelledPayload {
   reason?: string;
 }
 
+export interface DisputeRaisedPayload {
+  disputeId: string;
+  billId: string;
+  billTitle: string;
+  billItemId: string;
+  debtorId: string;
+  debtorName: string;
+  creditorId: string;
+  disputedAmount: string;
+  reason: string;
+  evidenceUrl?: string;
+}
+
+export interface DisputeResolvedPayload {
+  disputeId: string;
+  billId: string;
+  billTitle: string;
+  billItemId: string;
+  debtorId: string;
+  creditorId: string;
+  status: "resolved_paid" | "resolved_written_off" | "resolved_rejected";
+  resolutionNote?: string;
+  resolvedAt: string;
+}
+
 export type NotificationPayload =
   | BillCreatedPayload
   | BillUpdatedPayload
@@ -139,6 +166,8 @@ export type NotificationPayload =
   | PaymentConfirmedPayload
   | PaymentRejectedPayload
   | DebtWeeklyReminderPayload
+  | DisputeRaisedPayload
+  | DisputeResolvedPayload
   | FriendRequestReceivedPayload
   | FriendRequestAcceptedPayload;
 

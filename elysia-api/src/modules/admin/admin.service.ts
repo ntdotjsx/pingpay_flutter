@@ -1,5 +1,6 @@
 import { AdminRepository } from "./admin.repository";
 import { defaultFcmNotificationProvider } from "../notifications/fcm-notification.provider";
+import { NotificationOutboxService } from "../notifications/notification-outbox.service";
 import { db } from "../../db";
 import {
   deviceTokens,
@@ -410,6 +411,52 @@ export class AdminService {
           })
           .where(eq(bills.id, billItem.billId));
       }
+    }
+
+    // Enqueue notifications to both parties
+    try {
+      const outbox = new NotificationOutboxService();
+      if (dispute.raisedById) {
+        await outbox.enqueueInTx(db, {
+          eventType: "DISPUTE_RESOLVED",
+          recipientUserId: dispute.raisedById,
+          channel: "push",
+          deduplicationKey: `DISPUTE_RESOLVED:${disputeId}:DEBTOR`,
+          payload: {
+            disputeId,
+            billId: billItem?.billId || "",
+            billTitle: billItem?.bill?.title || "รายการบิล",
+            billItemId: billItem?.id || "",
+            debtorId: dispute.raisedById,
+            creditorId: billItem?.bill?.ownerId || "",
+            status: resolution.status,
+            resolutionNote: resolution.note,
+            resolvedAt: new Date().toISOString(),
+          },
+        });
+      }
+
+      if (billItem?.bill?.ownerId && billItem.bill.ownerId !== dispute.raisedById) {
+        await outbox.enqueueInTx(db, {
+          eventType: "DISPUTE_RESOLVED",
+          recipientUserId: billItem.bill.ownerId,
+          channel: "push",
+          deduplicationKey: `DISPUTE_RESOLVED:${disputeId}:CREDITOR`,
+          payload: {
+            disputeId,
+            billId: billItem?.billId || "",
+            billTitle: billItem?.bill?.title || "รายการบิล",
+            billItemId: billItem?.id || "",
+            debtorId: dispute.raisedById,
+            creditorId: billItem.bill.ownerId,
+            status: resolution.status,
+            resolutionNote: resolution.note,
+            resolvedAt: new Date().toISOString(),
+          },
+        });
+      }
+    } catch (notifErr) {
+      console.error("Failed to enqueue dispute resolution notification:", notifErr);
     }
 
     await this.repo.logAdminAction({

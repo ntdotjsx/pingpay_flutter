@@ -7,6 +7,8 @@ import {
   PaymentConfirmedPayload,
   PaymentRejectedPayload,
   DebtWeeklyReminderPayload,
+  DisputeRaisedPayload,
+  DisputeResolvedPayload,
   FriendRequestReceivedPayload,
   FriendRequestAcceptedPayload,
   NotificationPayload,
@@ -390,6 +392,74 @@ export class NotificationTemplateService {
   }
 
   /**
+   * Dispute Raised Notification Template
+   */
+  static disputeRaised(payload: DisputeRaisedPayload, locale = "th"): FormattedNotificationMessage {
+    if (locale === "th") {
+      const lines = [
+        `⚠️ มีการยื่นข้อพิพาทเรื่องยอดเงิน: ${payload.billTitle}`,
+        ``,
+        `ผู้ยื่นข้อพิพาท: ${payload.debtorName}`,
+        `ยอดเงินที่มีข้อพิพาท: ${payload.disputedAmount} THB`,
+        `เหตุผล: ${payload.reason}`,
+        ``,
+        `คุณสามารถตรวจสอบรายละเอียดและส่งหลักฐานชี้แจงเพิ่มเติมได้ในระบบครับ`,
+      ];
+
+      return {
+        title: `⚠️ มีการยื่นข้อพิพาท: ${payload.billTitle}`,
+        body: lines.join("\n"),
+        fallbackText: `${payload.debtorName} ได้ยื่นข้อพิพาทสำหรับบิล ${payload.billTitle} (เหตุผล: ${payload.reason})`,
+        imageUrl: payload.evidenceUrl,
+      };
+    }
+
+    return {
+      title: `⚠️ Dispute Raised: ${payload.billTitle}`,
+      body: `Dispute raised on ${payload.billTitle} by ${payload.debtorName} for ${payload.disputedAmount} THB.\nReason: ${payload.reason}`,
+      fallbackText: `Dispute raised by ${payload.debtorName} on ${payload.billTitle}`,
+      imageUrl: payload.evidenceUrl,
+    };
+  }
+
+  /**
+   * Dispute Resolved Notification Template
+   */
+  static disputeResolved(payload: DisputeResolvedPayload, locale = "th"): FormattedNotificationMessage {
+    const statusTextMap: Record<string, string> = {
+      resolved_paid: "ปรับสถานะเป็นชำระเงินแล้ว (Paid)",
+      resolved_written_off: "ยกหนี้ให้ (Written Off)",
+      resolved_rejected: "ปฏิเสธข้อพิพาท / คงยอดเดิม (Rejected)",
+    };
+
+    if (locale === "th") {
+      const lines = [
+        `⚖️ ผลการตัดสินข้อพิพาท: ${payload.billTitle}`,
+        ``,
+        `ผลการตัดสิน: ${statusTextMap[payload.status] || payload.status}`,
+      ];
+
+      if (payload.resolutionNote) {
+        lines.push(`บันทึกคำตัดสิน: ${payload.resolutionNote}`);
+      }
+
+      lines.push(``, `ระบบได้ทำการปรับปรุงสถานะและสมุดบัญชีเรียบร้อยแล้ว`);
+
+      return {
+        title: `⚖️ ข้อพิพาทได้รับการตัดสินแล้ว: ${payload.billTitle}`,
+        body: lines.join("\n"),
+        fallbackText: `ข้อพิพาทสำหรับบิล ${payload.billTitle} ได้รับการตัดสินแล้ว (${statusTextMap[payload.status] || payload.status})`,
+      };
+    }
+
+    return {
+      title: `⚖️ Dispute Resolved: ${payload.billTitle}`,
+      body: `Dispute on ${payload.billTitle} resolved as ${payload.status}.\nNote: ${payload.resolutionNote || "None"}`,
+      fallbackText: `Dispute on ${payload.billTitle} resolved (${payload.status})`,
+    };
+  }
+
+  /**
    * Central dispatch generator based on event type
    */
   static formatMessage(
@@ -414,6 +484,10 @@ export class NotificationTemplateService {
         return this.paymentRejected(payload as PaymentRejectedPayload, locale);
       case "DEBT_WEEKLY_REMINDER":
         return this.weeklyDebtReminder(payload as DebtWeeklyReminderPayload, locale);
+      case "DISPUTE_RAISED":
+        return this.disputeRaised(payload as DisputeRaisedPayload, locale);
+      case "DISPUTE_RESOLVED":
+        return this.disputeResolved(payload as DisputeResolvedPayload, locale);
       case "FRIEND_REQUEST_RECEIVED":
         return this.friendRequestReceived(payload as FriendRequestReceivedPayload, locale);
       case "FRIEND_REQUEST_ACCEPTED":

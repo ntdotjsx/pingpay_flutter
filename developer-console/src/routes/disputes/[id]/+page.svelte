@@ -134,6 +134,59 @@
             <dt class="text-xs text-[#615d59] mb-1">Claim Details / Reason</dt>
             <dd class="rounded-lg border border-[#e6e6e6] bg-[#fbfbfa] p-3 text-xs text-[#31302e] leading-relaxed font-medium">{dispute.reason}</dd>
           </div>
+
+          {#if dispute.evidenceUrl}
+            <div class="mt-3">
+              <dt class="text-xs font-medium text-[#615d59] mb-1.5">Debtor's Attached Proof / Evidence</dt>
+              <dd class="flex items-center gap-3">
+                <a href={dispute.evidenceUrl} target="_blank" rel="noopener noreferrer" class="group relative block w-24 h-24 rounded-lg overflow-hidden border border-[#e6e6e6] bg-[#f6f5f4] hover:opacity-90 transition-opacity">
+                  <img src={dispute.evidenceUrl} alt="Debtor Evidence" class="w-full h-full object-cover" />
+                  <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white text-[10px] font-medium transition-opacity">View Full</div>
+                </a>
+                <div class="text-[11px] text-[#615d59]">
+                  <p class="font-medium text-[#000000]">Document / Photo Attached</p>
+                  <a href={dispute.evidenceUrl} target="_blank" rel="noopener noreferrer" class="text-[#0075de] hover:underline text-xs">Open in New Tab &rarr;</a>
+                </div>
+              </dd>
+            </div>
+          {/if}
+
+          <!-- Creditor Counter-Evidence Section -->
+          <div class="mt-4 border-t border-[#e6e6e6] pt-3">
+            <dt class="text-xs font-bold text-[#000000] mb-2 flex items-center gap-1.5">
+              <span>Creditor (Bill Owner) Counter-Evidence</span>
+              {#if dispute.creditorRespondedAt}
+                <span class="rounded bg-[#e8f8eb] text-[#138029] px-1.5 py-0.5 text-[10px] font-semibold">Submitted</span>
+              {:else}
+                <span class="rounded bg-[#fef2e8] text-[#dd5b00] px-1.5 py-0.5 text-[10px] font-semibold">Pending Response</span>
+              {/if}
+            </dt>
+            {#if dispute.creditorRespondedAt}
+              <dd class="rounded-lg border border-[#e6e6e6] bg-[#fbfbfa] p-3 text-xs text-[#31302e] space-y-2">
+                {#if dispute.creditorEvidenceNote}
+                  <p class="leading-relaxed font-medium">{dispute.creditorEvidenceNote}</p>
+                {/if}
+                {#if dispute.creditorEvidenceUrl}
+                  <div class="pt-2 flex items-center gap-3">
+                    <a href={dispute.creditorEvidenceUrl} target="_blank" rel="noopener noreferrer" class="group relative block w-20 h-20 rounded-lg overflow-hidden border border-[#e6e6e6] bg-white hover:opacity-90">
+                      <img src={dispute.creditorEvidenceUrl} alt="Creditor Proof" class="w-full h-full object-cover" />
+                      <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white text-[10px] font-medium">View</div>
+                    </a>
+                    <div class="text-[11px] text-[#615d59]">
+                      <p class="font-medium text-[#000000]">Creditor Proof Photo</p>
+                      <a href={dispute.creditorEvidenceUrl} target="_blank" rel="noopener noreferrer" class="text-[#0075de] hover:underline text-xs">Open in New Tab &rarr;</a>
+                    </div>
+                  </div>
+                {/if}
+                <p class="text-[10px] text-[#a39e98] font-mono pt-1">Responded: {new Date(dispute.creditorRespondedAt).toLocaleString()}</p>
+              </dd>
+            {:else}
+              <dd class="rounded-lg border border-dashed border-[#e6e6e6] p-3 text-xs text-[#a39e98] italic">
+                Bill owner has not submitted additional counter-explanation yet.
+              </dd>
+            {/if}
+          </div>
+
           {#if dispute.resolutionNote}
             <div class="mt-4 border-t border-[#e6e6e6] pt-3">
               <dt class="text-xs font-semibold text-[#138029]">Official Determination Recorded</dt>

@@ -125,6 +125,8 @@ export const notificationEventTypeEnum = pgEnum("notification_event_type", [
   "PAYMENT_CONFIRMED",
   "PAYMENT_REJECTED",
   "DEBT_WEEKLY_REMINDER",
+  "DISPUTE_RAISED",
+  "DISPUTE_RESOLVED",
   "ADMIN_BROADCAST",
 ]);
 
@@ -483,7 +485,13 @@ export const disputes = pgTable(
       .references(() => users.id, { onDelete: "restrict" }),
 
     reason: text("reason").notNull(),
+    evidenceUrl: text("evidence_url"), // Debtor's proof/photo
     status: disputeStatusEnum("status").notNull().default("open"),
+
+    // Creditor Counter-Evidence
+    creditorEvidenceNote: text("creditor_evidence_note"), // Creditor's explanation note
+    creditorEvidenceUrl: text("creditor_evidence_url"), // Creditor's additional proof/photo
+    creditorRespondedAt: timestamp("creditor_responded_at"),
 
     resolvedById: uuid("resolved_by_id").references(() => users.id, {
       onDelete: "set null",

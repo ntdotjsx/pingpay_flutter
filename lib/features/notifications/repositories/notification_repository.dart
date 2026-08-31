@@ -130,6 +130,27 @@ class NotificationRepository {
         relatedId = payload['billId']?.toString();
         break;
 
+      case 'DISPUTE_RAISED':
+        type = NotificationType.debtRequest;
+        title = 'มีการยื่นข้อพิพาทเรื่องยอดหนี้ ⚠️';
+        final disputeBillTitle = payload['billTitle'] ?? 'บิล';
+        final disputeDebtorName = payload['debtorName'] ?? 'ลูกหนี้';
+        final disputeReason = payload['reason'] ?? '';
+        final disputedAmt = payload['disputedAmount']?.toString();
+        body = '$disputeDebtorName ได้ยื่นข้อพิพาทสำหรับบิล "$disputeBillTitle" ($disputeReason)';
+        amount = disputedAmt != null ? double.tryParse(disputedAmt) : null;
+        relatedId = payload['billId']?.toString();
+        break;
+
+      case 'DISPUTE_RESOLVED':
+        type = NotificationType.systemGeneral;
+        title = 'ข้อพิพาทได้รับการตัดสินแล้ว ⚖️';
+        final resolvedBillTitle = payload['billTitle'] ?? 'บิล';
+        final resolutionNote = payload['resolutionNote'] ?? '';
+        body = 'ข้อพิพาทสำหรับบิล "$resolvedBillTitle" ได้รับการตัดสินแล้ว ($resolutionNote)';
+        relatedId = payload['billId']?.toString();
+        break;
+
       case 'FRIEND_REQUEST_RECEIVED':
         type = NotificationType.friendRequest;
         title = 'มีคำขอเป็นเพื่อนใหม่ 👥';

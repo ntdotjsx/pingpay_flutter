@@ -12,6 +12,10 @@ import '../../payments/providers/payment_providers.dart';
 import 'widgets/destructive_confirmation_sheet.dart';
 import '../models/bill_models.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../disputes/models/dispute_model.dart';
+import '../../disputes/presentation/creditor_dispute_evidence_sheet.dart';
+import '../../disputes/presentation/raise_dispute_sheet.dart';
+import '../../disputes/providers/dispute_providers.dart';
 import '../../friends/providers/friend_nickname_provider.dart';
 import '../providers/bill_provider.dart';
 import '../repositories/bill_repository.dart';
@@ -747,6 +751,50 @@ class _BillDetailScreenState extends ConsumerState<BillDetailScreen> {
                                                               fontSize: 10.5,
                                                               fontWeight: FontWeight.w700,
                                                               color: Color(0xFF06C755),
+                                                            ),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ],
+                                            if (!isOwner && item.debtorId == currentUserId && item.outstandingAmount > 0) ...[
+                                              const SizedBox(height: 5),
+                                              Row(
+                                                children: [
+                                                  GestureDetector(
+                                                    onTap: () async {
+                                                      final ownerName = bill.owner?.displayName ?? 'เจ้าของบิล';
+                                                      final res = await RaiseDisputeSheet.show(
+                                                        context,
+                                                        billItemId: item.id,
+                                                        billTitle: bill.title ?? 'บิล',
+                                                        amount: item.currentAmount,
+                                                        creditorName: ownerName,
+                                                      );
+                                                      if (res == true) {
+                                                        ref.invalidate(billDetailProvider(widget.billId));
+                                                      }
+                                                    },
+                                                    child: Container(
+                                                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                                                      decoration: BoxDecoration(
+                                                        color: AppColors.error.withValues(alpha: 0.12),
+                                                        borderRadius: BorderRadius.circular(6),
+                                                      ),
+                                                      child: const Row(
+                                                        mainAxisSize: MainAxisSize.min,
+                                                        children: [
+                                                          Icon(Icons.gavel_rounded, size: 11, color: AppColors.error),
+                                                          SizedBox(width: 3.5),
+                                                          Text(
+                                                            'แจ้งยอดไม่ถูกต้อง / ยื่นข้อพิพาท',
+                                                            style: TextStyle(
+                                                              fontSize: 10.5,
+                                                              fontWeight: FontWeight.w700,
+                                                              color: AppColors.error,
                                                             ),
                                                           ),
                                                         ],

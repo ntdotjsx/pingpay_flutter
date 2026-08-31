@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../bills/providers/bill_provider.dart';
+import '../../../disputes/presentation/raise_dispute_sheet.dart';
 import '../../../friends/providers/friend_nickname_provider.dart';
 import '../../models/payment_models.dart';
 import '../../providers/payment_providers.dart';
@@ -573,6 +574,35 @@ class DebtAcknowledgementDetailSheet extends ConsumerWidget {
                             ),
                           ),
                         ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 12),
+
+                    // Dispute Trigger Button
+                    Center(
+                      child: TextButton.icon(
+                        onPressed: () async {
+                          final res = await RaiseDisputeSheet.show(
+                            context,
+                            billItemId: debt.id,
+                            billTitle: debt.billTitle,
+                            amount: debt.currentAmount,
+                            creditorName: effectiveCreditorName,
+                          );
+                          if (res == true && context.mounted) {
+                            Navigator.of(context).pop();
+                          }
+                        },
+                        icon: const Icon(Icons.gavel_rounded, size: 16, color: AppColors.error),
+                        label: const Text(
+                          'ยอดเงินไม่ถูกต้อง? ยื่นข้อพิพาท',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.error,
+                          ),
+                        ),
                       ),
                     ),
                   ],
