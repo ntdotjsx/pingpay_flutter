@@ -1,5 +1,5 @@
 # DFD - LEVEL 0
-```mermaid.js
+```mermaid
 ---
 config:
   layout: elk
