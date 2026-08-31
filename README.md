@@ -60,18 +60,24 @@
 - **Anti-Fraud Duplicate Hash Protection**: ตรวจสอบ SHA-256 Hash ของสลิป ป้องกันการใช้สลิปซ้ำซ้อน
 - **Multi-Installments & Write-off**: รองรับการผ่อนชำระหลายงวดโดยไม่ทับประวัติเดิม และระบบยกหนี้ให้เพื่อน (Debt Write-off)
 
-### 5. ระบบรายงาน สรุปสถิติ และการแจ้งเตือน (Analytics & Notifications)
+### 5. ระบบจัดการข้อพิพาททางการเงินและการแก้ต่างสองฝ่าย (Two-Sided Dispute Resolution)
+- **Debtor Dispute Filing**: ลูกหนี้สามารถยื่นคัดค้านยอดหนี้ที่ไม่ถูกต้อง พร้อมระบุหมวดหมู่ปัญหา เหตุผล และแนบลิงก์/ภาพถ่ายหลักฐาน
+- **Realtime FCM Notification (`DISPUTE_RAISED`)**: ระบบส่งการแจ้งเตือนแบบพุชไปยังเจ้าหนี้ทันทีเมื่อมีรายการข้อพิพาทเกิดขึ้น
+- **Creditor Counter-Evidence**: เจ้าหนี้สามารถตรวจสอบข้อร้องเรียน ดูภาพถ่ายใบเสร็จรับเงินต้นฉบับ และส่งคำชี้แจงแก้ต่างพร้อมหลักฐานเพิ่มเติม
+- **Admin Adjudication Console**: ผู้ดูแลระบบสามารถตรวจสอบหลักฐานเปรียบเทียบ 2 ฝั่งแบบเคียงข้างกัน (Side-by-Side) และทำการตัดสินชี้ขาด (`resolved_paid`, `resolved_written_off`, `resolved_rejected`) พร้อมส่งแจ้งเตือน `DISPUTE_RESOLVED` แจ้งผลให้ทั้งสองฝ่ายทราบทันที
+
+### 6. ระบบรายงาน สรุปสถิติ และการแจ้งเตือน (Analytics & Notifications)
 - **Monthly & Yearly Analytics**: สรุปยอดรายรับ-รายจ่าย กราฟแท่งเปรียบเทียบ ยอดเฉลี่ยต่อเดือน และหมวดหมู่ค่าใช้จ่าย
 - **Daily Financial Timeline**: ปฏิทินไทม์ไลน์บันทึกกิจกรรมการเงินรายวัน
 - **1-Click LINE Parnuan Bot Export**: ส่งออกรายการสรุปค่าใช้จ่ายที่ชำระแล้วแยกบรรทัด พร้อมระบุวัน-เวลา และชื่อเล่นเพื่อน เข้าสู่ LINE ป้านวล (`@508zvpuj`) ใน 1 คลิก
 - **Automated Weekly Debt Reminders (8.9.1)**: ระบบ Cron/Worker ส่งแจ้งเตือนยอดค้างชำระไปยังลูกหนี้สัปดาห์ละ 1 ครั้ง พร้อมกลไก Deduplication Key ป้องกันการส่งซ้ำ
 
-### 6. ระบบร้านค้าและแลกของรางวัล (Rewards & Gamification)
+### 7. ระบบร้านค้าและแลกของรางวัล (Rewards & Gamification)
 - **PingPay Points**: รับคะแนนสะสมจากการทำรายการและชำระเงินตรงเวลา
 - **Rewards Catalog & Fulfillment**: แลกของรางวัลจริง พร้อมระบบติดตามเลขพัสดุจัดส่ง (Tracking Number)
 
-### 7. ระบบผู้ดูแลระบบและหลังบ้าน (Developer & Admin Console)
-- **Web Back-Office**: ติดตามสถิติ GMV ภาพรวม, ตรวจสอบสมุดบัญชีแยกประเภท (`financial_transactions`), จัดการข้อพิพาท, ระงับ/แบนบัญชี, และบรอดแคสต์แจ้งเตือน
+### 8. ระบบผู้ดูแลระบบและหลังบ้าน (Developer & Admin Console)
+- **Web Back-Office**: ติดตามสถิติ GMV ภาพรวม, ตรวจสอบสมุดบัญชีแยกประเภท (`financial_transactions`), ตรวจจับสลิปซ้ำและการทุจริต, ตัดสินข้อพิพาท, ระงับ/แบนบัญชี, และบรอดแคสต์แจ้งเตือน
 
 ---
 
@@ -131,6 +137,7 @@ pingpay_mobile/
 │   │   ├── analytics/                      # แดชบอร์ดสรุปรายเดือน/รายปี (MonthlySummaryScreen)
 │   │   ├── auth/                           # Google Login, Onboarding, PIN Screen, PDPA
 │   │   ├── bills/                          # สร้างบิล, AI OCR Scanner, NLI Input, รายละเอียดบิล
+│   │   ├── disputes/                       # ระบบยื่นข้อพิพาท, ส่งหลักฐานแก้ต่าง, ประวัติข้อพิพาท
 │   │   ├── friends/                        # รายชื่อเพื่อน, สแกน QR เพิ่มเพื่อน, ตั้งชื่อเล่น
 │   │   ├── notifications/                  # Notification Center, Outbox View
 │   │   ├── payments/                       # PromptPay Dynamic QR, ตรวจสลิป, ผ่อนชำระ, ยกหนี้
@@ -139,7 +146,7 @@ pingpay_mobile/
 ├── elysia-api/                             # Backend API (Bun + Elysia.js + Drizzle ORM)
 │   ├── src/
 │   │   ├── db/                             # schema.ts (23 Tables), migrations, bootstrap
-│   │   ├── modules/                        # Business Logic Modules (auth, bills, payments...)
+│   │   ├── modules/                        # Business Logic Modules (auth, bills, disputes, payments...)
 │   │   │   └── notifications/              # FCM v1, Debt Reminder Scheduler, Outbox Worker
 │   │   ├── routes/                         # REST API Endpoints (Auto-loaded)
 │   │   └── index.ts                        # เซิร์ฟเวอร์หลักและ Background Worker
@@ -199,7 +206,22 @@ bun dev
 
 ---
 
-### 2. การติดตั้งและรัน Mobile App (`pingpay_mobile`)
+### 2. การติดตั้งและรัน Web Developer Console (`developer-console`)
+```bash
+# 1. เข้าสู่โฟลเดอร์ Web Admin
+cd developer-console
+
+# 2. ติดตั้ง Dependencies
+npm install
+
+# 3. เริ่มต้นรันเซิร์ฟเวอร์พัฒนา
+npm run dev
+```
+> เว็บคอนโซลจะเปิดทำงานที่ `http://localhost:5173`
+
+---
+
+### 3. การติดตั้งและรัน Mobile App (`pingpay_mobile`)
 ```bash
 # 1. ติดตั้ง Dependencies ของ Flutter
 flutter pub get
@@ -219,14 +241,14 @@ flutter run
 ```bash
 flutter test
 ```
-* ครอบคลุมการทดสอบ Unit Tests, Widget Tests, Theme, NLI Parsing, Financial Calculations, และ Screen Flows (88/88 Test Files — 100% Pass)
+* ครอบคลุมการทดสอบ Unit Tests, Widget Tests, Theme, NLI Parsing, Financial Calculations, Dispute Models, และ Screen Flows (**90/90 Tests — 100% Pass**)
 
 ### รันการทดสอบ Backend Test Suite (Elysia API)
 ```bash
 cd elysia-api
 bun test tests/unit/
 ```
-* ครอบคลุมการทดสอบ Authentication State Machine, Password/PIN Security, Slip Hash Deduplication, Weekly Scheduler, และ Invariant Equations
+* ครอบคลุมการทดสอบ Authentication State Machine, Password/PIN Security, Slip Hash Deduplication, Dispute Notification Templates, Weekly Scheduler, และ Invariant Equations (**76/76 Tests — 100% Pass**)
 
 ---
 
